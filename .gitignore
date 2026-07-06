@@ -1,0 +1,71 @@
+############################
+# Root Project
+############################
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment Files
+.env
+.env.*
+
+############################
+# Backend (Spring Boot)
+############################
+
+backend/target/
+backend/.idea/
+backend/*.iml
+
+############################
+# IntelliJ IDEA
+############################
+
+.idea/
+*.iws
+*.iml
+*.ipr
+
+############################
+# STS / Eclipse
+############################
+
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache
+
+############################
+# VS Code
+############################
+
+.vscode/
+
+############################
+# Frontend (React / Next.js)
+############################
+
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/dist/
+
+############################
+# Coverage
+############################
+
+coverage/
+
+############################
+# Temporary Files
+############################
+
+*.tmp
+*.temp
