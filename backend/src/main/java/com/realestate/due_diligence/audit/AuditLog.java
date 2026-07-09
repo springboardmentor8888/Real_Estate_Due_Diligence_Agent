@@ -1,4 +1,4 @@
-package com.realestate.due_diligence.auth;
+package com.realestate.due_diligence.audit;
 
-public class AuthController {
+public class AuditLog {
 }
