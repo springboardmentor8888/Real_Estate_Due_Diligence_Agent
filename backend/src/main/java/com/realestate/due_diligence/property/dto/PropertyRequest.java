@@ -1,0 +1,25 @@
+package com.realestate.due_diligence.property.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class PropertyRequest {
+
+    @NotBlank
+    private String address;
+
+    @NotBlank
+    private String city;
+
+    @NotBlank
+    private String state;
+
+    @NotBlank
+    private String zipCode;
+
+    @NotBlank
+    private String propertyType;
+}
