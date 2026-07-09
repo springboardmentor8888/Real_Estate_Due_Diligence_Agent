@@ -13,7 +13,6 @@ function LoginForm() {
   const [form, setForm] = useState({
     email: "",
     password: "",
-    role: "",
   });
 
   const [errors, setErrors] = useState({});
@@ -45,10 +44,6 @@ function LoginForm() {
       newErrors.password = "Password is required";
     }
 
-    if (!form.role) {
-      newErrors.role = "Please select your role";
-    }
-
     setErrors(newErrors);
 
     return Object.keys(newErrors).length === 0;
@@ -61,6 +56,8 @@ function LoginForm() {
 
     console.log(form);
 
+    // Backend API will be added later
+    // axios.post("/login", form);
   };
 
   return (
@@ -83,7 +80,9 @@ function LoginForm() {
           </label>
 
           <div className="relative">
-            <HiOutlineEnvelope className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <HiOutlineEnvelope
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+            />
 
             <input
               type="email"
@@ -109,7 +108,9 @@ function LoginForm() {
           </label>
 
           <div className="relative">
-            <HiOutlineLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <HiOutlineLockClosed
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+            />
 
             <input
               type={showPassword ? "text" : "password"}
@@ -136,46 +137,19 @@ function LoginForm() {
           )}
         </div>
 
-        {/* Role */}
-        <div>
-          <label className="block text-sm text-slate-200 mb-2">
-            Select Role
-          </label>
-
-          <select
-            name="role"
-            value={form.role}
-            onChange={handleChange}
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg py-3 px-3 text-white focus:border-teal-500 outline-none"
-          >
-            <option value="">Select your role</option>
-            <option value="Buyer">Buyer</option>
-            <option value="Real Estate Agent">Real Estate Agent</option>
-            <option value="Legal Reviewer">Legal Reviewer</option>
-            <option value="Financial Institution">Financial Institution</option>
-            <option value="Administrator">Administrator</option>
-          </select>
-
-          {errors.role && (
-            <p className="text-red-400 text-sm mt-1">
-              {errors.role}
-            </p>
-          )}
-        </div>
-
-        {/* Remember & Forgot */}
+        {/* Remember Me & Forgot Password */}
         <div className="flex justify-between items-center text-sm">
           <label className="flex items-center gap-2 text-slate-300">
             <input type="checkbox" />
             Remember Me
           </label>
 
-          <button
-            type="button"
-            className="text-teal-400 hover:text-teal-300"
-          >
-            Forgot Password?
-          </button>
+          <Link
+                to="/forgot-password"
+                className="text-teal-400 hover:text-teal-300"
+                >
+                Forgot Password?
+            </Link>
         </div>
 
         {/* Login Button */}
