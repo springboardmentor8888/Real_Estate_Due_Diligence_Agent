@@ -71,8 +71,7 @@ function RegisterForm() {
             <option>Real Estate Agent</option>
             <option>Legal Reviewer</option>
             <option>Financial Institution</option>
-            <option>Administrator</option>
-          </select>
+            </select>
         </div>
 
         {/* Password */}
