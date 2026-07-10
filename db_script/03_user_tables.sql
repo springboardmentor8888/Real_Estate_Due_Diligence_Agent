@@ -24,8 +24,6 @@ CREATE TABLE users (
 
     password_hash VARCHAR(255) NOT NULL,
 
-    company_name VARCHAR(150),
-
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
 
     email_verified BOOLEAN NOT NULL DEFAULT FALSE,
