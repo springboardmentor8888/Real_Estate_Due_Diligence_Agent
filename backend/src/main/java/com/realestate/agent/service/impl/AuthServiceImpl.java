@@ -12,6 +12,8 @@ import com.realestate.agent.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
 
 @Service
 @RequiredArgsConstructor
@@ -28,22 +30,21 @@ public class AuthServiceImpl implements AuthService {
             throw new ResourceAlreadyExistsException("Email already exists");
         }
 
-        if (request.getPhone() != null &&
+        if (StringUtils.hasText(request.getPhone()) &&
                 userRepository.existsByPhone(request.getPhone())) {
 
             throw new ResourceAlreadyExistsException("Phone number already exists");
         }
 
-        Role role = roleRepository.findByRoleName("Buyer")
+        Role role = roleRepository.findByRoleName(request.getRole())
                 .orElseThrow(() ->
-                        new ResourceNotFoundException("Default role Buyer not found"));
+                        new ResourceNotFoundException("Role not found: " + request.getRole()));
 
         User user = User.builder()
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .email(request.getEmail())
                 .phone(request.getPhone())
-                .companyName(request.getCompanyName())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role(role)
                 .isActive(true)

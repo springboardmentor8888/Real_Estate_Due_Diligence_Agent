@@ -39,9 +39,6 @@ public class User {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
-    @Column(name = "company_name")
-    private String companyName;
-
     @Column(name = "is_active")
     private Boolean isActive;
 
