@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   HiOutlineEnvelope,
   HiOutlineLockClosed,
@@ -16,6 +16,7 @@ function LoginForm() {
   });
 
   const [errors, setErrors] = useState({});
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -58,21 +59,18 @@ function LoginForm() {
 
     // Backend API will be added later
     // axios.post("/login", form);
+    navigate("/dashboard");
   };
 
   return (
     <div className="w-full max-w-md bg-slate-900 p-8 rounded-xl border border-slate-800">
-
       <h2 className="text-3xl font-bold text-center text-white">
         Welcome Back
       </h2>
 
-      <p className="text-center text-slate-400 mt-2">
-        Login to continue
-      </p>
+      <p className="text-center text-slate-400 mt-2">Login to continue</p>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-
         {/* Email */}
         <div>
           <label className="block text-sm text-slate-200 mb-2">
@@ -80,9 +78,7 @@ function LoginForm() {
           </label>
 
           <div className="relative">
-            <HiOutlineEnvelope
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
+            <HiOutlineEnvelope className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
 
             <input
               type="email"
@@ -95,22 +91,16 @@ function LoginForm() {
           </div>
 
           {errors.email && (
-            <p className="text-red-400 text-sm mt-1">
-              {errors.email}
-            </p>
+            <p className="text-red-400 text-sm mt-1">{errors.email}</p>
           )}
         </div>
 
         {/* Password */}
         <div>
-          <label className="block text-sm text-slate-200 mb-2">
-            Password
-          </label>
+          <label className="block text-sm text-slate-200 mb-2">Password</label>
 
           <div className="relative">
-            <HiOutlineLockClosed
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
+            <HiOutlineLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
 
             <input
               type={showPassword ? "text" : "password"}
@@ -131,9 +121,7 @@ function LoginForm() {
           </div>
 
           {errors.password && (
-            <p className="text-red-400 text-sm mt-1">
-              {errors.password}
-            </p>
+            <p className="text-red-400 text-sm mt-1">{errors.password}</p>
           )}
         </div>
 
@@ -145,11 +133,11 @@ function LoginForm() {
           </label>
 
           <Link
-                to="/forgot-password"
-                className="text-teal-400 hover:text-teal-300"
-                >
-                Forgot Password?
-            </Link>
+            to="/forgot-password"
+            className="text-teal-400 hover:text-teal-300"
+          >
+            Forgot Password?
+          </Link>
         </div>
 
         {/* Login Button */}
@@ -170,7 +158,6 @@ function LoginForm() {
             Register
           </Link>
         </p>
-
       </form>
     </div>
   );

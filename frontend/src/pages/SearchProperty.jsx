@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FaTimes } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 const properties = [
   {
     id: "PROP001",
@@ -70,7 +70,8 @@ const properties = [
   },
 ];
 
-const SearchProperty = ({ showFilters, setShowFilters }) => {
+const SearchProperty = () => {
+  const { showFilters, setShowFilters } = useOutletContext();
   const [filters, setFilters] = useState({
     type: "All",
     status: "All",
