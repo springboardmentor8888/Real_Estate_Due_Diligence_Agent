@@ -1,8 +1,7 @@
-package com.realestate.backend.service;
+package com.infosys.realestate.service;
 
 import java.util.List;
-
-import com.realestate.backend.entity.Property;
+import com.infosys.realestate.entity.Property;
 
 public interface PropertyService {
 
@@ -20,7 +19,7 @@ public interface PropertyService {
 
     List<Property> searchByState(String state);
 
-    List<Property> searchByPincode(String pincode);
+    List<Property> searchByZipCode(String zipCode);
 
     List<Property> searchByPropertyType(String propertyType);
 }

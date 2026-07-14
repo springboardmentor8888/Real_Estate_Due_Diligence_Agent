@@ -1,14 +1,15 @@
-package com.realestate.backend.controller;
+package com.infosys.realestate.controller;
 
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 
-import com.realestate.backend.entity.Property;
-import com.realestate.backend.service.PropertyService;
+import com.infosys.realestate.entity.Property;
+import com.infosys.realestate.service.PropertyService;
 
 @RestController
 @RequestMapping("/api/properties")
@@ -19,6 +20,7 @@ public class PropertyController {
     private PropertyService propertyService;
 
     @PostMapping
+    @PreAuthorize("hasAuthority('ADMIN')")
     public Property saveProperty(@Valid @RequestBody Property property) {
         return propertyService.saveProperty(property);
     }
@@ -34,12 +36,14 @@ public class PropertyController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public Property updateProperty(@PathVariable Long id,
                                    @Valid @RequestBody Property property) {
         return propertyService.updateProperty(id, property);
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public void deleteProperty(@PathVariable Long id) {
         propertyService.deleteProperty(id);
     }
@@ -55,8 +59,8 @@ public class PropertyController {
     }
 
     @GetMapping("/search/pincode/{pincode}")
-    public List<Property> searchByPincode(@PathVariable String pincode) {
-        return propertyService.searchByPincode(pincode);
+    public List<Property> searchByZipCode(@PathVariable String pincode) {
+        return propertyService.searchByZipCode(pincode);
     }
 
     @GetMapping("/search/type/{propertyType}")

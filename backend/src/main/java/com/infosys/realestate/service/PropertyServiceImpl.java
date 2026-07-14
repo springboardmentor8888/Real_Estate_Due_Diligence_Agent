@@ -1,13 +1,12 @@
-package com.realestate.backend.service.impl;
+package com.infosys.realestate.service;
 
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.realestate.backend.entity.Property;
-import com.realestate.backend.repository.PropertyRepository;
-import com.realestate.backend.service.PropertyService;
+import com.infosys.realestate.entity.Property;
+import com.infosys.realestate.repository.PropertyRepository;
 
 @Service
 public class PropertyServiceImpl implements PropertyService {
@@ -32,7 +31,7 @@ public class PropertyServiceImpl implements PropertyService {
 
     @Override
     public Property updateProperty(Long id, Property property) {
-        property.setId(id);
+        property.setPropertyId(id);
         return propertyRepository.save(property);
     }
 
@@ -52,8 +51,8 @@ public class PropertyServiceImpl implements PropertyService {
     }
 
     @Override
-    public List<Property> searchByPincode(String pincode) {
-        return propertyRepository.findByPincode(pincode);
+    public List<Property> searchByZipCode(String zipCode) {
+        return propertyRepository.findByZipCode(zipCode);
     }
 
     @Override

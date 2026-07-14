@@ -12,6 +12,9 @@ public class Property {
     @Column(name = "property_id")
     private Long propertyId;
 
+    @Column(name = "property_name", length = 150)
+    private String propertyName;
+
     @Column(nullable = false, length = 255)
     private String address;
 
@@ -40,6 +43,14 @@ public class Property {
 
     public void setPropertyId(Long propertyId) {
         this.propertyId = propertyId;
+    }
+
+    public String getPropertyName() {
+        return propertyName;
+    }
+
+    public void setPropertyName(String propertyName) {
+        this.propertyName = propertyName;
     }
 
     public String getAddress() {
