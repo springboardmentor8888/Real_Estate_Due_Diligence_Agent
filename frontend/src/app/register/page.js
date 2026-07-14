@@ -6,7 +6,6 @@ import Input from "../../components/Input";
 import Button from "../../components/Button";
 
 export default function RegisterPage() {
-
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,63 +32,53 @@ export default function RegisterPage() {
     <div>
       <Navbar />
 
-      <h1>Registration</h1>
+      <div className="container">
+        <h1>Registration</h1>
 
-      <form onSubmit={handleRegister}>
+        <form onSubmit={handleRegister}>
+          <Input
+            type="text"
+            placeholder="Enter your full name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
 
-        <Input
-          type="text"
-          placeholder="Enter your full name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
+          <Input
+            type="email"
+            placeholder="Enter your email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
 
-        <br /><br />
+          <Input
+            type="password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
 
-        <Input
-          type="email"
-          placeholder="Enter your email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+          <Input
+            type="password"
+            placeholder="Confirm your password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+          />
 
-        <br /><br />
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+          >
+            <option value="">Select Role</option>
+            <option>Buyer</option>
+            <option>Real Estate Agent</option>
+            <option>Legal Reviewer</option>
+            <option>Financial Institution</option>
+            <option>Administrator</option>
+          </select>
 
-        <Input
-          type="password"
-          placeholder="Enter your password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-
-        <br /><br />
-
-        <Input
-          type="password"
-          placeholder="Confirm your password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-        />
-
-        <br /><br />
-
-        <select
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-        >
-          <option value="">Select Role</option>
-          <option>Buyer</option>
-          <option>Real Estate Agent</option>
-          <option>Legal Reviewer</option>
-          <option>Financial Institution</option>
-          <option>Administrator</option>
-        </select>
-
-        <br /><br />
-
-        <Button text="Register" type="submit" />
-
-      </form>
+          <Button text="Register" type="submit" />
+        </form>
+      </div>
     </div>
   );
 }
