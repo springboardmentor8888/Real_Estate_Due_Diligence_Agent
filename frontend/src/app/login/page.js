@@ -1,124 +1,232 @@
 "use client";
+import Link from "next/link";
 
 import { useState } from "react";
-import Navbar from "../../components/Navbar";
-import Input from "../../components/Input";
-import Button from "../../components/Button";
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+  FileCheck,
+  Building2,
+  ArrowRight,
+} from "lucide-react";
 
 import "./login.css";
 
-
 export default function LoginPage() {
+  const [showPassword, setShowPassword] = useState(false);
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-
-  function handleLogin(e) {
-
+  const handleSubmit = (e) => {
     e.preventDefault();
 
-    if(email === "" || password === "") {
-      alert("Please fill all fields");
-      return;
-    }
-
-    alert("Login successful!");
-  }
-
+    // TODO:
+    // Connect Spring Boot Login API here
+    console.log("Login Button Clicked");
+  };
 
   return (
-
     <div className="login-page">
+      {/* LEFT SECTION */}
 
-      <Navbar />
+      <div className="login-left">
 
+        <div className="overlay"></div>
 
-      <div className="login-container">
+        <div className="left-content">
 
+          <div className="logo">
 
-        <div className="login-card">
+            <Building2 size={40} />
 
+            <div>
+              <h2>Diligence</h2>
+              <p>Real Estate Due Diligence</p>
+            </div>
 
-          <h1>
-            Welcome Back
-          </h1>
+          </div>
 
+          <div className="hero">
 
-          <p className="subtitle">
-            Sign in to access your Real Estate Due Diligence dashboard
-          </p>
+            <h1>
+              Smart Due Diligence.
+              <br />
+              <span>Secure Investments.</span>
+            </h1>
 
+            <p>
+              Verify property ownership, documents,
+              legal records and generate professional
+              due diligence reports with confidence.
+            </p>
 
+          </div>
 
-          <form onSubmit={handleLogin}>
+          <div className="features">
 
+            <div className="feature">
 
-            <Input
-              type="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e)=>setEmail(e.target.value)}
-            />
+              <div className="icon blue">
+                <ShieldCheck />
+              </div>
 
-
-
-            <Input
-              type="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e)=>setPassword(e.target.value)}
-            />
-
-
-
-            <div className="options">
-
-
-              <label>
-                <input type="checkbox"/>
-                Remember me
-              </label>
-
-
-
-              <a href="#">
-                Forgot Password?
-              </a>
-
+              <div>
+                <h4>Secure & Reliable</h4>
+                <p>Bank-level security for your data.</p>
+              </div>
 
             </div>
 
+            <div className="feature">
 
+              <div className="icon purple">
+                <FileCheck />
+              </div>
 
-            <Button
-              text="Login"
-              type="submit"
-            />
+              <div>
+                <h4>AI Reports</h4>
+                <p>Generate reports instantly.</p>
+              </div>
 
+            </div>
 
+            <div className="feature">
 
-            <p className="signup">
+              <div className="icon green">
+                <Building2 />
+              </div>
 
-              Don't have an account?
+              <div>
+                <h4>Property Analysis</h4>
+                <p>Fast and accurate verification.</p>
+              </div>
 
-              <a href="/register">
-                Sign Up
-              </a>
+            </div>
 
-            </p>
-
-
-          </form>
-
+          </div>
 
         </div>
 
+      </div>
+
+      {/* RIGHT SECTION */}
+
+      <div className="login-right">
+
+        <form className="login-card" onSubmit={handleSubmit}>
+
+          <h1>Welcome Back</h1>
+
+          <p className="subtitle">
+            Login to continue to your account
+          </p>
+
+          {/* EMAIL */}
+
+          <div className="input-group">
+
+            <label>Email Address</label>
+
+            <div className="input-box">
+
+              <Mail size={18} />
+
+              <input
+                type="email"
+                placeholder="Enter your email"
+                required
+              />
+
+            </div>
+
+          </div>
+
+          {/* PASSWORD */}
+
+
+          <div className="input-group">
+
+            <div className="password-label">
+              <label>Password</label>
+              <a href="#">Forgot Password?</a>
+            </div>
+
+            <div className="input-box">
+
+              <Lock size={18} />
+
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter your password"
+                autoComplete="current-password"
+                required
+              />
+
+              <span
+                className="eye-btn"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? (
+                  <EyeOff size={18} />
+                ) : (
+                  <Eye size={18} />
+                )}
+              </span>
+
+            </div>
+
+          </div>
+
+
+          {/* REMEMBER */}
+
+
+
+          {/* LOGIN */}
+
+          <button className="login-btn">
+
+            Login
+
+            <ArrowRight size={18} />
+
+          </button>
+
+          <div className="divider">
+
+            <span>OR</span>
+
+          </div>
+
+          <div className="social-login">
+
+            <button type="button">
+              Google
+            </button>
+
+            <button type="button">
+              Microsoft
+            </button>
+
+          </div>
+          <div className="remember">
+            <label>
+              <input type="checkbox" />
+              Remember Me
+            </label>
+          </div>
+
+         <p className="signup">
+           Don't have an account?{" "}
+           <Link href="/register" className="signup-link">
+             Sign Up
+           </Link>
+         </p>
+        </form>
 
       </div>
 
-
     </div>
-
   );
 }
