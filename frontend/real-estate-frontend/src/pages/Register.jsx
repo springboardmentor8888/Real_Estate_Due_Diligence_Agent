@@ -62,11 +62,12 @@ if (!/^[0-9]{10}$/.test(formData.phone)) {
 }
   try {
   const response = await registerUser({
-   firstName: formData.firstName,
-   lastName: formData.lastName,
-   email: formData.email,
-   phone: formData.phone,
-   password: formData.password,
+  firstName: formData.firstName,
+  lastName: formData.lastName,
+  email: formData.email,
+  phone: formData.phone,
+  password: formData.password,
+  role: formData.role,
 });
 
   alert("Registration Successful!");
@@ -84,137 +85,170 @@ if (!/^[0-9]{10}$/.test(formData.phone)) {
 };
 
   return (
-    <div
-    className="min-h-screen flex items-center
-   justify-center bg-cover
-   bg-center"
-    style={{
-    backgroundImage: "url('/register-bg.jpg')"
+   <div
+  className="relative min-h-screen flex items-center justify-end bg-cover bg-center overflow-hidden pr-24"
+  style={{
+    backgroundImage: "url('myhome.jpg')",
   }}
 >
-    <div className="bg-white/95 p-8 rounded-xl shadow-2xl w-[430px] max-h-[90vh] overflow-y-auto backdrop-blur-sm">
-      <h1 className="text-3xl font-bold text-center mb-6">
+  {/* Dark Overlay */}
+  <div className="absolute inset-0 bg-black/40"></div>
+
+  {/* Glow Effect */}
+  <div className="absolute -top-24 -left-20 w-96 h-96 bg-cyan-400/20 rounded-full blur-3xl"></div>
+
+  <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl"></div>
+   <div
+  className="relative z-10 w-[700px] rounded-3xl
+  bg-white/10 backdrop-blur-2xl
+  border border-white/20
+  shadow-2xl
+  p-8
+  text-white"
+>
+      <h1 className="text-4xl font-bold text-center mb-8 text-white">
        Create Account
       </h1>
       <form onSubmit={handleSubmit}>
 
-       <div className="mb-4">
-       <label className="block mb-1 font-medium">
-         First Name
-      </label>
-      <input
-       type="text"
-       name="firstName"
-       value={formData.firstName}
-       onChange={handleChange}
-       placeholder="Enter First Name"
-       className="w-full border p-3 rounded-lg"
-     />
-    </div>
-      <div className="mb-4">
-      <label className="block mb-1 font-medium">
-       Last Name
-      </label>
+       <div className="grid grid-cols-2 gap-4 mb-5">
 
-      <input
-       type="text"
-       name="lastName"
-       value={formData.lastName}
-       onChange={handleChange}
-       placeholder="Enter Last Name"
-       className="w-full border p-3 rounded-lg"
-     />
-     </div>
-     <div className="mb-4">
-       <label className="block mb-1 font-medium">
-         Phone Number
-        </label>
-        <input
-         type="tel"
-         name="phone"
-         value={formData.phone}
-         onChange={handleChange}
-         placeholder="Enter Phone Number"
-         className="w-full border p-3 rounded-lg"
-       />
-     </div>
+  <div>
+    <label className="block mb-2">First Name</label>
 
-        <div className="mb-4">
-           <label className="block mb-1 font-medium">
-             Email
-           </label>
+    <input
+      type="text"
+      name="firstName"
+      value={formData.firstName}
+      onChange={handleChange}
+      placeholder="Enter First Name"
+      className="w-full p-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-300"
+    />
+  </div>
 
-          <input
-           type="email"
-           name="email"
-           value={formData.email}
-           onChange={handleChange}
-           placeholder="Enter Email"
-           className="w-full border p-3 rounded-lg"
-         />
-       </div>
+  <div>
+    <label className="block mb-2">Last Name</label>
 
-        <div className="mb-4">
-          <label className="block mb-1 font-medium">
-            Password
-          </label>
+    <input
+      type="text"
+      name="lastName"
+      value={formData.lastName}
+      onChange={handleChange}
+      placeholder="Enter Last Name"
+      className="w-full p-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-300"
+    />
+  </div>
 
-         <input
-           type="password"
-           name="password"
-           value={formData.password}
-           onChange={handleChange}
-           placeholder="Enter Password"
-           className="w-full border p-3 rounded-lg"
-         />
-    </div>
-        <div className="mb-4">
-          <label className="block mb-1 font-medium">
-           Confirm Password
-         </label>
+</div>
+     <div className="grid grid-cols-2 gap-4 mb-5">
 
-         <input
-           type="password"
-           name="confirmPassword"
-           value={formData.confirmPassword}
-           onChange={handleChange}
-           placeholder="Confirm Password"
-           className="w-full border p-3 rounded-lg"
-         />
-       </div>
+  <div>
+    <label className="block mb-2">Phone Number</label>
 
-        <div className="mb-4">
-            <label className="block mb-1 font-medium">
-             Role
-           </label>
+    <input
+      type="tel"
+      name="phone"
+      value={formData.phone}
+      onChange={handleChange}
+      placeholder="Phone Number"
+      className="w-full p-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-300"
+    />
+  </div>
 
-            <select
-             name="role"
-             value={formData.role}
-             onChange={handleChange}
-             className="w-full border p-3 rounded-lg"
-             >
-             <option value="">Select Role</option>
-             <option value="BUYER">Buyer</option>
-             <option value="AGENT">Real Estate Agent</option>
-             <option value="LEGAL_REVIEWER">Legal Reviewer</option>
-             <option value="FINANCIAL_INSTITUTION">Financial Institution</option>
-           </select>
-         </div>
+  <div>
+    <label className="block mb-2">Email</label>
 
-        <button
-         type="submit"
-         className="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition duration-300"
-         >
-         Register
-        </button>
+    <input
+      type="email"
+      name="email"
+      value={formData.email}
+      onChange={handleChange}
+      placeholder="Email"
+      className="w-full p-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-300"
+    />
+  </div>
 
+</div>
+
+        <div className="grid grid-cols-2 gap-4 mb-5">
+
+  <div>
+    <label className="block mb-2">Password</label>
+
+    <input
+      type="password"
+      name="password"
+      value={formData.password}
+      onChange={handleChange}
+      placeholder="Password"
+      className="w-full p-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-300"
+    />
+  </div>
+
+  <div>
+    <label className="block mb-2">Confirm Password</label>
+
+    <input
+      type="password"
+      name="confirmPassword"
+      value={formData.confirmPassword}
+      onChange={handleChange}
+      placeholder="Confirm Password"
+      className="w-full p-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-300"
+    />
+  </div>
+
+</div>
+        <div className="mb-6">
+  <label className="block mb-2 font-medium text-white">
+    Role
+  </label>
+
+  <select
+    name="role"
+    value={formData.role}
+    onChange={handleChange}
+    className="w-full p-3 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
+  >
+    <option value="" className="text-black">
+      Select Role
+    </option>
+
+    <option value="Buyer" className="text-black">
+      Buyer
+    </option>
+
+    <option value="Real Estate Agent" className="text-black">
+      Real Estate Agent
+    </option>
+
+    <option value="Legal Reviewer" className="text-black">
+      Legal Reviewer
+    </option>
+
+    <option value="Financial Institution" className="text-black">
+      Financial Institution
+    </option>
+
+    <option value="Administrator" className="text-black">
+      Administrator
+    </option>
+  </select>
+</div>
+       <div className="flex justify-center mt-8">
+  <button
+    type="submit"
+    className="w-64 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-600 text-white font-semibold transition-all duration-300 hover:scale-105"
+  >
+    Register
+  </button>
+</div>
       </form>
-       <p className="text-center mt-4 text-gray-600">
+       <p className="text-center mt-6 text-gray-300">
        Already have an account?
        <Link
          to="/login"
-         className="text-blue-600 cursor-pointer ml-1"
+         className="text-cyan-300 ml-2 hover:text-white"
          >
          Login
        </Link>
