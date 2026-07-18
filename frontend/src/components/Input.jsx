@@ -1,8 +1,14 @@
 export default function Input({
-  type,
+  type = "text",
   placeholder,
   value,
   onChange,
+  className = "",
+  required = false,
+  name,
+  id,
+  disabled = false,
+  ...props
 }) {
   return (
     <input
@@ -10,6 +16,12 @@ export default function Input({
       placeholder={placeholder}
       value={value}
       onChange={onChange}
+      className={`form-input ${className}`}
+      required={required}
+      name={name}
+      id={id}
+      disabled={disabled}
+      {...props}
     />
   );
 }

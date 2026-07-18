@@ -1,74 +1,135 @@
 "use client";
 
+import { useState } from "react";
 import Navbar from "../../components/Navbar";
+import { Search, MapPin, ShieldCheck, HelpCircle } from "lucide-react";
 import "./properties.css";
 
 export default function PropertiesPage() {
+  const [searchTerm, setSearchTerm] = useState("");
+
   const properties = [
     {
       id: 1,
       title: "Luxury Villa",
-      location: "Chennai",
+      location: "Chennai, Tamil Nadu",
       price: "₹75,00,000",
-      image:
-        "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=600",
+      status: "Verified",
+      score: "98/100 Title Score",
+      image: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=600&q=80",
     },
     {
       id: 2,
       title: "Modern Apartment",
-      location: "Bangalore",
+      location: "Bangalore, Karnataka",
       price: "₹55,00,000",
-      image:
-        "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=600",
+      status: "Verified",
+      score: "95/100 Title Score",
+      image: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=600&q=80",
     },
     {
       id: 3,
       title: "Independent House",
-      location: "Coimbatore",
+      location: "Coimbatore, Tamil Nadu",
       price: "₹90,00,000",
-      image:
-        "https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600",
+      status: "Under Review",
+      score: "In Progress",
+      image: "https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600&q=80",
     },
     {
       id: 4,
       title: "Premium Flat",
-      location: "Hyderabad",
+      location: "Hyderabad, Telangana",
       price: "₹68,00,000",
-      image:
-        "https://images.unsplash.com/photo-1460317442991-0ec209397118?w=600",
+      status: "Verified",
+      score: "92/100 Title Score",
+      image: "https://images.unsplash.com/photo-1460317442991-0ec209397118?w=600&q=80",
     },
   ];
 
+  const filteredProperties = properties.filter((property) =>
+    property.location.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--bg-main)" }}>
       <Navbar />
 
       <div className="properties-page">
+        <header className="properties-header">
+          <h1>Available Properties</h1>
+          <p className="properties-subtitle">
+            Explore premium verified listings backed by exhaustive AI and legal due diligence reports.
+          </p>
+        </header>
 
-        <h1>Available Properties</h1>
-
-        <div className="search-bar">
-          <input type="text" placeholder="Search by location..." />
-          <button>Search</button>
+        <div className="properties-search-section">
+          <div className="search-bar-wrapper">
+            <Search className="search-icon" size={20} />
+            <input
+              type="text"
+              placeholder="Search by location (e.g. Chennai, Bangalore)..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
 
         <div className="property-grid">
-          {properties.map((property) => (
-            <div key={property.id} className="property-card">
-              <img src={property.image} alt={property.title} />
+          {filteredProperties.length > 0 ? (
+            filteredProperties.map((property) => (
+              <div key={property.id} className="property-card">
+                <div className="property-image-container">
+                  <img src={property.image} alt={property.title} />
+                  
+                  {/* Status Badge */}
+                  <span className={`status-badge ${property.status.toLowerCase().replace(" ", "-")}`}>
+                    {property.status === "Verified" ? (
+                      <>
+                        <ShieldCheck size={14} />
+                        Verified Title
+                      </>
+                    ) : (
+                      <>
+                        <HelpCircle size={14} />
+                        Under Legal Review
+                      </>
+                    )}
+                  </span>
+                </div>
 
-              <div className="property-content">
-                <h3>{property.title}</h3>
-                <p>{property.location}</p>
-                <span>{property.price}</span>
+                <div className="property-content">
+                  <div className="property-header-row">
+                    <h3>{property.title}</h3>
+                    <span className="due-diligence-score">{property.score}</span>
+                  </div>
 
-                <button>View Details</button>
+                  <div className="property-location">
+                    <MapPin size={16} />
+                    <span>{property.location}</span>
+                  </div>
+
+                  <div className="property-footer-row">
+                    <div className="price-container">
+                      <span className="price-label">ESTIMATED PRICE</span>
+                      <span className="price-amount">{property.price}</span>
+                    </div>
+
+                    <button className="details-btn">
+                      Verify Details
+                    </button>
+                  </div>
+                </div>
               </div>
+            ))
+          ) : (
+            <div className="no-results">
+              <h3>No properties found</h3>
+              <p>Try searching for a different location or check back later.</p>
             </div>
-          ))}
+          )}
         </div>
-
       </div>
-    </>
+    </div>
   );
 }
