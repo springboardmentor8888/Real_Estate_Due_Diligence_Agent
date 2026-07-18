@@ -14,8 +14,12 @@ public class PropertyServiceImpl implements PropertyService {
     @Autowired
     private PropertyRepository propertyRepository;
 
+    @Autowired
+    private AddressValidationService addressValidationService;
+
     @Override
     public Property saveProperty(Property property) {
+        addressValidationService.validateAddress(property);
         return propertyRepository.save(property);
     }
 
@@ -31,6 +35,7 @@ public class PropertyServiceImpl implements PropertyService {
 
     @Override
     public Property updateProperty(Long id, Property property) {
+        addressValidationService.validateAddress(property);
         property.setPropertyId(id);
         return propertyRepository.save(property);
     }
