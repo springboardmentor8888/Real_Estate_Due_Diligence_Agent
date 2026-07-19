@@ -5,6 +5,7 @@ import Notifications from "./Notifications";
 import RecentReports from "./RecentReports";
 import { FaSearch, FaFileAlt, FaBookmark, FaBell } from "react-icons/fa";
 
+
 const Dashboard = () => {
   return (
     <div className="px-8 pt-5 pb-8">

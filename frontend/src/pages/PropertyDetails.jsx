@@ -15,6 +15,7 @@ import {
   FaHospital,
   FaShoppingCart,
   FaSubway,
+  FaMapMarkedAlt,
 } from "react-icons/fa";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -52,11 +53,24 @@ const property = {
     "Encumbrance Certificate",
     "Survey Map",
   ],
+
+  zoning: {
+    zoneType: "Residential",
+    landUse: "Residential Development",
+    far: "2.5",
+    maxHeight: "G+3 Floors",
+    plotCoverage: "60%",
+    authority: "GHMC",
+    regulations: "Municipal Zoning Act 2020",
+    lastUpdated: "15 Jan 2025",
+    status: "Approved",
+  },
 };
 
 const PropertyDetails = () => {
   const [selectedImage, setSelectedImage] = useState(property.images[0]);
   const navigate = useNavigate();
+  
   return (
     <div className="px-8 pt-5 pb-8">
       <button
@@ -68,9 +82,9 @@ const PropertyDetails = () => {
       </button>
 
       <div className="text-center mb-10">
-        <h1 className="text-4xl font-bold text-gray-800">Property Details</h1>
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-800">Property Details</h1>
 
-        <p className="text-gray-500 mt-3 text-lg">
+        <p className="text-gray-500 mt-3 text-base md:text-lg">
           Complete due diligence information for the selected property.
         </p>
       </div>
@@ -79,17 +93,17 @@ const PropertyDetails = () => {
         <img
           src={selectedImage}
           alt={property.title}
-          className="w-full h-[450px] object-cover"
+          className="w-full h-64 md:h-96 lg:h-[450px] object-cover"
         />
 
-        <div className="grid grid-cols-4 gap-4 p-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
           {property.images.map((image, index) => (
             <img
               key={index}
               src={image}
               alt={`Property ${index + 1}`}
               onClick={() => setSelectedImage(image)}
-              className={`h-28 w-full rounded-xl object-cover cursor-pointer transition border-4 ${
+              className={`h-20 md:h-28 w-full rounded-xl object-cover cursor-pointer transition border-4 ${
                 selectedImage === image
                   ? "border-blue-600"
                   : "border-transparent hover:border-gray-300"
@@ -99,7 +113,7 @@ const PropertyDetails = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-6 mt-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
         <div className="bg-white rounded-xl shadow p-5 flex items-center gap-4">
           <FaHome className="text-3xl text-blue-600" />
 
@@ -141,7 +155,7 @@ const PropertyDetails = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6 mt-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         <div className="bg-white rounded-2xl shadow p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">
             Property Information
@@ -243,7 +257,7 @@ const PropertyDetails = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6 mt-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         <div className="bg-white rounded-2xl shadow p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">
             Due Diligence Status
@@ -291,8 +305,90 @@ const PropertyDetails = () => {
             </div>
           </div>
         </div>
+        
+        <div className="bg-white rounded-2xl shadow p-6  transition-all duration-300 hover:shadow-lg">
+          <div className="flex items-center gap-3 mb-6">
+            <FaMapMarkedAlt className="text-2xl text-blue-600" />
 
-        <div className="bg-white rounded-2xl shadow p-6">
+            <h2 className="text-2xl font-bold text-gray-800">
+                  Zoning Information
+              </h2>
+          </div>
+
+          <div className="space-y-4">
+
+            <div className="flex items-center justify-between border-b pb-3">
+              <span className="text-gray-500">Zone Type</span>
+              <span className="font-semibold text-gray-800">
+                {property.zoning.zoneType}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between border-b pb-3">
+              <span className="text-gray-500">Land Use</span>
+              <span className="font-semibold text-gray-800">
+                {property.zoning.landUse}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between border-b pb-3">
+              <span className="text-gray-500">FAR / FSI</span>
+              <span className="font-semibold text-gray-800">
+                {property.zoning.far}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between border-b pb-3">
+              <span className="text-gray-500">Maximum Height</span>
+              <span className="font-semibold text-gray-800">
+                {property.zoning.maxHeight}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between border-b pb-3">
+              <span className="text-gray-500">Plot Coverage</span>
+              <span className="font-semibold text-gray-800">
+                {property.zoning.plotCoverage}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between border-b pb-3">
+              <span className="text-gray-500">Authority</span>
+              <span className="font-semibold text-gray-800">
+                {property.zoning.authority}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between border-b pb-3">
+              <span className="text-gray-500">Applicable Regulations</span>
+
+              <span className="font-semibold text-gray-800">
+                    {property.zoning.regulations}
+                </span>
+            </div>
+
+            <div className="flex items-center justify-between border-b pb-3">
+              <span className="text-gray-500">Last Updated</span>
+
+              <span className="font-semibold text-gray-800">
+                    {property.zoning.lastUpdated}
+                </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-gray-500">Approval Status</span>
+
+              <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-700">
+                <FaCheckCircle className="mr-2 text-green-600" />
+                {property.zoning.status}
+              </span>
+            </div>
+
+          </div>
+        </div>
+          
+      </div>
+      <div className="bg-white rounded-2xl shadow p-6 mt-8">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">
             Property Documents
           </h2>
@@ -314,9 +410,8 @@ const PropertyDetails = () => {
             ))}
           </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-6 mt-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         <div className="bg-white rounded-2xl shadow p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">
             Property Description
@@ -359,7 +454,7 @@ const PropertyDetails = () => {
           Nearby Amenities
         </h2>
 
-        <div className="grid grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
           <div className="rounded-xl bg-gray-50 p-5 text-center">
             <FaSchool className="mx-auto text-4xl text-blue-600" />
             <h3 className="font-semibold mt-3">Schools</h3>
@@ -387,12 +482,16 @@ const PropertyDetails = () => {
       </div>
 
       <div className="flex justify-end gap-4 mt-10">
-        <button className="flex items-center gap-2 rounded-xl border border-blue-600 px-6 py-3 font-semibold text-blue-600 hover:bg-blue-50 transition">
+        <button 
+        onClick={() => navigate("/property-history")}
+        className="flex items-center gap-2 rounded-xl border border-blue-600 px-6 py-3 font-semibold text-blue-600 hover:bg-blue-50 transition">
           <FaHistory />
           Property History
         </button>
 
-        <button className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700 transition">
+        <button 
+        onClick={() => navigate("/reports")}
+        className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700 transition">
           <FaFileAlt />
           Generate Due Diligence Report
         </button>
