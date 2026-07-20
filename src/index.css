@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --primary: 0.60 0.16 155;
+    --primary-foreground: 0.99 0.003 250;
+    --background: 0.985 0.003 250;
+    --surface: 0.99 0.003 250;
+    --surface-2: 0.975 0.004 250;
+    --card: 1 0 0;
+    --popover: 1 0 0;
+    --foreground: 0.20 0.02 260;
+    --secondary-foreground: 0.22 0.02 260;
+    --muted-foreground: 0.50 0.015 258;
+    --accent: 0.95 0.03 155;
+    --secondary: 0.96 0.005 250;
+    --muted: 0.96 0.005 250;
+    --destructive: 0.62 0.22 25;
+    --destructive-foreground: 0.99 0.003 250;
+    --border: 0.20 0.02 260;
+    --input: 0.20 0.02 260;
+    --ring: 0.60 0.16 155;
+    --chart-1: 0.60 0.16 155;
+    --chart-2: 0.60 0.14 220;
+    --chart-3: 0.75 0.15 85;
+    --chart-4: 0.65 0.22 25;
+    --chart-5: 0.60 0.18 300;
+    --emerald: 0.60 0.16 155;
+  }
+
+  * {
+    border-color: oklch(var(--border) / 0.09);
+  }
+
+  body {
+    background-color: oklch(var(--background));
+    background-image: 
+      radial-gradient(circle at top left, oklch(0.62 0.15 155 / 0.07) 0%, transparent 45%),
+      radial-gradient(circle at top right, oklch(0.60 0.14 220 / 0.05) 0%, transparent 45%);
+    background-attachment: fixed;
+    color: oklch(var(--foreground));
+    font-family: Inter, system-ui, -apple-system, sans-serif;
+    margin: 0;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  .glass {
+    background: oklch(1 0 0 / 0.90);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid oklch(0.20 0.02 260 / 0.09);
+  }
+
+  .glass-strong {
+    background: oklch(1 0 0 / 0.97);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    border: 1px solid oklch(0.20 0.02 260 / 0.09);
+  }
+
+  .text-gradient {
+    background: linear-gradient(135deg, oklch(0.22 0.02 260) 0%, oklch(0.42 0.02 258) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-emerald {
+    background: linear-gradient(135deg, oklch(0.55 0.17 155) 0%, oklch(0.45 0.15 175) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .shadow-glow {
+    box-shadow: 0 0 40px oklch(0.60 0.16 155 / 0.15);
+  }
+
+  .shadow-elevated {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+  }
+
+  .grid-bg {
+    background-image:
+      radial-gradient(circle at 1px 1px, oklch(0.20 0.02 260 / 0.02) 1px, transparent 0);
+    background-size: 40px 40px;
+  }
+}
