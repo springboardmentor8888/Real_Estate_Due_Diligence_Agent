@@ -22,6 +22,10 @@ CREATE TABLE api_logs (
 
     success BOOLEAN DEFAULT TRUE,
 
+    retry_count INTEGER DEFAULT 0,
+
+    response_body JSONB,
+
     error_message TEXT,
 
     CONSTRAINT fk_api_provider

@@ -14,6 +14,8 @@ CREATE TABLE properties (
 
     property_code VARCHAR(30) NOT NULL UNIQUE,
 
+    external_property_id VARCHAR(100),
+
     property_type_id BIGINT NOT NULL,
 
     property_name VARCHAR(200) NOT NULL,
@@ -29,6 +31,10 @@ CREATE TABLE properties (
     market_value DECIMAL(18,2),
 
     status VARCHAR(30) NOT NULL DEFAULT 'UNDER_REVIEW',
+
+    source_provider VARCHAR(100),
+
+    last_synced_at TIMESTAMP,
 
     created_by BIGINT NOT NULL,
 
@@ -73,6 +79,8 @@ CREATE TABLE addresses (
     address_line1 VARCHAR(255) NOT NULL,
 
     address_line2 VARCHAR(255),
+
+    formatted_address TEXT,
 
     city VARCHAR(100) NOT NULL,
 

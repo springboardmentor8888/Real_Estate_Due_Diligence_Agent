@@ -22,6 +22,10 @@ CREATE TABLE property_taxes (
 
     payment_date DATE,
 
+    tax_receipt_number VARCHAR(100),
+
+    tax_authority VARCHAR(150),
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -56,6 +60,10 @@ CREATE TABLE permits (
     expiry_date DATE,
 
     status VARCHAR(30),
+
+    document_url TEXT,
+
+    verification_status VARCHAR(30),
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
@@ -151,6 +159,8 @@ CREATE TABLE environmental_records (
 
     description TEXT,
 
+    report_url TEXT,
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -178,6 +188,10 @@ CREATE TABLE utility_information (
     connection_status VARCHAR(30),
 
     account_reference VARCHAR(100),
+
+    last_bill_date DATE,
+
+    provider_contact VARCHAR(100),
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
