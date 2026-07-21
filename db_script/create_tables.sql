@@ -59,3 +59,17 @@ CREATE TABLE ownership_records (
         FOREIGN KEY (property_id)
         REFERENCES properties(id)
 );
+
+CREATE TABLE property_tax_history (
+    id BIGSERIAL PRIMARY KEY,
+    tax_year INTEGER,
+    tax_amount DECIMAL(15,2),
+    payment_status VARCHAR(100),
+    property_id BIGINT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_tax_property
+        FOREIGN KEY (property_id)
+        REFERENCES properties(id)
+        ON DELETE CASCADE
+);

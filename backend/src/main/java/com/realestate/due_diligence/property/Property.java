@@ -1,4 +1,5 @@
 package com.realestate.due_diligence.property;
+import com.realestate.due_diligence.propertytax.PropertyTaxHistory;
 import com.realestate.due_diligence.ownership.OwnershipRecord;
 import java.util.List;
 import com.realestate.due_diligence.common.BaseEntity;
@@ -25,4 +26,6 @@ public class Property extends BaseEntity {
     private String propertyType;
     @OneToMany(mappedBy = "property")
 private List<OwnershipRecord> ownershipRecords;
+   @OneToMany(mappedBy = "property")
+private List<PropertyTaxHistory> taxHistory;
 }
