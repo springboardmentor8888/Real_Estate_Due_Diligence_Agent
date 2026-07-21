@@ -16,6 +16,9 @@ import {
   FaShoppingCart,
   FaSubway,
   FaMapMarkedAlt,
+  FaWater,
+  FaShieldAlt,
+  FaBuilding,
 } from "react-icons/fa";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -64,6 +67,15 @@ const property = {
     regulations: "Municipal Zoning Act 2020",
     lastUpdated: "15 Jan 2025",
     status: "Approved",
+  },
+
+  floodZone: {
+    riskLevel: "Low",
+    floodZoneCode: "Zone X",
+    lastFloodYear: "2013",
+    floodInsurance: "Not Required",
+    authority: "National Disaster Management Authority",
+    status: "Safe",
   },
 };
 
@@ -259,9 +271,13 @@ const PropertyDetails = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         <div className="bg-white rounded-2xl shadow p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">
-            Due Diligence Status
-          </h2>
+          <div className="flex items-center gap-3 mb-6">
+              <FaCheckCircle className="text-2xl text-green-600" />
+
+              <h2 className="text-2xl font-bold text-gray-800">
+                  Due Diligence Status
+              </h2>
+          </div>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -301,6 +317,38 @@ const PropertyDetails = () => {
 
               <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm">
                 {property.litigation}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span>Encumbrance Certificate</span>
+
+              <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm">
+                Verified
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span>Survey Records</span>
+
+              <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm">
+                Verified
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span>Mutation Records</span>
+
+              <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm">
+                Updated
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span>Title Verification</span>
+
+              <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm">
+                Clear
               </span>
             </div>
           </div>
@@ -410,6 +458,66 @@ const PropertyDetails = () => {
             ))}
           </div>
         </div>
+      
+      <div className="bg-white rounded-2xl shadow p-6 mt-8 transition-all duration-300 hover:shadow-lg">
+        <div className="flex items-center gap-3 mb-6">
+          <FaWater className="text-2xl text-blue-600" />
+          <h2 className="text-2xl font-bold text-gray-800">
+            Flood Zone Verification
+          </h2>
+        </div>
+
+        <div className="space-y-4">
+
+          <div className="flex items-center justify-between border-b pb-3">
+            <span className="text-gray-500">Risk Level</span>
+            <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm font-semibold">
+                {property.floodZone.riskLevel}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between border-b pb-3">
+            <span className="text-gray-500">Flood Zone Code</span>
+            <span className="font-semibold text-gray-800">
+              {property.floodZone.floodZoneCode}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between border-b pb-3">
+            <span className="text-gray-500">Last Major Flood</span>
+            <span className="font-semibold text-gray-800">
+              {property.floodZone.lastFloodYear}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between border-b pb-3">
+            <span className="text-gray-500">Flood Insurance</span>
+            <span className="font-semibold text-gray-800">
+              {property.floodZone.floodInsurance}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between border-b pb-3">
+            <div className="flex items-center gap-2 text-gray-500">
+                <span>Authority</span>
+            </div>
+
+            <span className="font-semibold text-gray-800 text-right max-w-sm">
+              {property.floodZone.authority}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-gray-500">Verification Status</span>
+
+            <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-700">
+              <FaShieldAlt className="mr-2 text-green-600" />
+              {property.floodZone.status}
+            </span>
+          </div>
+
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         <div className="bg-white rounded-2xl shadow p-6">
