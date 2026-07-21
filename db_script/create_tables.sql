@@ -43,3 +43,19 @@ INSERT INTO roles (role_name) VALUES
 ('Legal Reviewer'),
 ('Financial Institution'),
 ('Administrator');
+
+
+CREATE TABLE ownership_records (
+    id BIGSERIAL PRIMARY KEY,
+    owner_name VARCHAR(255) NOT NULL,
+    purchase_date DATE,
+    purchase_price DECIMAL(15,2),
+    property_id BIGINT NOT NULL,
+
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+
+    CONSTRAINT fk_ownership_property
+        FOREIGN KEY (property_id)
+        REFERENCES properties(id)
+);
