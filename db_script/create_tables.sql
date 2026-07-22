@@ -82,3 +82,12 @@ CREATE TABLE zoning_info (
     property_id BIGINT REFERENCES properties(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE flood_zone_info (
+    id BIGSERIAL PRIMARY KEY,
+    flood_zone_code VARCHAR(100),
+    flood_risk_level VARCHAR(100),
+    flood_insurance_required BOOLEAN,
+    property_id BIGINT REFERENCES properties(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
