@@ -1,6 +1,7 @@
-import AppRouter from "./routes/AppRoutes";
-
 function App() {
-  return <AppRouter />;
+  return (
+    <h1>Real Estate Due Diligence Agent</h1>
+  );
 }
+
 export default App;
