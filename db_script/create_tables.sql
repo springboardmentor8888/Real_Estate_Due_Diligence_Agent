@@ -91,3 +91,22 @@ CREATE TABLE flood_zone_info (
     property_id BIGINT REFERENCES properties(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE building_permit_records (
+    id BIGSERIAL PRIMARY KEY,
+    permit_number VARCHAR(100),
+    permit_type VARCHAR(100),
+    issue_date DATE,
+    status VARCHAR(100),
+    property_id BIGINT REFERENCES properties(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE environmental_records (
+    id BIGSERIAL PRIMARY KEY,
+    record_type VARCHAR(100),
+    risk_level VARCHAR(50),
+    description TEXT,
+    property_id BIGINT REFERENCES properties(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
