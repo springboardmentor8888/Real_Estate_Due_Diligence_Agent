@@ -38,8 +38,8 @@ const menuItems = [
   },
   {
     icon: <HiOutlineScale />,
-    label: "Comparisons",
-    path: "/comparisons",
+    label: "Property Comparison",
+    path: "/property-comparison",
   },
   {
     icon: <HiOutlineClock />,
