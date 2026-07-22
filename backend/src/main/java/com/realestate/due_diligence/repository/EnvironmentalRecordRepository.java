@@ -1,14 +1,12 @@
 package com.realestate.due_diligence.repository;
 
-import java.util.List;
-
+import com.realestate.due_diligence.environment.EnvironmentalRecord;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.realestate.due_diligence.environmental.EnvironmentalRecord;
+import java.util.List;
 
 public interface EnvironmentalRecordRepository
         extends JpaRepository<EnvironmentalRecord, Long> {
 
     List<EnvironmentalRecord> findByPropertyId(Long propertyId);
-
 }
