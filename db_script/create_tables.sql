@@ -43,3 +43,51 @@ INSERT INTO roles (role_name) VALUES
 ('Legal Reviewer'),
 ('Financial Institution'),
 ('Administrator');
+
+
+CREATE TABLE ownership_records (
+    id BIGSERIAL PRIMARY KEY,
+    owner_name VARCHAR(255) NOT NULL,
+    purchase_date DATE,
+    purchase_price DECIMAL(15,2),
+    property_id BIGINT NOT NULL,
+
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+
+    CONSTRAINT fk_ownership_property
+        FOREIGN KEY (property_id)
+        REFERENCES properties(id)
+);
+
+CREATE TABLE property_tax_history (
+    id BIGSERIAL PRIMARY KEY,
+    tax_year INTEGER,
+    tax_amount DECIMAL(15,2),
+    payment_status VARCHAR(100),
+    property_id BIGINT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_tax_property
+        FOREIGN KEY (property_id)
+        REFERENCES properties(id)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE zoning_info (
+    id BIGSERIAL PRIMARY KEY,
+    zoning_code VARCHAR(100),
+    zoning_description VARCHAR(255),
+    permitted_use VARCHAR(255),
+    property_id BIGINT REFERENCES properties(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE flood_zone_info (
+    id BIGSERIAL PRIMARY KEY,
+    flood_zone_code VARCHAR(100),
+    flood_risk_level VARCHAR(100),
+    flood_insurance_required BOOLEAN,
+    property_id BIGINT REFERENCES properties(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

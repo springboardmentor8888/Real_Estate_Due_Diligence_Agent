@@ -5,5 +5,4 @@ import com.realestate.due_diligence.property.dto.PropertyResponse;
 public interface PropertyApiService {
 
     PropertyResponse fetchPropertyDetails(Long propertyId);
-
 }
