@@ -73,3 +73,12 @@ CREATE TABLE property_tax_history (
         REFERENCES properties(id)
         ON DELETE CASCADE
 );
+
+CREATE TABLE zoning_info (
+    id BIGSERIAL PRIMARY KEY,
+    zoning_code VARCHAR(100),
+    zoning_description VARCHAR(255),
+    permitted_use VARCHAR(255),
+    property_id BIGINT REFERENCES properties(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
