@@ -12,7 +12,6 @@ import SearchProperty from "../pages/SearchProperty";
 import PropertyDetails from "../pages/PropertyDetails";
 import PropertyHistory from "../pages/PropertyHistory";
 import Layout from "../components/common/Layout";
-import SavedProperties from "../pages/SavedProperties";
 
 function AppRouter() {
   return (
@@ -52,6 +51,10 @@ export default AppRouter;
 
 function Reports() {
   return <h1 className="text-3xl font-bold">My Reports</h1>;
+}
+
+function SavedProperties() {
+  return <h1 className="text-3xl font-bold">Saved Properties</h1>;
 }
 
 function Comparisons() {
