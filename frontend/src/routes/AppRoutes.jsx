@@ -12,6 +12,8 @@ import SearchProperty from "../pages/SearchProperty";
 import PropertyDetails from "../pages/PropertyDetails";
 import PropertyHistory from "../pages/PropertyHistory";
 import Layout from "../components/common/Layout";
+import SavedProperties from "../pages/SavedProperties";
+import PropertyComparison from "../pages/PropertyComparison";
 
 function AppRouter() {
   return (
@@ -21,8 +23,6 @@ function AppRouter() {
       <Route path="/login" element={<Login />} />
 
       <Route path="/register" element={<Register />} />
-
-      <Route path="/profile" element={<Profile />} />
 
       <Route path="/forgot-password" element={<ForgotPassword />} />
 
@@ -36,7 +36,7 @@ function AppRouter() {
         <Route path="/property-history" element={<PropertyHistory />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/saved-properties" element={<SavedProperties />} />
-        <Route path="/comparisons" element={<Comparisons />} />
+        <Route path="/property-comparison" element={<PropertyComparison />} />
         <Route path="/alerts" element={<Alerts />} />
         <Route path="/audit-logs" element={<AuditLogs />} />
         <Route path="/settings" element={<Settings />} />
@@ -51,14 +51,6 @@ export default AppRouter;
 
 function Reports() {
   return <h1 className="text-3xl font-bold">My Reports</h1>;
-}
-
-function SavedProperties() {
-  return <h1 className="text-3xl font-bold">Saved Properties</h1>;
-}
-
-function Comparisons() {
-  return <h1 className="text-3xl font-bold">Comparisons</h1>;
 }
 
 function Alerts() {
