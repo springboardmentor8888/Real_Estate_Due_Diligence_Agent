@@ -36,7 +36,7 @@ export default function ProfilePage() {
 
       <div className="profile-page">
         <div className="profile-layout">
-          
+
           {/* Sidebar Panel */}
           <aside className="profile-sidebar">
             <div className="profile-header-card">
@@ -70,7 +70,7 @@ export default function ProfilePage() {
           <main className="profile-main-content">
             <section className="profile-details-card">
               <h3 className="section-title">Account Details</h3>
-              
+
               <div className="details-grid">
                 <div className="profile-detail-box">
                   <div className="detail-header">

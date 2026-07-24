@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../../context/AuthContext";
 import Navbar from "../../components/Navbar";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
@@ -12,21 +14,36 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleRegister(e) {
+  const { register } = useAuth();
+  const router = useRouter();
+
+  async function handleRegister(e) {
     e.preventDefault();
+    setErrorMsg("");
 
     if (!name || !email || !password || !confirmPassword || !role) {
-      alert("Please fill in all fields.");
+      setErrorMsg("Please fill in all required fields.");
       return;
     }
 
     if (password !== confirmPassword) {
-      alert("Passwords do not match.");
+      setErrorMsg("Passwords do not match.");
       return;
     }
 
-    alert("Registration validation successful!");
+    setSubmitting(true);
+
+    try {
+      await register({ name, email, password, role });
+      router.push("/profile");
+    } catch (err) {
+      setErrorMsg(err.message || "Registration failed. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -39,6 +56,12 @@ export default function RegisterPage() {
           <p style={{ textAlign: "center", color: "var(--text-muted)", fontSize: "14px", marginBottom: "32px", fontWeight: 500 }}>
             Create an account to start verifying properties
           </p>
+
+          {errorMsg && (
+            <div style={{ color: "#ef4444", background: "#fef2f2", padding: "10px 14px", borderRadius: "8px", fontSize: "14px", marginBottom: "16px", border: "1px solid #fca5a5" }}>
+              {errorMsg}
+            </div>
+          )}
 
           <form onSubmit={handleRegister}>
             <Input
@@ -97,7 +120,7 @@ export default function RegisterPage() {
               <option value="Admin">Administrator</option>
             </select>
 
-            <Button text="Create Account" type="submit" />
+            <Button text={submitting ? "Creating Account..." : "Create Account"} type="submit" disabled={submitting} />
           </form>
 
           <p style={{ textAlign: "center", marginTop: "24px", fontSize: "14px", color: "var(--text-muted)", fontWeight: 500 }}>

@@ -200,25 +200,25 @@
   .contact-page-container {
     padding: 30px 20px;
   }
-  
+
   .contact-card-split {
     flex-direction: column;
   }
-  
+
   .contact-info-panel,
   .contact-form-panel {
     width: 100%;
     padding: 36px 30px;
   }
-  
+
   .contact-info-panel h2 {
     font-size: 26px;
   }
-  
+
   .contact-panel-desc {
     margin-bottom: 24px;
   }
-  
+
   .contact-panel-footer {
     margin-top: 32px;
   }

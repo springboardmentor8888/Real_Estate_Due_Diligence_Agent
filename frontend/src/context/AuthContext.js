@@ -66,7 +66,7 @@ export function AuthProvider({ children }) {
 
   const register = async (userData) => {
     const response = await authApi.register(userData);
-    
+
     // Set user session and generated token
     const tokenVal = response?.token || ("jwt_token_" + Date.now());
     const userInfo = {

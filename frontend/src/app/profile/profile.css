@@ -279,17 +279,17 @@
     grid-template-columns: 1fr;
     gap: 30px;
   }
-  
+
   .profile-sidebar {
     position: static;
     padding: 30px 20px;
   }
-  
+
   .profile-details-card,
   .saved-listings-section {
     padding: 30px 20px;
   }
-  
+
   .details-grid {
     grid-template-columns: 1fr;
     gap: 16px;

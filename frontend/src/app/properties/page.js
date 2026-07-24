@@ -81,7 +81,7 @@ export default function PropertiesPage() {
               <div key={property.id} className="property-card">
                 <div className="property-image-container">
                   <img src={property.image} alt={property.title} />
-                  
+
                   {/* Status Badge */}
                   <span className={`status-badge ${property.status.toLowerCase().replace(" ", "-")}`}>
                     {property.status === "Verified" ? (

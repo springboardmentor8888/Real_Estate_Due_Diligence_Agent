@@ -1,4 +1,5 @@
 import { Geist, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import ClientProviders from "../components/ClientProviders";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -28,8 +29,9 @@ export default function RootLayout({ children }) {
       lang="en"
       className={`${plusJakarta.variable} ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <ClientProviders>{children}</ClientProviders>
+      </body>
     </html>
   );
 }
-
