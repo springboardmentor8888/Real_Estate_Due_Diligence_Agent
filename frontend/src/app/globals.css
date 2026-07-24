@@ -218,6 +218,9 @@ button:active,
   transition: var(--transition-smooth);
   position: relative;
   padding: 4px 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .navbar-link:hover {
@@ -258,3 +261,38 @@ button:active,
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
 }
+
+/* Active nav link state */
+.navbar-link-active {
+  color: var(--primary) !important;
+}
+
+.navbar-link-active::after {
+  transform: scaleX(1) !important;
+  transform-origin: left !important;
+}
+
+/* Bell notification icon */
+.navbar-bell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 6px;
+}
+
+.navbar-notif-dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+  border: 2px solid white;
+  animation: notif-pulse 2s ease-in-out infinite;
+}
+
+@keyframes notif-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.8; }
+}

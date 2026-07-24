@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   Mail,
@@ -12,18 +12,38 @@ import {
   Building2,
   ArrowRight,
 } from "lucide-react";
+import { apiFetch, setToken } from "../../lib/api";
 
 import "./login.css";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError(null);
 
-    // TODO:
-    // Connect Spring Boot Login API here
-    console.log("Login Button Clicked");
+    try {
+      const res = await apiFetch("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
+      
+      if (res && res.token) {
+        setToken(res.token);
+        router.push("/explore");
+      }
+    } catch (err) {
+      setError(err.message || "Invalid email or password");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -122,6 +142,12 @@ export default function LoginPage() {
             Login to continue to your account
           </p>
 
+          {error && (
+            <div style={{ backgroundColor: "#fff1f2", color: "#be123c", padding: "12px", borderRadius: "8px", marginBottom: "20px", fontSize: "14px", border: "1px solid #fecdd3" }}>
+              {error}
+            </div>
+          )}
+
           {/* EMAIL */}
 
           <div className="input-group">
@@ -135,6 +161,8 @@ export default function LoginPage() {
               <input
                 type="email"
                 placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
 
@@ -160,6 +188,8 @@ export default function LoginPage() {
                 type={showPassword ? "text" : "password"}
                 placeholder="Enter your password"
                 autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
               />
 
@@ -185,12 +215,9 @@ export default function LoginPage() {
 
           {/* LOGIN */}
 
-          <button className="login-btn">
-
-            Login
-
-            <ArrowRight size={18} />
-
+          <button className="login-btn" disabled={loading}>
+            {loading ? "Logging in..." : "Login"}
+            {!loading && <ArrowRight size={18} />}
           </button>
 
           <div className="divider">
