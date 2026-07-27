@@ -1,11 +1,19 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Navbar from "../../components/Navbar";
 import SavedPropertyCard from "../../components/SavedPropertyCard";
-import { User, Mail, Phone, MapPin, ShieldCheck, Edit3, LogOut, Heart } from "lucide-react";
+import { User, Mail, Phone, MapPin, ShieldCheck, Edit3, LogOut, Heart, Loader2 } from "lucide-react";
+import { apiFetch, clearToken, getToken } from "../../lib/api";
 import "./profile.css";
 
 export default function ProfilePage() {
+  const router = useRouter();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // We can leave some dummy saved properties for UI showcase since that API isn't built yet
   const savedProperties = [
     {
       id: 1,
@@ -30,6 +38,45 @@ export default function ProfilePage() {
     },
   ];
 
+  useEffect(() => {
+    // Check auth
+    if (!getToken()) {
+      router.push("/login");
+      return;
+    }
+
+    const fetchUser = async () => {
+      try {
+        const data = await apiFetch("/api/users/me");
+        setUser(data);
+      } catch (err) {
+        console.error("Failed to load user info:", err);
+        clearToken();
+        router.push("/login");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser();
+  }, [router]);
+
+  const handleLogout = () => {
+    clearToken();
+    router.push("/login");
+  };
+
+  if (loading || !user) {
+    return (
+      <div style={{ minHeight: "100vh", backgroundColor: "var(--bg-main)" }}>
+        <Navbar />
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh", color: "var(--primary)" }}>
+          <Loader2 size={32} className="spin" style={{ animation: "spin 1s linear infinite" }} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--bg-main)" }}>
       <Navbar />
@@ -49,8 +96,8 @@ export default function ProfilePage() {
                 </span>
               </div>
 
-              <h2>Madhumitha</h2>
-              <p className="role-tag">Real Estate Buyer</p>
+              <h2>{user.name}</h2>
+              <p className="role-tag">User</p>
               <span className="profile-status">🛡️ KYC Verified</span>
             </div>
 
@@ -59,7 +106,7 @@ export default function ProfilePage() {
                 <Edit3 size={16} />
                 Edit Profile
               </button>
-              <button className="profile-menu-btn logout-btn">
+              <button className="profile-menu-btn logout-btn" onClick={handleLogout}>
                 <LogOut size={16} />
                 Sign Out
               </button>
@@ -77,7 +124,7 @@ export default function ProfilePage() {
                     <User size={16} />
                     <span>Full Name</span>
                   </div>
-                  <p>Madhumitha R</p>
+                  <p>{user.name}</p>
                 </div>
 
                 <div className="profile-detail-box">
@@ -85,7 +132,7 @@ export default function ProfilePage() {
                     <Mail size={16} />
                     <span>Email Address</span>
                   </div>
-                  <p>madhumitha@email.com</p>
+                  <p>{user.email}</p>
                 </div>
 
                 <div className="profile-detail-box">
@@ -93,7 +140,7 @@ export default function ProfilePage() {
                     <Phone size={16} />
                     <span>Mobile Number</span>
                   </div>
-                  <p>+91 98765 43210</p>
+                  <p>Not provided</p>
                 </div>
 
                 <div className="profile-detail-box">
@@ -101,7 +148,7 @@ export default function ProfilePage() {
                     <MapPin size={16} />
                     <span>Primary Location</span>
                   </div>
-                  <p>Coimbatore, Tamil Nadu</p>
+                  <p>Not provided</p>
                 </div>
               </div>
             </section>

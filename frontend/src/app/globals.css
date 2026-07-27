@@ -42,7 +42,7 @@
   /* Transitions */
   --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-spring: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-
+  
   /* Borders */
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -127,7 +127,7 @@ textarea:focus {
 }
 
 /* General Button Styles */
-button,
+button, 
 .btn-primary {
   width: 100%;
   padding: 14px 24px;
