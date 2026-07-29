@@ -1,6 +1,6 @@
 package com.realestate.due_diligence.repository;
 
-import com.realestate.due_diligence.environment.EnvironmentalRecord;
+import com.realestate.due_diligence.environmental.EnvironmentalRecord;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
