@@ -1,9 +1,8 @@
 package com.realestate.due_diligence.environmental;
 
 import com.realestate.due_diligence.common.BaseEntity;
-
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import com.realestate.due_diligence.property.Property;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -13,11 +12,13 @@ import lombok.Setter;
 @Table(name = "environmental_records")
 public class EnvironmentalRecord extends BaseEntity {
 
-    private Long propertyId;
+    private String recordType;
 
-    private String environmentalRisk;
+    private String riskLevel;
 
-    private String contaminationLevel;
+    private String description;
 
-    private String remarks;
+    @ManyToOne
+    @JoinColumn(name = "property_id")
+    private Property property;
 }

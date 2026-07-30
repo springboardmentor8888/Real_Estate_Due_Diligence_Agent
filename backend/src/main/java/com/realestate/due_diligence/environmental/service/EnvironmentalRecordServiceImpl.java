@@ -12,8 +12,7 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-public class EnvironmentalRecordServiceImpl
-        implements EnvironmentalRecordService {
+public class EnvironmentalRecordServiceImpl implements EnvironmentalRecordService {
 
     private final EnvironmentalRecordRepository repository;
 
@@ -28,14 +27,15 @@ public class EnvironmentalRecordServiceImpl
 
     private EnvironmentalRecordResponse convert(EnvironmentalRecord record) {
 
-        EnvironmentalRecordResponse response =
-                new EnvironmentalRecordResponse();
+        EnvironmentalRecordResponse response = new EnvironmentalRecordResponse();
 
         response.setId(record.getId());
-        response.setPropertyId(record.getPropertyId());
-        response.setEnvironmentalRisk(record.getEnvironmentalRisk());
-        response.setContaminationLevel(record.getContaminationLevel());
-        response.setRemarks(record.getRemarks());
+        if (record.getProperty() != null) {
+            response.setPropertyId(record.getProperty().getId());
+        }
+        response.setEnvironmentalRisk(record.getRiskLevel());
+        response.setContaminationLevel(record.getRecordType());
+        response.setRemarks(record.getDescription());
 
         return response;
     }

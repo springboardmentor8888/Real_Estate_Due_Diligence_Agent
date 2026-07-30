@@ -25,12 +25,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
-/**
- * Spring Security 6 configuration class.
- *
- * <p>Sets up stateless JWT authentication, disables CSRF, configures CORS
- * properties, and specifies role-based authorization rules.
- */
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -51,33 +45,24 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Configure CORS using source defined below
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                // Disable CSRF since we are using stateless JWT authentication
                 .csrf(AbstractHttpConfigurer::disable)
-                // Configure authorized endpoints
                 .authorizeHttpRequests(auth -> auth
-                        // Permit public authentication endpoints
                         .requestMatchers("/auth/**").permitAll()
-                        // Permit public Swagger and OpenAPI endpoints
+                        .requestMatchers("/api/properties/**").permitAll()
                         .requestMatchers(
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/swagger-ui/index.html"
                         ).permitAll()
-                        // Role-based authorization: DELETE on any resource is restricted to Administrator
                         .requestMatchers(HttpMethod.DELETE, "/**").hasRole("ADMINISTRATOR")
-                        // Require authentication for all other requests
                         .anyRequest().authenticated()
                 )
-                // Set session management to stateless
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                // Configure authentication provider
                 .authenticationProvider(authenticationProvider())
-                // Register JWT authentication filter before UsernamePasswordAuthenticationFilter
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

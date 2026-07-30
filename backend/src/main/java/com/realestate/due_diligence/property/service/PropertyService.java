@@ -8,12 +8,9 @@ import com.realestate.due_diligence.property.dto.PropertySearchRequest;
 import java.util.List;
 
 public interface PropertyService {
-
+    PropertyResponse performDueDiligence(AddressValidationRequest request);
     List<PropertyResponse> getAllProperties();
-
     PropertyResponse getPropertyById(Long id);
-
     List<PropertyResponse> searchProperties(PropertySearchRequest request);
-
     AddressValidationResponse validateAddress(AddressValidationRequest request);
 }
