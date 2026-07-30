@@ -138,7 +138,7 @@ const SavedProperties = () => {
 
                 <div className="flex gap-3 mt-6">
                   <button
-                    onClick={() => navigate("/property-details")}
+                    onClick={() => navigate(`/property-details/PROP00${property.id}`)}
                     className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg flex items-center justify-center gap-2 transition"
                   >
                     <FaEye />

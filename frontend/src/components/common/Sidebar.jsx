@@ -38,7 +38,7 @@ const menuItems = [
   },
   {
     icon: <HiOutlineScale />,
-    label: "Property Comparison",
+    label: "Comparable Properties",
     path: "/property-comparison",
   },
   {
