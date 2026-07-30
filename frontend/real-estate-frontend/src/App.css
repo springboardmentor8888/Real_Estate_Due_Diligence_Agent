@@ -2,39 +2,70 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Custom Scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Complete Universal Native Scrollbar Suppression */
+*,
+*::before,
+*::after,
+html,
+body,
+div,
+nav,
+aside,
+main,
+section,
+article,
+table,
+tbody,
+tr,
+td,
+th {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
-::-webkit-scrollbar-track {
-  background: #f1f5f9;
+*::-webkit-scrollbar,
+::-webkit-scrollbar,
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+div::-webkit-scrollbar,
+nav::-webkit-scrollbar,
+aside::-webkit-scrollbar,
+main::-webkit-scrollbar,
+section::-webkit-scrollbar {
+  display: none !important;
+  width: 0px !important;
+  height: 0px !important;
+  background: transparent !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
 }
 
-.dark ::-webkit-scrollbar-track {
-  background: #0b1120;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 9999px;
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: #334155;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+*::-webkit-scrollbar-track,
+::-webkit-scrollbar-track,
+*::-webkit-scrollbar-thumb,
+::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-corner,
+::-webkit-scrollbar-corner {
+  display: none !important;
+  width: 0px !important;
+  height: 0px !important;
+  background: transparent !important;
+  opacity: 0 !important;
 }
 
 /* Global 250ms Theme Transitions */
-body, div, header, aside, main, nav, section, table, input, select, button, article {
+body,
+div,
+header,
+aside,
+main,
+nav,
+section,
+table,
+input,
+select,
+button,
+article {
   transition: background-color 250ms ease, border-color 250ms ease, color 250ms ease, box-shadow 250ms ease;
 }
 
@@ -56,14 +87,14 @@ body {
 
 /* Blueprint Grid Pattern */
 .bg-blueprint-grid {
-  background-image: 
+  background-image:
     linear-gradient(to right, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
   background-size: 28px 28px;
 }
 
 .dark .bg-blueprint-grid {
-  background-image: 
+  background-image:
     linear-gradient(to right, rgba(51, 65, 85, 0.25) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(51, 65, 85, 0.25) 1px, transparent 1px);
 }
@@ -117,18 +148,24 @@ body {
 
 /* Animations */
 @keyframes float {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0px);
   }
+
   50% {
     transform: translateY(-8px);
   }
 }
 
 @keyframes pulseSoft {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 0.3;
   }
+
   50% {
     opacity: 0.6;
   }

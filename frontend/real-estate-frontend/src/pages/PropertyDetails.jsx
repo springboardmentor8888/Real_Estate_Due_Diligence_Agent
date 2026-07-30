@@ -32,19 +32,60 @@ import {
 import { showToast } from "../utils/swal";
 import { INDIAN_PROPERTIES } from "../data/indianProperties";
 
+import { getPropertyDetails } from "../services/propertyService";
+import { useEffect } from "react";
+
 function PropertyDetails() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  // Dynamic Lookup for the Selected Indian Property
   const targetId = searchParams.get("id") || location.state?.property?.id;
-  const property =
+  const initialProp =
     INDIAN_PROPERTIES.find((p) => p.id === targetId) ||
     location.state?.property ||
     INDIAN_PROPERTIES[0];
 
+  const [property, setProperty] = useState(initialProp);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (!targetId) return;
+    const numericId = targetId.toString().replace(/\D/g, "");
+    if (numericId) {
+      setLoading(true);
+      getPropertyDetails(numericId)
+        .then((res) => {
+          if (res && res.data) {
+            const p = res.data;
+            const addressString = p.address
+              ? `${p.address.addressLine1 || ""}, ${p.address.city || ""}, ${p.address.state || ""}`.replace(/^, |, $/g, "")
+              : p.propertyName || "Property Parcel";
+            setProperty({
+              id: `PR-${p.propertyId}`,
+              numericId: p.propertyId,
+              address: addressString,
+              city: p.address?.city || "Bengaluru",
+              state: p.address?.state || "Karnataka",
+              type: p.propertyType || "Residential",
+              owner: p.createdByEmail ? p.createdByEmail.split("@")[0] : "Verified Owner",
+              score: p.marketValue ? `₹${(p.marketValue / 1000000).toFixed(2)} Cr` : "98/100",
+              status: p.status || "Verified Clear Title",
+              variant: "success",
+              area: p.totalArea ? `${p.totalArea} sq ft` : "2,400 sq ft",
+              year: p.builtYear || 2018,
+              surveyNumber: `SY-${p.propertyId}-2024`,
+              marketValue: p.marketValue ? `₹${(p.marketValue / 1000000).toFixed(2)} Cr` : "₹4.20 Cr",
+              rawBackendData: p,
+            });
+          }
+        })
+        .catch((err) => {
+          console.warn("Backend getPropertyDetails error, using local data:", err);
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [targetId]);
 
   const handleRetry = () => {
     setLoading(true);
@@ -67,17 +108,17 @@ function PropertyDetails() {
 
   return (
     <MainLayout>
-      <div className="space-y-8">
+      <div className="space-y-5 sm:space-y-6">
         {/* Back Navigation Bar */}
         <div className="flex items-center justify-between">
           <Link
             to="/property-search"
-            className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-blue-600 transition-colors"
+            className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-[#CBD5E1] hover:text-blue-600 dark:hover:text-cyan-400 transition-colors"
           >
             <ArrowLeft size={16} /> Back to Search Results
           </Link>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
+            <span className="text-xs font-mono font-bold text-slate-500 dark:text-[#CBD5E1] bg-slate-100 dark:bg-[#0F172A] px-2.5 py-1 rounded-md border border-slate-200 dark:border-[#334155]">
               Parcel ID: {property.id}
             </span>
             <Button onClick={handleRetry} variant="secondary" size="sm" icon={RotateCcw}>
@@ -87,7 +128,7 @@ function PropertyDetails() {
         </div>
 
         {/* Flagship Hero Header Section (Clean Slate Theme) */}
-        <div className="relative overflow-hidden rounded-2xl bg-slate-900 text-white p-8 lg:p-10 border border-slate-800 shadow-lg">
+        <div className="relative overflow-hidden rounded-2xl bg-slate-900 text-white p-6 sm:p-8 lg:p-8 border border-slate-800 dark:border-[#334155] shadow-lg">
           <div className="relative z-10 space-y-6">
             {/* Top Bar: APN Badge & Action Toolbar */}
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -164,45 +205,45 @@ function PropertyDetails() {
           defaultOpen
         >
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl bg-white/80 border border-blue-200/60">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">Complete Address</p>
-              <p className="text-sm font-bold text-slate-900 mt-1">{property.address}</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Complete Address</p>
+              <p className="text-sm font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">{property.address}</p>
             </div>
 
-            <div className="p-4 rounded-xl bg-white/80 border border-blue-200/60">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">Registered Owner Name</p>
-              <p className="text-sm font-bold text-slate-900 mt-1">{property.owner}</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Registered Owner Name</p>
+              <p className="text-sm font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">{property.owner}</p>
             </div>
 
-            <div className="p-4 rounded-xl bg-white/80 border border-blue-200/60">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">City & State</p>
-              <p className="text-sm font-bold text-slate-900 mt-1">
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">City & State</p>
+              <p className="text-sm font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">
                 {property.city}, {property.state}
               </p>
             </div>
 
-            <div className="p-4 rounded-xl bg-white/80 border border-blue-200/60">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">PIN Code</p>
-              <p className="text-sm font-bold text-slate-900 font-mono mt-1">{property.pincode}</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">PIN Code</p>
+              <p className="text-sm font-bold text-slate-900 dark:text-[#F8FAFC] font-mono mt-1">{property.pincode}</p>
             </div>
 
-            <div className="p-4 rounded-xl bg-white/80 border border-blue-200/60">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">Property Type</p>
-              <p className="text-sm font-bold text-slate-900 mt-1">{property.type}</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Property Type</p>
+              <p className="text-sm font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">{property.type}</p>
             </div>
 
-            <div className="p-4 rounded-xl bg-white/80 border border-blue-200/60">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">Plot / Built Area</p>
-              <p className="text-sm font-bold text-slate-900 mt-1">{property.area}</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Plot / Built Area</p>
+              <p className="text-sm font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">{property.area}</p>
             </div>
 
-            <div className="p-4 rounded-xl bg-white/80 border border-blue-200/60">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">Survey / Plot Number</p>
-              <p className="text-sm font-bold text-slate-900 font-mono mt-1">{property.surveyNo}</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Survey / Plot Number</p>
+              <p className="text-sm font-bold text-slate-900 dark:text-[#F8FAFC] font-mono mt-1">{property.surveyNo}</p>
             </div>
 
-            <div className="p-4 rounded-xl bg-white/80 border border-blue-200/60">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">Risk Assessment</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Risk Assessment</p>
               <Badge variant={property.variant} className="mt-1">{property.status}</Badge>
             </div>
           </div>
@@ -218,20 +259,20 @@ function PropertyDetails() {
           defaultOpen
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl bg-white/80 border border-emerald-200/60">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">Current Registered Owner</p>
-              <p className="text-base font-bold text-slate-900 mt-1">{property.owner}</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Current Registered Owner</p>
+              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">{property.owner}</p>
             </div>
-            <div className="p-4 rounded-xl bg-white/80 border border-emerald-200/60">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">Registration Jurisdiction</p>
-              <p className="text-base font-bold text-slate-900 mt-1">{property.city} Sub-Registrar</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Registration Jurisdiction</p>
+              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">{property.city} Sub-Registrar</p>
             </div>
-            <div className="p-4 rounded-xl bg-white/80 border border-emerald-200/60">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">Deed Instrument #</p>
-              <p className="text-base font-bold text-slate-900 font-mono mt-1">{property.deedId}</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Deed Instrument #</p>
+              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] font-mono mt-1">{property.deedId}</p>
             </div>
-            <div className="p-4 rounded-xl bg-white/80 border border-emerald-200/60">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">Encumbrance Status</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Encumbrance Status</p>
               <Badge variant={property.variant} className="mt-1">{property.status}</Badge>
             </div>
           </div>
@@ -246,10 +287,10 @@ function PropertyDetails() {
           collapsible
           defaultOpen
         >
-          <div className="overflow-x-auto rounded-xl border border-amber-200/80 bg-white">
+          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#0F172A]">
             <table className="w-full text-left text-sm border-collapse">
               <thead>
-                <tr className="bg-amber-100/80 text-amber-900 text-xs font-mono uppercase">
+                <tr className="bg-slate-900 text-slate-200 text-xs font-mono uppercase">
                   <th className="p-3.5 font-semibold">Tax Assessment Year</th>
                   <th className="p-3.5 font-semibold">Assessed Market Value</th>
                   <th className="p-3.5 font-semibold">Annual Tax Assessment</th>
@@ -257,13 +298,13 @@ function PropertyDetails() {
                   <th className="p-3.5 font-semibold">Challan Number</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-amber-200/60">
-                <tr className="hover:bg-amber-50/50">
-                  <td className="p-3.5 font-mono font-bold text-slate-900">FY 2025-26</td>
-                  <td className="p-3.5 font-medium text-slate-700">{property.assessedVal}</td>
-                  <td className="p-3.5 font-bold text-slate-900 font-mono">{property.taxStatus}</td>
+              <tbody className="divide-y divide-slate-200 dark:divide-[#334155] text-slate-700 dark:text-slate-200">
+                <tr className="hover:bg-slate-50 dark:hover:bg-[#1E293B]/60">
+                  <td className="p-3.5 font-mono font-bold text-slate-900 dark:text-[#F8FAFC]">FY 2025-26</td>
+                  <td className="p-3.5 font-medium text-slate-700 dark:text-slate-300">{property.assessedVal}</td>
+                  <td className="p-3.5 font-bold text-slate-900 dark:text-[#F8FAFC] font-mono">{property.taxStatus}</td>
                   <td className="p-3.5"><Badge variant={property.variant}>{property.status}</Badge></td>
-                  <td className="p-3.5 text-xs text-slate-500 font-mono">CH-IND-2025-88</td>
+                  <td className="p-3.5 text-xs text-slate-500 dark:text-[#94A3B8] font-mono">CH-IND-2025-88</td>
                 </tr>
               </tbody>
             </table>
@@ -280,21 +321,21 @@ function PropertyDetails() {
           defaultOpen
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl bg-white/80 border border-blue-200/60">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">Zoning Code</p>
-              <p className="text-base font-bold text-blue-700 font-mono mt-1">{property.zoning}</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Zoning Code</p>
+              <p className="text-base font-bold text-blue-700 dark:text-cyan-400 font-mono mt-1">{property.zoning}</p>
             </div>
-            <div className="p-4 rounded-xl bg-white/80 border border-blue-200/60">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">Max Height Limit</p>
-              <p className="text-base font-bold text-slate-900 mt-1">18 Meters</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Max Height Limit</p>
+              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">18 Meters</p>
             </div>
-            <div className="p-4 rounded-xl bg-white/80 border border-blue-200/60">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">Allowable FAR</p>
-              <p className="text-base font-bold text-slate-900 mt-1">2.0 Floor Area Ratio</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Allowable FAR</p>
+              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">2.0 Floor Area Ratio</p>
             </div>
-            <div className="p-4 rounded-xl bg-white/80 border border-blue-200/60">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">Authority</p>
-              <p className="text-base font-bold text-slate-900 mt-1">{property.city} Urban Authority</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Authority</p>
+              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">{property.city} Urban Authority</p>
             </div>
           </div>
         </InfoCard>
@@ -309,21 +350,21 @@ function PropertyDetails() {
           defaultOpen
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl bg-white/80 border border-rose-200/60">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">Flood Risk Rating</p>
-              <p className="text-base font-bold text-slate-900 font-mono mt-1">{property.floodRisk}</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Flood Risk Rating</p>
+              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] font-mono mt-1">{property.floodRisk}</p>
             </div>
-            <div className="p-4 rounded-xl bg-white/80 border border-rose-200/60">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">Disaster Clearance</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Disaster Clearance</p>
               <Badge variant={property.variant} className="mt-1">{property.status}</Badge>
             </div>
-            <div className="p-4 rounded-xl bg-white/80 border border-rose-200/60">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">Mandatory Insurance</p>
-              <p className="text-base font-bold text-slate-900 mt-1">Not Mandated</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Mandatory Insurance</p>
+              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">Not Mandated</p>
             </div>
-            <div className="p-4 rounded-xl bg-white/80 border border-rose-200/60">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">Survey Date</p>
-              <p className="text-base font-bold text-slate-900 mt-1">2025 Regional Survey</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Survey Date</p>
+              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">2025 Regional Survey</p>
             </div>
           </div>
         </InfoCard>
@@ -338,20 +379,20 @@ function PropertyDetails() {
           defaultOpen
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl bg-white/80 border border-cyan-200/60">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">Soil Composition</p>
-              <p className="text-base font-bold text-slate-900 mt-1">Clear (No Lead / Radon)</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Soil Composition</p>
+              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">Clear (No Lead / Radon)</p>
             </div>
-            <div className="p-4 rounded-xl bg-white/80 border border-cyan-200/60">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">Water Quality</p>
-              <p className="text-base font-bold text-slate-900 mt-1">Safe Potable Supply</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Water Quality</p>
+              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">Safe Potable Supply</p>
             </div>
-            <div className="p-4 rounded-xl bg-white/80 border border-cyan-200/60">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">Air Quality Index</p>
-              <p className="text-base font-bold text-emerald-700 font-mono mt-1">AQI 22 (Good)</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Air Quality Index</p>
+              <p className="text-base font-bold text-emerald-700 dark:text-emerald-400 font-mono mt-1">AQI 22 (Good)</p>
             </div>
-            <div className="p-4 rounded-xl bg-white/80 border border-cyan-200/60">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">SPCB Hazard Clearance</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">SPCB Hazard Clearance</p>
               <Badge variant={property.variant} className="mt-1">{property.status}</Badge>
             </div>
           </div>
@@ -366,10 +407,10 @@ function PropertyDetails() {
           collapsible
           defaultOpen
         >
-          <div className="overflow-x-auto rounded-xl border border-purple-200/80 bg-white">
+          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#0F172A]">
             <table className="w-full text-left text-sm border-collapse">
               <thead>
-                <tr className="bg-purple-100/80 text-purple-900 text-xs font-mono uppercase">
+                <tr className="bg-slate-900 text-slate-200 text-xs font-mono uppercase">
                   <th className="p-3.5 font-semibold">Permit Number</th>
                   <th className="p-3.5 font-semibold">Department Jurisdiction</th>
                   <th className="p-3.5 font-semibold">Scope of Work</th>
@@ -377,13 +418,13 @@ function PropertyDetails() {
                   <th className="p-3.5 font-semibold">Issue Date</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-purple-200/60">
-                <tr className="hover:bg-purple-50/50">
-                  <td className="p-3.5 font-mono font-bold text-purple-700">PMT-IND-1024</td>
-                  <td className="p-3.5 font-medium text-slate-800">{property.city} Municipal DBI</td>
-                  <td className="p-3.5 text-xs text-slate-600">Building Occupancy & Rooftop Solar PV</td>
+              <tbody className="divide-y divide-slate-200 dark:divide-[#334155] text-slate-700 dark:text-slate-200">
+                <tr className="hover:bg-slate-50 dark:hover:bg-[#1E293B]/60">
+                  <td className="p-3.5 font-mono font-bold text-blue-600 dark:text-cyan-400">PMT-IND-1024</td>
+                  <td className="p-3.5 font-medium text-slate-800 dark:text-slate-200">{property.city} Municipal DBI</td>
+                  <td className="p-3.5 text-xs text-slate-600 dark:text-slate-300">Building Occupancy & Rooftop Solar PV</td>
                   <td className="p-3.5"><Badge variant="success">Approved & Closed</Badge></td>
-                  <td className="p-3.5 text-xs font-mono text-slate-500">10-Jan-2024</td>
+                  <td className="p-3.5 text-xs font-mono text-slate-500 dark:text-[#94A3B8]">10-Jan-2024</td>
                 </tr>
               </tbody>
             </table>
@@ -400,21 +441,21 @@ function PropertyDetails() {
           defaultOpen
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl bg-white border border-slate-200">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">Electricity Grid</p>
-              <p className="text-base font-bold text-slate-900 mt-1">State DISCOM Active</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Electricity Grid</p>
+              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">State DISCOM Active</p>
             </div>
-            <div className="p-4 rounded-xl bg-white border border-slate-200">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">Water & Sewer</p>
-              <p className="text-base font-bold text-slate-900 mt-1">Municipal Metro Water</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Water & Sewer</p>
+              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">Municipal Metro Water</p>
             </div>
-            <div className="p-4 rounded-xl bg-white border border-slate-200">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">Natural Gas Grid</p>
-              <p className="text-base font-bold text-slate-900 mt-1">Piped City Gas Connected</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Natural Gas Grid</p>
+              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">Piped City Gas Connected</p>
             </div>
-            <div className="p-4 rounded-xl bg-white border border-slate-200">
-              <p className="text-xs text-slate-500 font-mono uppercase font-bold">Fiber Internet</p>
-              <p className="text-base font-bold text-slate-900 mt-1">Gigabit Fiber Ready</p>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Fiber Internet</p>
+              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">Gigabit Fiber Ready</p>
             </div>
           </div>
         </InfoCard>

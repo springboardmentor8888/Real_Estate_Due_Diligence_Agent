@@ -79,15 +79,21 @@ function Login() {
       showToast("Signed in successfully", "success");
       navigate("/dashboard");
     } catch (error) {
-      console.warn("Backend unavailable, using mock auth session fallback:", error);
-      localStorage.setItem("token", "demo-enterprise-jwt-token");
-      localStorage.setItem(
-        "user",
-        JSON.stringify({ name: "Rama Charan", email: loginData.email, role: "Senior Auditor" })
-      );
-
-      showToast("Signed in successfully", "success");
-      navigate("/dashboard");
+      console.warn("Backend login error:", error);
+      const serverMsg = error.response?.data?.message || error.response?.data?.error;
+      if (serverMsg) {
+        showErrorAlert("Login Failed", serverMsg);
+      } else if (error.response?.status === 401) {
+        showErrorAlert("Invalid Credentials", "Email or password is incorrect.");
+      } else {
+        localStorage.setItem("token", "demo-enterprise-jwt-token");
+        localStorage.setItem(
+          "user",
+          JSON.stringify({ firstName: "Rama", lastName: "Charan", email: loginData.email, role: "Real Estate Agent" })
+        );
+        showToast("Signed in successfully", "success");
+        navigate("/dashboard");
+      }
     } finally {
       setLoading(false);
     }

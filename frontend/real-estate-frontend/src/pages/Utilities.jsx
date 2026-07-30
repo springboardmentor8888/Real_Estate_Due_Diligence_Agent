@@ -18,42 +18,42 @@ function Utilities() {
   const utilityServices = [
     {
       name: "Electric Grid Power",
-      provider: "City Power & Light Co",
+      provider: "Bangalore Electricity Supply Co (BESCOM)",
       status: "Active (Connected)",
       meterId: "MTR-E-4819",
-      capacity: "200A Single Phase",
+      capacity: "200A Commercial Service",
       icon: Zap,
-      gradient: "from-amber-500/10 to-orange-500/5 text-amber-600 border-amber-200/60",
+      gradient: "from-amber-500/10 to-orange-500/5 text-amber-600 dark:text-amber-400 border-amber-200/60 dark:border-amber-800",
       variant: "success",
     },
     {
       name: "Water & Sewer Connection",
-      provider: "Municipal Water District",
+      provider: "Bangalore Water Supply Board (BWSSB)",
       status: "Active (Connected)",
       meterId: "MTR-W-8812",
-      capacity: "3/4 inch Tap Service",
+      capacity: "3/4 inch Mains Connection",
       icon: Droplets,
-      gradient: "from-blue-500/10 to-cyan-500/5 text-blue-600 border-blue-200/60",
+      gradient: "from-blue-500/10 to-cyan-500/5 text-blue-600 dark:text-cyan-400 border-blue-200/60 dark:border-blue-800",
       variant: "success",
     },
     {
-      name: "Natural Gas Grid",
-      provider: "Metropolitan Gas Corp",
+      name: "Piped Natural Gas Grid",
+      provider: "GAIL Gas Corporation India",
       status: "Active (Connected)",
       meterId: "MTR-G-1194",
-      capacity: "Standard Residential",
+      capacity: "PNG Commercial Meter",
       icon: Flame,
-      gradient: "from-rose-500/10 to-amber-500/5 text-rose-600 border-rose-200/60",
+      gradient: "from-rose-500/10 to-amber-500/5 text-rose-600 dark:text-rose-400 border-rose-200/60 dark:border-rose-800",
       variant: "success",
     },
     {
       name: "High-Speed Fiber Internet",
-      provider: "Apex Telecom Fiber",
+      provider: "Airtel Xstream Gigabit Fiber",
       status: "Active (Connected)",
       meterId: "ONT-F-9021",
       capacity: "1,000 Mbps Symmetric",
       icon: Wifi,
-      gradient: "from-purple-500/10 to-indigo-500/5 text-purple-600 border-purple-200/60",
+      gradient: "from-purple-500/10 to-indigo-500/5 text-purple-600 dark:text-purple-400 border-purple-200/60 dark:border-purple-800",
       variant: "success",
     },
   ];
@@ -67,17 +67,17 @@ function Utilities() {
 
   return (
     <MainLayout>
-      <div className="space-y-8">
+      <div className="space-y-5 sm:space-y-6">
         {/* Page Header */}
-        <div className="glass-card rounded-3xl p-8 border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="glass-card rounded-3xl p-6 sm:p-7 border border-slate-200 dark:border-[#334155] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-mono font-bold mb-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-mono font-bold mb-3">
               <Zap size={14} /> Public Utility Infrastructure Grid
             </div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-[#F8FAFC] tracking-tight">
               ⚡ Utilities & Grid Service Connections
             </h1>
-            <p className="text-sm text-slate-500 mt-1 max-w-2xl">
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-[#CBD5E1] mt-1 max-w-2xl">
               Inspect active utility meters, service providers, connection capacities, and municipal grid health.
             </p>
           </div>
@@ -95,7 +95,7 @@ function Utilities() {
             return (
               <div
                 key={index}
-                className="glass-card rounded-3xl p-6 border border-slate-200/80 hover-lift flex flex-col justify-between space-y-4"
+                className="glass-card rounded-3xl p-6 border border-slate-200 dark:border-[#334155] hover-lift flex flex-col justify-between space-y-4"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -103,21 +103,21 @@ function Utilities() {
                       <Icon size={24} />
                     </div>
                     <div>
-                      <h3 className="font-bold text-slate-900 text-lg">{service.name}</h3>
-                      <p className="text-xs text-slate-500">{service.provider}</p>
+                      <h3 className="font-extrabold text-slate-900 dark:text-[#F8FAFC] text-lg">{service.name}</h3>
+                      <p className="text-xs text-slate-500 dark:text-[#CBD5E1]">{service.provider}</p>
                     </div>
                   </div>
                   <Badge variant={service.variant}>{service.status}</Badge>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100 text-xs">
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/60">
-                    <p className="text-[10px] text-slate-400 font-mono uppercase">Meter Serial ID</p>
-                    <p className="font-mono font-bold text-slate-800 mt-0.5">{service.meterId}</p>
+                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100 dark:border-[#334155] text-xs">
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155]">
+                    <p className="text-[10px] text-slate-400 dark:text-[#94A3B8] font-mono uppercase font-bold">Meter Serial ID</p>
+                    <p className="font-mono font-bold text-slate-800 dark:text-[#F8FAFC] mt-0.5">{service.meterId}</p>
                   </div>
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/60">
-                    <p className="text-[10px] text-slate-400 font-mono uppercase">Service Capacity</p>
-                    <p className="font-bold text-slate-800 mt-0.5">{service.capacity}</p>
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155]">
+                    <p className="text-[10px] text-slate-400 dark:text-[#94A3B8] font-mono uppercase font-bold">Service Capacity</p>
+                    <p className="font-bold text-slate-800 dark:text-[#F8FAFC] mt-0.5">{service.capacity}</p>
                   </div>
                 </div>
               </div>

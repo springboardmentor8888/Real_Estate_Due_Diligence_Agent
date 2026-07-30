@@ -104,13 +104,15 @@ function Register() {
 
     setLoading(true);
 
+    // Extract exactly 10 digits to align with backend @Pattern(regexp = "^[0-9]{10}$")
+    const sanitizedPhone = formData.phone.replace(/\D/g, "").slice(-10);
+
     try {
       await registerUser({
         firstName: formData.firstName,
         lastName: formData.lastName,
-        name: `${formData.firstName} ${formData.lastName}`,
         email: formData.email,
-        phone: formData.phone,
+        phone: sanitizedPhone,
         password: formData.password,
         role: formData.role,
       });
@@ -122,20 +124,24 @@ function Register() {
 
       navigate("/login");
     } catch (error) {
-      console.warn("Backend API server pending development, storing session locally:", error);
-
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          name: `${formData.firstName} ${formData.lastName}`,
-          email: formData.email,
-          phone: formData.phone,
-          role: formData.role,
-        })
-      );
-
-      showToast(`Account registered as ${formData.role}`, "success");
-      navigate("/login");
+      console.warn("Registration API error:", error);
+      const serverMsg = error.response?.data?.message || error.response?.data?.error;
+      if (serverMsg) {
+        showErrorAlert("Registration Failed", serverMsg);
+      } else {
+        localStorage.setItem(
+          "user",
+          JSON.stringify({
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            phone: formData.phone,
+            role: formData.role,
+          })
+        );
+        showToast(`Account registered as ${formData.role}`, "success");
+        navigate("/login");
+      }
     } finally {
       setLoading(false);
     }
