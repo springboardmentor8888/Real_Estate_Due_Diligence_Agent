@@ -602,3 +602,127 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Risk Dashboard Custom Classes ────────────────────────────────────────── */
+.risk-grid-split {
+  display: grid;
+  grid-template-columns: 1.2fr 2.8fr;
+  gap: 36px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+@media (max-width: 768px) {
+  .risk-grid-split {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+}
+
+.risk-meter-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+}
+
+.radial-score-wrapper {
+  position: relative;
+  width: 140px;
+  height: 140px;
+}
+
+.radial-progress-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.progress-bg {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 8;
+}
+
+.progress-bar {
+  fill: none;
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.8s ease-in-out;
+}
+
+.radial-score-value {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+}
+
+.score-num {
+  font-size: 38px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.score-denom {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.risk-rec-details {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.risk-rec-details h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.rec-box-callout {
+  background: var(--primary-light);
+  border-left: 4px solid var(--primary);
+  padding: 16px 20px;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--text-main);
+}
+
+.risk-verification-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.icon-green {
+  color: var(--success);
+}
+
+.icon-orange {
+  color: var(--warning);
+}
+
+.icon-red {
+  color: var(--danger);
+}
+
