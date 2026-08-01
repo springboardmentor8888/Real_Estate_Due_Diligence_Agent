@@ -65,7 +65,7 @@ function StatCard() {
             className={`rounded-2xl p-6 border shadow-xs hover-lift group transition-all duration-200 ${stat.cardStyle}`}
           >
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-[#CBD5E1]">
                 {stat.title}
               </span>
               <div className={`p-2.5 rounded-xl border ${stat.iconBg}`}>
@@ -90,7 +90,7 @@ function StatCard() {
                 <TrendIcon size={13} />
                 {stat.change}
               </span>
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              <span className="text-xs text-slate-500 dark:text-[#94A3B8] font-medium">
                 {stat.period}
               </span>
             </div>

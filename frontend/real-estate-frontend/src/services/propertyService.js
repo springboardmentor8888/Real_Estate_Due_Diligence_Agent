@@ -1,13 +1,71 @@
-import axios from "axios";
+import apiClient from "./apiClient";
 
-const API_URL = "http://localhost:8081/api/properties";
-
-export const searchProperty = async (address) => {
-  return axios.get(`${API_URL}/search`, {
-    params: { address },
+// Search Properties by Criteria (city, state, postalCode, propertyType, status, etc.)
+export const searchProperties = async (criteria = {}) => {
+  return apiClient.get("/api/properties/search", {
+    params: criteria,
   });
 };
 
-export const getPropertyDetails = async (id) => {
-  return axios.get(`${API_URL}/${id}`);
+// Backwards-compatible alias for searchProperty
+export const searchProperty = async (searchParam) => {
+  if (typeof searchParam === "string") {
+    return apiClient.get("/api/properties/search", {
+      params: { city: searchParam },
+    });
+  }
+  return searchProperties(searchParam);
 };
+
+// Get All Properties with Pagination
+export const getAllProperties = async (page = 0, size = 10) => {
+  return apiClient.get("/api/properties", {
+    params: { page, size },
+  });
+};
+
+// Get Property Details by ID
+export const getPropertyDetails = async (id) => {
+  return apiClient.get(`/api/properties/${id}`);
+};
+
+// Create New Property
+export const createProperty = async (propertyData) => {
+  return apiClient.post("/api/properties", propertyData);
+};
+
+// Validate Address
+export const validateAddress = async (addressId) => {
+  return apiClient.post(`/api/addresses/${addressId}/validate`);
+};
+
+// Get Ownership Records for a Property
+export const getOwnershipRecords = async (propertyId) => {
+  return apiClient.get(`/api/ownership-records/property/${propertyId}`);
+};
+
+// Get Property Tax History for a Property
+export const getPropertyTaxHistory = async (propertyId) => {
+  return apiClient.get(`/api/verification/taxes/property/${propertyId}`);
+};
+
+// Get Zoning Information for a Property
+export const getZoningInformation = async (propertyId) => {
+  return apiClient.get(`/api/verification/zoning/property/${propertyId}`);
+};
+
+// Get Flood Zone Information for a Property
+export const getFloodZoneInformation = async (propertyId) => {
+  return apiClient.get(`/api/verification/flood/property/${propertyId}`);
+};
+
+// Get Environmental Records for a Property
+export const getEnvironmentalRecords = async (propertyId) => {
+  return apiClient.get(`/api/verification/environmental/property/${propertyId}`);
+};
+
+// Get Building Permit Records for a Property
+export const getPermitRecords = async (propertyId) => {
+  return apiClient.get(`/api/verification/permits/property/${propertyId}`);
+};
+

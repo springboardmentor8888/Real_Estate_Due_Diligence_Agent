@@ -16,77 +16,166 @@ import PermitRecords from "./pages/PermitRecords";
 import Utilities from "./pages/Utilities";
 import Profile from "./pages/Profile";
 
+// Milestone 3 Pages
+import RiskAssessment from "./pages/RiskAssessment";
+import ComparableProperties from "./pages/ComparableProperties";
+import DueDiligenceReport from "./pages/DueDiligenceReport";
+import NotificationCenter from "./pages/NotificationCenter";
+import ReportHistory from "./pages/ReportHistory";
+import AdminDashboard from "./pages/AdminDashboard";
+
+import ProtectedRoute from "./components/common/ProtectedRoute";
+
 function App() {
   return (
     <Routes>
-
       {/* Authentication */}
-
       <Route path="/" element={<Login />} />
-
       <Route path="/login" element={<Login />} />
-
       <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
 
+      {/* Protected Diligence & Dashboard Routes */}
       <Route
-        path="/forgot-password"
-        element={<ForgotPassword />}
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
       />
-
-      {/* Milestone 2 */}
-
-      <Route path="/dashboard" element={<Dashboard />} />
-
       <Route
         path="/property-search"
-        element={<PropertySearch />}
+        element={
+          <ProtectedRoute>
+            <PropertySearch />
+          </ProtectedRoute>
+        }
       />
-
       <Route
         path="/property-details"
-        element={<PropertyDetails />}
+        element={
+          <ProtectedRoute>
+            <PropertyDetails />
+          </ProtectedRoute>
+        }
       />
 
+      {/* Milestone 3 Feature Routes */}
+      <Route
+        path="/risk-assessment"
+        element={
+          <ProtectedRoute>
+            <RiskAssessment />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/comparable-properties"
+        element={
+          <ProtectedRoute>
+            <ComparableProperties />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/due-diligence-report"
+        element={
+          <ProtectedRoute>
+            <DueDiligenceReport />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/notifications"
+        element={
+          <ProtectedRoute>
+            <NotificationCenter />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/report-history"
+        element={
+          <ProtectedRoute>
+            <ReportHistory />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin-dashboard"
+        element={
+          <ProtectedRoute>
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Milestone 2 Views */}
       <Route
         path="/ownership"
-        element={<Ownership />}
+        element={
+          <ProtectedRoute>
+            <Ownership />
+          </ProtectedRoute>
+        }
       />
-
       <Route
         path="/tax-history"
-        element={<TaxHistory />}
+        element={
+          <ProtectedRoute>
+            <TaxHistory />
+          </ProtectedRoute>
+        }
       />
-
       <Route
         path="/zoning"
-        element={<Zoning />}
+        element={
+          <ProtectedRoute>
+            <Zoning />
+          </ProtectedRoute>
+        }
       />
-
       <Route
         path="/flood-zone"
-        element={<FloodZone />}
+        element={
+          <ProtectedRoute>
+            <FloodZone />
+          </ProtectedRoute>
+        }
       />
-
       <Route
         path="/environmental"
-        element={<Environmental />}
+        element={
+          <ProtectedRoute>
+            <Environmental />
+          </ProtectedRoute>
+        }
       />
-
       <Route
         path="/permit-records"
-        element={<PermitRecords />}
+        element={
+          <ProtectedRoute>
+            <PermitRecords />
+          </ProtectedRoute>
+        }
       />
-
       <Route
         path="/utilities"
-        element={<Utilities />}
+        element={
+          <ProtectedRoute>
+            <Utilities />
+          </ProtectedRoute>
+        }
       />
-
       <Route
         path="/profile"
-        element={<Profile />}
+        element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        }
       />
-
     </Routes>
   );
 }

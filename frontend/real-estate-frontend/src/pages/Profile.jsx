@@ -74,25 +74,25 @@ function Profile() {
 
   return (
     <MainLayout>
-      <div className="space-y-8">
+      <div className="space-y-5 sm:space-y-6 max-w-4xl mx-auto">
         {/* Profile Header Hero */}
-        <div className="glass-card rounded-3xl p-8 border border-slate-200/80 shadow-sm flex flex-col md:flex-row items-center gap-6">
+        <div className="glass-card rounded-3xl p-6 sm:p-7 border border-slate-200 dark:border-[#334155] shadow-xs flex flex-col md:flex-row items-center gap-6">
           <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 text-white font-extrabold text-3xl flex items-center justify-center shadow-xl shadow-blue-500/20 shrink-0">
             RC
           </div>
 
           <div className="space-y-2 text-center md:text-left flex-1">
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-              <h1 className="text-3xl font-extrabold text-slate-900">{profileData.name}</h1>
+              <h1 className="text-3xl font-extrabold text-slate-900 dark:text-[#F8FAFC]">{profileData.name}</h1>
               <Badge variant="success">Active Auditor</Badge>
             </div>
-            <p className="text-sm font-medium text-slate-600">{profileData.role}</p>
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-xs text-slate-500 pt-1">
+            <p className="text-sm font-medium text-slate-600 dark:text-[#CBD5E1]">{profileData.role}</p>
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-xs text-slate-500 dark:text-[#94A3B8] pt-1">
               <span className="flex items-center gap-1">
-                <Mail size={14} className="text-blue-600" /> {profileData.email}
+                <Mail size={14} className="text-blue-600 dark:text-cyan-400" /> {profileData.email}
               </span>
               <span className="flex items-center gap-1">
-                <Building size={14} className="text-cyan-600" /> {profileData.organization}
+                <Building size={14} className="text-cyan-600 dark:text-cyan-400" /> {profileData.organization}
               </span>
             </div>
           </div>
@@ -100,34 +100,34 @@ function Profile() {
 
         {/* Auditor Statistics */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          <div className="glass-card rounded-2xl p-6 border border-slate-200/80 hover-lift">
-            <p className="text-xs font-mono uppercase font-bold text-slate-400">Total Audits Performed</p>
-            <h3 className="text-3xl font-extrabold text-slate-900 font-mono mt-2">1,240</h3>
-            <span className="text-xs text-emerald-600 font-bold block mt-3">+18% this month</span>
+          <div className="glass-card rounded-2xl p-6 border border-slate-200 dark:border-[#334155] hover-lift">
+            <p className="text-xs font-mono uppercase font-bold text-slate-400 dark:text-[#94A3B8]">Total Audits Performed</p>
+            <h3 className="text-3xl font-extrabold text-slate-900 dark:text-[#F8FAFC] font-mono mt-2">1,240</h3>
+            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold block mt-3">+18% this month</span>
           </div>
 
-          <div className="glass-card rounded-2xl p-6 border border-slate-200/80 hover-lift">
-            <p className="text-xs font-mono uppercase font-bold text-slate-400">Clear Titles Verified</p>
-            <h3 className="text-3xl font-extrabold text-blue-600 font-mono mt-2">980</h3>
-            <span className="text-xs text-slate-400 font-medium block mt-3">High confidence score</span>
+          <div className="glass-card rounded-2xl p-6 border border-slate-200 dark:border-[#334155] hover-lift">
+            <p className="text-xs font-mono uppercase font-bold text-slate-400 dark:text-[#94A3B8]">Clear Titles Verified</p>
+            <h3 className="text-3xl font-extrabold text-blue-600 dark:text-cyan-400 font-mono mt-2">980</h3>
+            <span className="text-xs text-slate-400 dark:text-[#94A3B8] font-medium block mt-3">High confidence score</span>
           </div>
 
-          <div className="glass-card rounded-2xl p-6 border border-slate-200/80 hover-lift">
-            <p className="text-xs font-mono uppercase font-bold text-slate-400">Security Clearance</p>
-            <h3 className="text-2xl font-extrabold text-slate-900 mt-2">Level 4 (Admin)</h3>
-            <span className="text-xs text-cyan-600 font-bold block mt-3">Master Key Granted</span>
+          <div className="glass-card rounded-2xl p-6 border border-slate-200 dark:border-[#334155] hover-lift">
+            <p className="text-xs font-mono uppercase font-bold text-slate-400 dark:text-[#94A3B8]">Security Clearance</p>
+            <h3 className="text-2xl font-extrabold text-slate-900 dark:text-[#F8FAFC] mt-2">Level 4 (Admin)</h3>
+            <span className="text-xs text-cyan-600 dark:text-cyan-400 font-bold block mt-3">Master Key Granted</span>
           </div>
         </div>
 
         {/* Security Settings Form */}
-        <div className="glass-card rounded-3xl p-6 lg:p-8 border border-slate-200/80 shadow-sm">
-          <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-            <Lock size={20} className="text-blue-600" /> Security & Credentials Management
+        <div className="glass-card rounded-3xl p-6 lg:p-8 border border-slate-200 dark:border-[#334155] shadow-xs">
+          <h2 className="text-xl font-extrabold text-slate-900 dark:text-[#F8FAFC] mb-6 flex items-center gap-2">
+            <Lock size={20} className="text-blue-600 dark:text-cyan-400" /> Security & Credentials Management
           </h2>
 
           <form onSubmit={handleUpdateSecurity} className="space-y-4 max-w-2xl">
             <div>
-              <label className="block text-xs font-mono font-bold text-slate-500 uppercase mb-1.5">
+              <label className="block text-xs font-mono font-bold text-slate-500 dark:text-[#94A3B8] uppercase mb-1.5">
                 Current Password
               </label>
               <input
@@ -136,13 +136,13 @@ function Profile() {
                 value={profileData.currentPassword}
                 onChange={handleChange}
                 placeholder="••••••••••••"
-                className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-mono font-bold text-slate-500 uppercase mb-1.5">
+                <label className="block text-xs font-mono font-bold text-slate-500 dark:text-[#94A3B8] uppercase mb-1.5">
                   New Password
                 </label>
                 <input
@@ -151,12 +151,12 @@ function Profile() {
                   value={profileData.newPassword}
                   onChange={handleChange}
                   placeholder="••••••••••••"
-                  className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-mono font-bold text-slate-500 uppercase mb-1.5">
+                <label className="block text-xs font-mono font-bold text-slate-500 dark:text-[#94A3B8] uppercase mb-1.5">
                   Confirm New Password
                 </label>
                 <input
@@ -165,7 +165,7 @@ function Profile() {
                   value={profileData.confirmPassword}
                   onChange={handleChange}
                   placeholder="••••••••••••"
-                  className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
