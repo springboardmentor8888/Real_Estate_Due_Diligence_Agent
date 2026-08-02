@@ -20,9 +20,9 @@ const actions = [
     link: "/reports",
   },
   {
-    title: "Compare Properties",
+    title: "Comparable Properties",
     icon: <FaBalanceScale />,
-    link: "/comparisons",
+    link: "/property-comparison",
   },
   {
     title: "View My Reports",

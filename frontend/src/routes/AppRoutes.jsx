@@ -8,13 +8,16 @@ import VerifyOtp from "../pages/VerifyOtp";
 import ResetPassword from "../pages/ResetPassword";
 
 import Dashboard from "../pages/Dashboard";
-import AdminDashboard from "../pages/AdminDashboard"; // Added AdminDashboard import
+import AdminDashboard from "../pages/AdminDashboard";
 import SearchProperty from "../pages/SearchProperty";
 import PropertyDetails from "../pages/PropertyDetails";
 import PropertyHistory from "../pages/PropertyHistory";
 import Layout from "../components/common/Layout";
 import SavedProperties from "../pages/SavedProperties";
 import PropertyComparison from "../pages/PropertyComparison";
+import RiskAssessment from "../pages/RiskAssessment";
+import ComparableAnalysis from "../pages/ComparableAnalysis";
+import DueDiligenceReport from "../pages/DueDiligenceReport";
 
 function AppRouter() {
   return (
@@ -37,10 +40,18 @@ function AppRouter() {
 
         <Route path="/search-property" element={<SearchProperty />} />
         <Route path="/property-details" element={<PropertyDetails />} />
+        <Route path="/property-details/:propertyId" element={<PropertyDetails />} />
         <Route path="/property-history" element={<PropertyHistory />} />
-        <Route path="/reports" element={<Reports />} />
+        <Route path="/property-history/:propertyId" element={<PropertyHistory />} />
+        <Route path="/reports" element={<DueDiligenceReport />} />
+        <Route path="/reports/:propertyId" element={<DueDiligenceReport />} />
         <Route path="/saved-properties" element={<SavedProperties />} />
         <Route path="/property-comparison" element={<PropertyComparison />} />
+        <Route path="/property-comparison/:propertyId" element={<PropertyComparison />} />
+        <Route path="/property-comparison/:propertyId/:compareId" element={<PropertyComparison />} />
+        <Route path="/risk-assessment/:propertyId" element={<RiskAssessment />} />
+        <Route path="/comparable-analysis" element={<ComparableAnalysis />} />
+        <Route path="/comparable-analysis/:propertyId" element={<ComparableAnalysis />} />
         <Route path="/alerts" element={<Alerts />} />
         <Route path="/audit-logs" element={<AuditLogs />} />
         <Route path="/settings" element={<Settings />} />
@@ -53,13 +64,9 @@ function AppRouter() {
 
 export default AppRouter;
 
-// Temporary Placeholder Components (We will move these to separate page files as we build them)
+// Temporary Placeholder Components
 function Analytics() {
   return <h1 className="text-3xl font-bold p-6">Analytics Dashboard</h1>;
-}
-
-function Reports() {
-  return <h1 className="text-3xl font-bold p-6">My Reports</h1>;
 }
 
 function Alerts() {

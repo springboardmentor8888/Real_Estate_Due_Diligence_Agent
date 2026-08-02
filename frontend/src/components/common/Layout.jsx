@@ -20,6 +20,7 @@ function Layout() {
         {showNavbar && (
           <Navbar
             showFilter={location.pathname === "/search-property"}
+            showSearch={location.pathname !== "/search-property"}
             onToggleFilter={() => setShowFilters(!showFilters)}
           />
         )}

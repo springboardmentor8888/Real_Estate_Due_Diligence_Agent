@@ -5,14 +5,17 @@ const reports = [
   {
     name: "654 Maple Drive Report",
     date: "Apr 3, 2026",
+    propertyId: "PROP001",
   },
   {
     name: "789 Pine Road Report",
     date: "Feb 10, 2026",
+    propertyId: "PROP003",
   },
   {
     name: "456 Oak Avenue",
     date: "Jan 8, 2026",
+    propertyId: "PROP002",
   },
 ];
 
@@ -23,7 +26,7 @@ const RecentReports = () => {
         <h2 className="text-xl font-semibold">Recent Reports</h2>
 
         <Link
-          to="/reports"
+          to="/reports/PROP001"
           className="text-blue-600 text-sm font-medium hover:underline"
         >
           View All
@@ -48,9 +51,12 @@ const RecentReports = () => {
               </div>
             </div>
 
-            <button className="text-gray-500 hover:text-blue-600">
+            <Link
+              to={`/reports/${report.propertyId}`}
+              className="text-gray-500 hover:text-blue-600"
+            >
               <FaDownload />
-            </button>
+            </Link>
           </div>
         ))}
       </div>
