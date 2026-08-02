@@ -16,6 +16,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.realestate.agent.dto.ComparableAnalysisItem;
+import com.realestate.agent.dto.ComparablePropertyAnalysisResponse;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.ArrayList;
+
 @Service
 public class ComparablePropertyServiceImpl implements ComparablePropertyService {
 
@@ -149,6 +156,91 @@ public class ComparablePropertyServiceImpl implements ComparablePropertyService 
                                                 + id));
 
         comparablePropertyRepository.delete(comparable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ComparablePropertyAnalysisResponse analyzeComparableProperty(Long propertyId) {
+
+        Property property = propertyRepository.findById(propertyId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Property not found with ID: " + propertyId));
+
+        List<ComparableProperty> comparables =
+                comparablePropertyRepository.findByPropertyPropertyId(propertyId);
+
+        if (comparables.isEmpty()) {
+            throw new ResourceNotFoundException(
+                    "No comparable properties found for property ID: " + propertyId);
+        }
+
+        List<ComparableAnalysisItem> analysisItems = new ArrayList<>();
+
+        BigDecimal totalValue = BigDecimal.ZERO;
+        BigDecimal highestValue = BigDecimal.ZERO;
+        BigDecimal lowestValue = null;
+
+        for (ComparableProperty comparable : comparables) {
+
+            BigDecimal comparisonPrice = comparable.getComparisonPrice();
+
+            totalValue = totalValue.add(comparisonPrice);
+
+            if (comparisonPrice.compareTo(highestValue) > 0) {
+                highestValue = comparisonPrice;
+            }
+
+            if (lowestValue == null || comparisonPrice.compareTo(lowestValue) < 0) {
+                lowestValue = comparisonPrice;
+            }
+
+            BigDecimal difference =
+                    property.getMarketValue().subtract(comparisonPrice).abs();
+
+            Double areaDifference =
+                    property.getTotalArea()
+                            .subtract(comparable.getComparableProperty().getTotalArea())
+                            .doubleValue();
+
+            analysisItems.add(
+                    ComparableAnalysisItem.builder()
+                            .comparableId(comparable.getComparableId())
+                            .comparablePropertyId(
+                                    comparable.getComparableProperty().getPropertyId())
+                            .comparablePropertyName(
+                                    comparable.getComparableProperty().getPropertyName())
+                            .comparisonPrice(comparisonPrice)
+                            .marketValueDifference(difference)
+                            .areaDifference(areaDifference)
+                            .similarityScore(comparable.getSimilarityScore().doubleValue())
+                            .distanceKm(comparable.getDistanceKm().doubleValue())
+                            .remarks(comparable.getRemarks())
+                            .build()
+            );
+        }
+
+        BigDecimal average =
+                totalValue.divide(
+                        BigDecimal.valueOf(comparables.size()),
+                        2,
+                        RoundingMode.HALF_UP);
+
+        return ComparablePropertyAnalysisResponse.builder()
+                .propertyId(property.getPropertyId())
+                .propertyName(property.getPropertyName())
+                .propertyMarketValue(property.getMarketValue())
+                .averageComparableValue(average)
+                .highestComparableValue(highestValue)
+                .lowestComparableValue(lowestValue)
+                .estimatedMarketValue(average)
+                .totalComparableProperties(comparables.size())
+                .comparableProperties(analysisItems)
+                .analysisSummary(
+                        "Analysis completed successfully using "
+                                + comparables.size()
+                                + " comparable properties.")
+                .build();
     }
 
 }

@@ -16,6 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import com.realestate.agent.dto.ComparablePropertyAnalysisResponse;
+
 import java.util.List;
 
 @RestController
@@ -87,6 +89,16 @@ public class ComparablePropertyController {
         ComparablePropertyResponse response =
                 comparablePropertyService
                         .updateComparableProperty(id, request);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/analysis/{propertyId}")
+    public ResponseEntity<ComparablePropertyAnalysisResponse> analyzeComparableProperty(
+            @PathVariable Long propertyId) {
+
+        ComparablePropertyAnalysisResponse response =
+                comparablePropertyService.analyzeComparableProperty(propertyId);
 
         return ResponseEntity.ok(response);
     }

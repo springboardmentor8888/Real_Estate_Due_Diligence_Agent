@@ -3,6 +3,8 @@ package com.realestate.agent.service;
 import com.realestate.agent.dto.ComparablePropertyRequest;
 import com.realestate.agent.dto.ComparablePropertyResponse;
 
+import com.realestate.agent.dto.ComparablePropertyAnalysisResponse;
+
 import java.util.List;
 
 public interface ComparablePropertyService {
@@ -16,4 +18,6 @@ public interface ComparablePropertyService {
     ComparablePropertyResponse updateComparableProperty(Long id, ComparablePropertyRequest request);
 
     void deleteComparableProperty(Long id);
+
+    ComparablePropertyAnalysisResponse analyzeComparableProperty(Long propertyId);
 }
