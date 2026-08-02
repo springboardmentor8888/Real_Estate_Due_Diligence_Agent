@@ -20,6 +20,8 @@ import ComparableAnalysis from "../pages/ComparableAnalysis";
 import DueDiligenceReport from "../pages/DueDiligenceReport";
 import AuditLogs from "../pages/AuditLogs";
 import Analytics from "../pages/Analytics";
+import ProtectedRoute from "../components/common/ProtectedRoute";
+import Alerts from "../pages/Alerts";
 
 function AppRouter() {
   return (
@@ -35,11 +37,15 @@ function AppRouter() {
       {/* Main App Routes with Shared Navbar/Sidebar Layout */}
       <Route element={<Layout />}>
         <Route path="/dashboard" element={<Dashboard />} />
-        
-        {/* Milestone 3 Admin & Analytics Routes */}
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/analytics" element={<Analytics />} />
 
+        {/* --- PROTECTED ADMIN ROUTES (Only accessible if role === 'ADMIN') --- */}
+        <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/audit-logs" element={<AuditLogs />} />
+        </Route>
+
+        {/* Standard User Routes */}
         <Route path="/search-property" element={<SearchProperty />} />
         <Route path="/property-details" element={<PropertyDetails />} />
         <Route path="/property-details/:propertyId" element={<PropertyDetails />} />
@@ -54,8 +60,11 @@ function AppRouter() {
         <Route path="/risk-assessment/:propertyId" element={<RiskAssessment />} />
         <Route path="/comparable-analysis" element={<ComparableAnalysis />} />
         <Route path="/comparable-analysis/:propertyId" element={<ComparableAnalysis />} />
+        
+        {/* System Alerts & Notifications */}
         <Route path="/alerts" element={<Alerts />} />
-        <Route path="/audit-logs" element={<AuditLogs />} />
+
+        {/* Miscellaneous */}
         <Route path="/settings" element={<Settings />} />
         <Route path="/help" element={<Help />} />
         <Route path="/profile" element={<Profile />} />
@@ -67,14 +76,6 @@ function AppRouter() {
 export default AppRouter;
 
 // Temporary Placeholder Components
-
-
-function Alerts() {
-  return <h1 className="text-3xl font-bold p-6">Alerts & Notifications</h1>;
-}
-
-
-
 function Settings() {
   return <h1 className="text-3xl font-bold p-6">Settings</h1>;
 }
