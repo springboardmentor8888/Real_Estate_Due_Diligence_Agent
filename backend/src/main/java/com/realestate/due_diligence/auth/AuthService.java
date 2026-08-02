@@ -51,12 +51,12 @@ public class AuthService {
             );
         }
 
-        // 2. Load the default role "Buyer" from RoleRepository.
-        //    Throws a specific IllegalStateException if the database has not been seeded.
-        Role defaultRole = roleRepository.findByRoleName("Buyer")
-                .orElseThrow(() -> new IllegalStateException(
-                        "Default user role 'Buyer' is not configured in the database."
-                ));
+        // 2. Load the default role "ROLE_USER" from RoleRepository.
+        Role defaultRole = roleRepository.findByRoleName("ROLE_USER")
+                .orElseGet(() -> roleRepository.findById(1L)
+                        .orElseThrow(() -> new IllegalStateException(
+                                "Default user role 'ROLE_USER' is not configured in the database."
+                        )));
 
         // 3. Create user entity.
         User user = new User();
@@ -90,7 +90,6 @@ public class AuthService {
     @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
         // 1. Authenticate credentials via AuthenticationManager.
-        //    Throws BadCredentialsException or AuthenticationException if invalid.
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail(),
@@ -132,7 +131,13 @@ public class AuthService {
                     .trim()
                     .replace(" ", "_")
                     .toUpperCase();
-            authorities = List.of(new SimpleGrantedAuthority("ROLE_" + normalizedRole));
+            
+            // Avoid duplicate "ROLE_" prefix if already present
+            if (!normalizedRole.startsWith("ROLE_")) {
+                normalizedRole = "ROLE_" + normalizedRole;
+            }
+            
+            authorities = List.of(new SimpleGrantedAuthority(normalizedRole));
         }
 
         return org.springframework.security.core.userdetails.User
