@@ -18,6 +18,8 @@ import PropertyComparison from "../pages/PropertyComparison";
 import RiskAssessment from "../pages/RiskAssessment";
 import ComparableAnalysis from "../pages/ComparableAnalysis";
 import DueDiligenceReport from "../pages/DueDiligenceReport";
+import AuditLogs from "../pages/AuditLogs";
+import Analytics from "../pages/Analytics";
 
 function AppRouter() {
   return (
@@ -65,17 +67,13 @@ function AppRouter() {
 export default AppRouter;
 
 // Temporary Placeholder Components
-function Analytics() {
-  return <h1 className="text-3xl font-bold p-6">Analytics Dashboard</h1>;
-}
+
 
 function Alerts() {
   return <h1 className="text-3xl font-bold p-6">Alerts & Notifications</h1>;
 }
 
-function AuditLogs() {
-  return <h1 className="text-3xl font-bold p-6">Audit Logs</h1>;
-}
+
 
 function Settings() {
   return <h1 className="text-3xl font-bold p-6">Settings</h1>;
