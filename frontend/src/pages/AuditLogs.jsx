@@ -103,6 +103,31 @@ const AuditLogs = () => {
     return matchesSearch && matchesCategory && matchesSeverity;
   });
 
+  // 📥 Working CSV Exporter
+  const handleExportCSV = () => {
+    const headers = ["Log ID", "Timestamp", "User", "Role", "IP Address", "Action", "Category", "Severity", "Details"];
+    const rows = filteredLogs.map(log => [
+      getSafeString(log.id, "N/A"),
+      getSafeString(log.timestamp || log.createdAt, "N/A"),
+      getSafeString(log.user || log.userName || log.username, "System"),
+      getSafeString(log.role || log.userRole, "USER"),
+      getSafeString(log.ipAddress || log.ip, "127.0.0.1"),
+      getSafeString(log.action, "EVENT"),
+      getSafeString(log.category, "N/A"),
+      getSafeString(log.severity, "INFO"),
+      `"${getSafeString(log.details || log.description, "").replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].map(e => e.join(",")).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `audit_logs_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="px-8 pt-6 pb-12 space-y-6">
       {/* Header */}
@@ -125,14 +150,14 @@ const AuditLogs = () => {
               setSelectedSeverity("ALL"); 
               fetchLogs();
             }} 
-            className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 shadow-sm"
+            className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 shadow-sm cursor-pointer"
           >
             <FaRedo className="text-xs" /> Reset Filters
           </button>
           <button 
             type="button"
-            onClick={() => alert("Exporting CSV...")}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm"
+            onClick={handleExportCSV}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm cursor-pointer"
           >
             <FaDownload /> Export CSV
           </button>
@@ -206,7 +231,7 @@ const AuditLogs = () => {
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             >
               <option value="ALL">All Categories</option>
               <option value="AUTH">Authentication</option>
@@ -219,7 +244,7 @@ const AuditLogs = () => {
           <select
             value={selectedSeverity}
             onChange={(e) => setSelectedSeverity(e.target.value)}
-            className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
           >
             <option value="ALL">All Severities</option>
             <option value="INFO">Info</option>
@@ -260,10 +285,13 @@ const AuditLogs = () => {
                   const displayDetails = getSafeString(log.details || log.description, "No details provided");
                   const displayTime = getSafeString(log.timestamp || log.createdAt, "N/A");
 
+                  const rawId = getSafeString(log.id, String(idx + 1));
+                  const displayLogId = rawId.startsWith("LOG-") ? rawId : `LOG-${rawId}`;
+
                   return (
                     <tr key={log.id || idx} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4">
-                        <p className="font-semibold text-gray-900">{log.id ? `LOG-${log.id}` : `LOG-${idx + 1}`}</p>
+                        <p className="font-semibold text-gray-900">{displayLogId}</p>
                         <p className="text-xs text-gray-400">{displayTime}</p>
                       </td>
                       <td className="px-6 py-4">

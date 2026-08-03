@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { 
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
+  AreaChart, Area, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
 } from "recharts";
 import { 
   FaChartLine, FaFilter, FaDownload, FaSearchPlus, FaExclamationTriangle, FaFileContract, FaClock 
@@ -19,12 +19,12 @@ const Analytics = () => {
     { month: "Jun", searches: 420, reports: 210 },
   ];
 
-  // Mock data for Property Risk Distribution
+  // Mock data for Property Risk Distribution (With Custom Fill Colors)
   const riskDistributionData = [
-    { category: "Low Risk", count: 142, fill: "#10B981" },     // Emerald
-    { category: "Medium Risk", count: 88, fill: "#F59E0B" },    // Amber
-    { category: "High Risk", count: 34, fill: "#EF4444" },     // Red
-    { category: "Critical Flag", count: 12, fill: "#881337" },  // Rose Dark
+    { category: "Low Risk", count: 142, color: "#10B981" },     // Emerald
+    { category: "Medium Risk", count: 88, color: "#F59E0B" },    // Amber
+    { category: "High Risk", count: 34, color: "#EF4444" },     // Red
+    { category: "Critical Flag", count: 12, color: "#881337" },  // Rose Dark
   ];
 
   // Mock data for Top Real Estate Markets
@@ -34,6 +34,23 @@ const Analytics = () => {
     { city: "New York, NY", searches: 310, reportsGenerated: 120, avgRisk: "High (65%)" },
     { city: "Seattle, WA", searches: 260, reportsGenerated: 98, avgRisk: "Low (22%)" },
   ];
+
+  // 📥 Function to Export Analytics to CSV
+  const handleExportCSV = () => {
+    const csvRows = [
+      ["Market / City", "Total Searches", "Reports Generated", "Average Risk Level"],
+      ...topMarkets.map(m => [m.city, m.searches, m.reportsGenerated, m.avgRisk])
+    ];
+
+    const csvContent = "data:text/csv;charset=utf-8," + csvRows.map(e => e.join(",")).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `due_diligence_analytics_${timeRange}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="px-8 pt-6 pb-12 space-y-8">
@@ -55,16 +72,19 @@ const Analytics = () => {
             <select
               value={timeRange}
               onChange={(e) => setTimeRange(e.target.value)}
-              className="px-2 py-1 text-sm bg-transparent font-medium text-gray-700 focus:outline-none"
+              className="px-2 py-1 text-sm bg-transparent font-medium text-gray-700 focus:outline-none cursor-pointer"
             >
-              <option value="30d font-medium">Last 30 Days</option>
+              <option value="30d">Last 30 Days</option>
               <option value="6m">Last 6 Months</option>
               <option value="1y">Last 1 Year</option>
             </select>
           </div>
 
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm transition-colors">
-            <FaDownload /> Export Analytics
+          <button 
+            onClick={handleExportCSV}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm transition-colors cursor-pointer"
+          >
+            <FaDownload /> Export CSV
           </button>
         </div>
       </div>
@@ -157,7 +177,11 @@ const Analytics = () => {
                 <XAxis dataKey="category" stroke="#9CA3AF" fontSize={12} />
                 <YAxis stroke="#9CA3AF" fontSize={12} />
                 <Tooltip />
-                <Bar dataKey="count" name="Properties" radius={[6, 6, 0, 0]} fill="#3B82F6" />
+                <Bar dataKey="count" name="Properties" radius={[6, 6, 0, 0]}>
+                  {riskDistributionData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>

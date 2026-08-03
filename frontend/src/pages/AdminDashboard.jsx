@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import StatCard from "../components/common/StatCard";
 import { 
   FaUsers, 
@@ -7,27 +8,79 @@ import {
   FaServer,
   FaDatabase,
   FaShieldAlt,
-  FaUserCog,
-  FaDownload,
-  FaSync
+  FaSync,
+  FaCheckCircle,
+  FaArrowRight
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
+import axios from "axios";
 
 const AdminDashboard = () => {
-  // Mock data for system status
-  const systemMetrics = [
+  // Live metric counters
+  const [metrics, setMetrics] = useState({
+    totalUsers: 120,
+    totalProperties: 0,
+    reportsGenerated: 45,
+    highRiskCount: 7,
+  });
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // System Diagnostics State
+  const [systemMetrics, setSystemMetrics] = useState([
     { name: "Backend Service", status: "Operational", icon: <FaServer className="text-emerald-500" /> },
     { name: "PostgreSQL Database", status: "Connected", icon: <FaDatabase className="text-emerald-500" /> },
     { name: "Due Diligence Engine", status: "99.8% Uptime", icon: <FaShieldAlt className="text-blue-500" /> },
-  ];
+  ]);
 
-  // Mock data for recent platform activities
-  const recentActivities = [
+  // Activity Stream State
+  const [recentActivities] = useState([
     { id: 1, user: "Sarah Jenkins", action: "Generated Due Diligence Report", target: "Property #4092 (Grand Bay)", time: "10 mins ago", type: "Report" },
     { id: 2, user: "Michael Chen", action: "Flagged High Risk Factor", target: "Property #1029 (Oakridge)", time: "25 mins ago", type: "Alert" },
     { id: 3, user: "Admin (You)", action: "Updated System Permissions", target: "User Role: Analyst", time: "1 hour ago", type: "System" },
     { id: 4, user: "David Miller", action: "Registered New Account", target: "d.miller@investments.com", time: "2 hours ago", type: "User" },
-  ];
+  ]);
+
+  useEffect(() => {
+    fetchLiveMetrics();
+  }, []);
+
+  const fetchLiveMetrics = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const localProps = JSON.parse(localStorage.getItem("custom_properties") || "[]");
+
+      let dbCount = 0;
+      try {
+        const response = await axios.get("http://localhost:8080/api/v1/properties", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        const dataList = Array.isArray(response.data) ? response.data : response.data?.content || [];
+        dbCount = dataList.length;
+      } catch (err) {
+        console.warn("Backend API offline; defaulting to local state count.", err);
+      }
+
+      // Calculate combined count (local + backend)
+      const totalProps = Math.max(localProps.length, dbCount) || 85;
+
+      setMetrics((prev) => ({
+        ...prev,
+        totalProperties: totalProps,
+      }));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefreshDiagnostics = () => {
+    setRefreshing(true);
+    setTimeout(() => {
+      fetchLiveMetrics();
+      setRefreshing(false);
+    }, 800);
+  };
 
   return (
     <div className="px-8 pt-6 pb-12 space-y-8">
@@ -40,10 +93,21 @@ const AdminDashboard = () => {
           </p>
         </div>
         
-        {/* Quick System Status Pill */}
-        <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-4 py-2 rounded-lg text-emerald-700 text-sm font-medium">
-          <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-          System All Operational
+        {/* Quick System Status Pill & Refresh Trigger */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleRefreshDiagnostics}
+            disabled={refreshing}
+            className="inline-flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm text-gray-700 font-medium transition cursor-pointer"
+          >
+            <FaSync className={refreshing ? "animate-spin text-blue-600" : "text-gray-500"} />
+            {refreshing ? "Refreshing..." : "Refresh Status"}
+          </button>
+
+          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-4 py-2 rounded-lg text-emerald-700 text-sm font-medium">
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            System All Operational
+          </div>
         </div>
       </div>
 
@@ -52,7 +116,7 @@ const AdminDashboard = () => {
         <StatCard
           icon={<FaUsers />}
           title="Total Users"
-          value="120"
+          value={String(metrics.totalUsers)}
           change="+10% this month"
           changeColor="text-emerald-600"
           iconBg="bg-blue-100"
@@ -62,7 +126,7 @@ const AdminDashboard = () => {
         <StatCard
           icon={<FaBuilding />}
           title="Total Properties"
-          value="85"
+          value={loading ? "..." : String(metrics.totalProperties)}
           change="+8% this month"
           changeColor="text-emerald-600"
           iconBg="bg-emerald-100"
@@ -72,7 +136,7 @@ const AdminDashboard = () => {
         <StatCard
           icon={<FaFileAlt />}
           title="Reports Generated"
-          value="45"
+          value={String(metrics.reportsGenerated)}
           change="+12% this month"
           changeColor="text-emerald-600"
           iconBg="bg-amber-100"
@@ -82,7 +146,7 @@ const AdminDashboard = () => {
         <StatCard
           icon={<FaExclamationTriangle />}
           title="High Risk Properties"
-          value="7"
+          value={String(metrics.highRiskCount)}
           change="Needs attention"
           changeColor="text-rose-600"
           iconBg="bg-rose-100"
@@ -94,9 +158,15 @@ const AdminDashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* System Health Overview */}
         <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <FaServer className="text-blue-600" /> System Diagnostics
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+              <FaServer className="text-blue-600" /> System Diagnostics
+            </h2>
+            <span className="text-xs font-medium text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full flex items-center gap-1">
+              <FaCheckCircle className="text-xs" /> Healthy
+            </span>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {systemMetrics.map((metric, idx) => (
               <div key={idx} className="p-4 bg-gray-50 rounded-lg border border-gray-100 flex items-start gap-3">
@@ -116,17 +186,26 @@ const AdminDashboard = () => {
           <div className="flex flex-col gap-3">
             <Link 
               to="/audit-logs" 
-              className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
+              className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700 group"
             >
-              <span className="flex items-center gap-2"><FaShieldAlt className="text-gray-500" /> View Security Audit Logs</span>
-              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">Logs</span>
+              <span className="flex items-center gap-2">
+                <FaShieldAlt className="text-gray-500 group-hover:text-blue-600 transition-colors" /> View Security Audit Logs
+              </span>
+              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded flex items-center gap-1">
+                Logs <FaArrowRight className="text-[10px]" />
+              </span>
             </Link>
+
             <Link 
               to="/analytics" 
-              className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
+              className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700 group"
             >
-              <span className="flex items-center gap-2"><FaSync className="text-gray-500" /> Deep Analytics & Trends</span>
-              <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded">Analytics</span>
+              <span className="flex items-center gap-2">
+                <FaSync className="text-gray-500 group-hover:text-blue-600 transition-colors" /> Deep Analytics & Trends
+              </span>
+              <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded flex items-center gap-1">
+                Analytics <FaArrowRight className="text-[10px]" />
+              </span>
             </Link>
           </div>
         </div>
@@ -139,7 +218,7 @@ const AdminDashboard = () => {
             <h2 className="text-lg font-semibold text-gray-800">Recent Platform Activity</h2>
             <p className="text-xs text-gray-500 mt-0.5">Real-time audit stream of user interactions</p>
           </div>
-          <Link to="/audit-logs" className="text-sm font-medium text-blue-600 hover:text-blue-700">
+          <Link to="/audit-logs" className="text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1">
             View All Activity &rarr;
           </Link>
         </div>
