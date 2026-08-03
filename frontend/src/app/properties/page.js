@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import Navbar from "../../components/Navbar";
 import { Search, MapPin, ShieldCheck, HelpCircle } from "lucide-react";
 import "./properties.css";
@@ -115,9 +116,9 @@ export default function PropertiesPage() {
                       <span className="price-amount">{property.price}</span>
                     </div>
 
-                    <button className="details-btn">
+                    <Link href={`/properties/${property.id}`} className="details-btn" style={{ textDecoration: "none" }}>
                       Verify Details
-                    </button>
+                    </Link>
                   </div>
                 </div>
               </div>

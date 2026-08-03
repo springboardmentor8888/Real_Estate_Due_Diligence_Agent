@@ -235,7 +235,92 @@ export default function PropertyDetailsPage() {
               </div>
             )}
           </div>
-        </div>
+        {/* ── Risk Assessment Dashboard ─────────────────────────────────── */}
+        <section className="pd-card pd-full-width risk-dashboard-block" style={{ marginBottom: "24px" }}>
+          <div className="pd-card-header">
+            <ShieldCheck size={20} />
+            <h2>Due Diligence Risk Assessment</h2>
+          </div>
+          
+          <div className="risk-grid-split">
+            {/* Radial Meter */}
+            <div className="risk-meter-box">
+              <div className="radial-score-wrapper">
+                <svg viewBox="0 0 100 100" className="radial-progress-svg">
+                  <circle cx="50" cy="50" r="40" className="progress-bg" />
+                  <circle 
+                    cx="50" 
+                    cy="50" 
+                    r="40" 
+                    className="progress-bar"
+                    style={{
+                      strokeDasharray: `${2 * Math.PI * 40}`,
+                      strokeDashoffset: `${2 * Math.PI * 40 * (1 - (property?.riskScore ?? 0) / 100)}`,
+                      stroke: property?.riskLevel === "HIGH_RISK" ? "var(--danger)" : property?.riskLevel === "CONCERNS_FOUND" ? "var(--warning)" : "var(--success)"
+                    }}
+                  />
+                </svg>
+                <div className="radial-score-value">
+                  <span className="score-num">{property?.riskScore ?? 0}</span>
+                  <span className="score-denom">/100</span>
+                </div>
+              </div>
+              <div 
+                className={`risk-badge-display ${property?.riskLevel?.toLowerCase()}`}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "8px 16px",
+                  borderRadius: "9999px",
+                  fontWeight: 700,
+                  marginTop: "16px",
+                  fontSize: "14px"
+                }}
+              >
+                {riskCfg.icon}
+                <span>{riskCfg.label} Profile</span>
+              </div>
+            </div>
+
+            {/* Recommendation Callout */}
+            <div className="risk-rec-details">
+              <h3>Overall Audit Recommendation</h3>
+              <div className="rec-box-callout">
+                <p>
+                  {property?.riskLevel === "HIGH_RISK" 
+                    ? "High Risk encumbrances identified. Active legal claims, litigation, or tax delinquencies require immediate attention before proceeding with this transaction."
+                    : property?.riskLevel === "CONCERNS_FOUND"
+                    ? "Certain concerns were detected in the public registries (e.g., active HOA assessment liens or minor zoning queries). Proceed with caution and ensure these liabilities are cleared by the seller."
+                    : "The title history is clear and all municipal tax payments are up to date. Highly recommended for acquisition with a very low risk profile."}
+                </p>
+              </div>
+
+              <div className="risk-verification-checklist">
+                <div className="checklist-item">
+                  <CheckCircle2 size={16} className="icon-green" />
+                  <span>Title Deed Verification: {ownership.length > 0 ? "Chain of title verified" : "Pending database records"}</span>
+                </div>
+                <div className="checklist-item">
+                  {property?.riskLevel === "HIGH_RISK" ? (
+                    <XCircle size={16} className="icon-red" />
+                  ) : (
+                    <CheckCircle2 size={16} className="icon-green" />
+                  )}
+                  <span>Tax Compliance Check: {property?.riskLevel === "HIGH_RISK" ? "Delinquency alert found" : "Fully paid or clear"}</span>
+                </div>
+                <div className="checklist-item">
+                  {publicRecords.some(r => r.status === "ACTIVE") ? (
+                    <AlertTriangle size={16} className="icon-orange" />
+                  ) : (
+                    <CheckCircle2 size={16} className="icon-green" />
+                  )}
+                  <span>Public Registry Encumbrance Audit: {publicRecords.some(r => r.status === "ACTIVE") ? `${publicRecords.filter(r => r.status === "ACTIVE").length} active liability alerts` : "No active encumbrances"}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <div className="pd-content-grid">
           {/* ── Ownership History ─────────────────────────────────────────── */}
