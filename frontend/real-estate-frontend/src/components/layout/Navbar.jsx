@@ -14,7 +14,7 @@ import {
 import { showConfirmDialog, showToast } from "../../utils/swal";
 import { useTheme } from "../../context/ThemeContext";
 
-function Navbar({ onToggleMobileMenu }) {
+function Navbar({ onToggleMobileMenu, onOpenCommandPalette }) {
   const navigate = useNavigate();
   const { theme, toggleTheme, isDark } = useTheme();
   const [searchQuery, setSearchQuery] = useState("");
@@ -61,7 +61,9 @@ function Navbar({ onToggleMobileMenu }) {
 
   const handleGlobalSearch = (e) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
+    if (onOpenCommandPalette) {
+      onOpenCommandPalette();
+    } else if (searchQuery.trim()) {
       showToast(`Searching properties for "${searchQuery}"`, "info");
       navigate("/property-search");
     }

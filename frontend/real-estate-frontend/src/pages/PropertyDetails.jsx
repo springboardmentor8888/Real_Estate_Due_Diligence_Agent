@@ -1,464 +1,449 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation, useSearchParams, Link } from "react-router-dom";
 import MainLayout from "../components/layout/MainLayout";
-import InfoCard from "../components/property/InfoCard";
 import Badge from "../components/common/Badge";
 import Button from "../components/common/Button";
+import EmptyState from "../components/common/EmptyState";
 import {
   Home,
   User,
   Building2,
   MapPin,
   Ruler,
-  BadgeCheck,
   Printer,
   Share2,
-  Calendar,
   DollarSign,
   ShieldCheck,
+  ShieldAlert,
   AlertTriangle,
   Waves,
   Leaf,
   Map,
-  Zap,
-  CheckCircle2,
   Clock,
-  Award,
-  FileText,
-  ArrowLeft,
-  Compass,
-  RotateCcw,
+  ChevronRight,
+  FolderOpen,
+  History,
+  ImageOff,
 } from "lucide-react";
 import { showToast } from "../utils/swal";
-import { INDIAN_PROPERTIES } from "../data/indianProperties";
-
-import { getPropertyDetails } from "../services/propertyService";
-import { useEffect } from "react";
+import {
+  getPropertyDetails,
+  getOwnershipRecords,
+  getPropertyTaxHistory,
+  getZoningInformation,
+  getFloodZoneInformation,
+  getEnvironmentalRecords,
+  getPermitRecords,
+} from "../services/propertyService";
 
 function PropertyDetails() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  const targetId = searchParams.get("id") || location.state?.property?.id;
-  const initialProp =
-    INDIAN_PROPERTIES.find((p) => p.id === targetId) ||
-    location.state?.property ||
-    INDIAN_PROPERTIES[0];
+  const targetId = searchParams.get("id") || location.state?.property?.id || location.state?.property?.propertyId;
 
-  const [property, setProperty] = useState(initialProp);
+  const [property, setProperty] = useState(location.state?.property || null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
+
+  // Sub-record states from real backend APIs
+  const [ownershipRecords, setOwnershipRecords] = useState([]);
+  const [taxHistory, setTaxHistory] = useState([]);
+  const [zoningInfo, setZoningInfo] = useState(null);
+  const [floodInfo, setFloodInfo] = useState(null);
+  const [environmentalRecords, setEnvironmentalRecords] = useState([]);
+  const [permitRecords, setPermitRecords] = useState([]);
 
   useEffect(() => {
     if (!targetId) return;
     const numericId = targetId.toString().replace(/\D/g, "");
     if (numericId) {
       setLoading(true);
+
+      // Fetch core property details from backend API
       getPropertyDetails(numericId)
         .then((res) => {
           if (res && res.data) {
             const p = res.data;
             const addressString = p.address
               ? `${p.address.addressLine1 || ""}, ${p.address.city || ""}, ${p.address.state || ""}`.replace(/^, |, $/g, "")
-              : p.propertyName || "Property Parcel";
+              : p.propertyName || "Address Not Available";
+
             setProperty({
               id: `PR-${p.propertyId}`,
+              propertyId: p.propertyId,
               numericId: p.propertyId,
+              title: p.propertyName || addressString,
               address: addressString,
-              city: p.address?.city || "Bengaluru",
-              state: p.address?.state || "Karnataka",
-              type: p.propertyType || "Residential",
-              owner: p.createdByEmail ? p.createdByEmail.split("@")[0] : "Verified Owner",
-              score: p.marketValue ? `₹${(p.marketValue / 1000000).toFixed(2)} Cr` : "98/100",
-              status: p.status || "Verified Clear Title",
-              variant: "success",
-              area: p.totalArea ? `${p.totalArea} sq ft` : "2,400 sq ft",
-              year: p.builtYear || 2018,
-              surveyNumber: `SY-${p.propertyId}-2024`,
-              marketValue: p.marketValue ? `₹${(p.marketValue / 1000000).toFixed(2)} Cr` : "₹4.20 Cr",
+              city: p.address?.city || "Not Available",
+              state: p.address?.state || "Not Available",
+              pincode: p.address?.postalCode || "Not Available",
+              type: p.propertyType || "Not Available",
+              owner: p.createdByEmail ? p.createdByEmail.split("@")[0] : "Not Available",
+              score: p.marketValue ? `₹${(p.marketValue / 1000000).toFixed(2)} Cr` : "Not Available",
+              status: p.status || "Verified Clear",
+              variant: p.status === "Verified Clear Title" ? "success" : "warning",
+              area: p.totalArea ? `${p.totalArea} sq ft` : "Not Available",
+              year: p.builtYear || "Not Available",
+              surveyNo: p.surveyNumber || `SY-${p.propertyId}`,
+              marketValue: p.marketValue ? `₹${(p.marketValue / 1000000).toFixed(2)} Cr` : "Not Available",
+              imageUrl: p.imageUrl || null,
+              description: p.description || null,
               rawBackendData: p,
             });
           }
         })
         .catch((err) => {
-          console.warn("Backend getPropertyDetails error, using local data:", err);
+          console.warn("Backend getPropertyDetails query error:", err);
         })
         .finally(() => setLoading(false));
+
+      // Fetch verification sub-records from backend API endpoints
+      getOwnershipRecords(numericId).then((res) => res?.data && setOwnershipRecords(Array.isArray(res.data) ? res.data : [res.data])).catch(() => setOwnershipRecords([]));
+      getPropertyTaxHistory(numericId).then((res) => res?.data && setTaxHistory(Array.isArray(res.data) ? res.data : [res.data])).catch(() => setTaxHistory([]));
+      getZoningInformation(numericId).then((res) => res?.data && setZoningInfo(res.data)).catch(() => setZoningInfo(null));
+      getFloodZoneInformation(numericId).then((res) => res?.data && setFloodInfo(res.data)).catch(() => setFloodInfo(null));
+      getEnvironmentalRecords(numericId).then((res) => res?.data && setEnvironmentalRecords(Array.isArray(res.data) ? res.data : [res.data])).catch(() => setEnvironmentalRecords([]));
+      getPermitRecords(numericId).then((res) => res?.data && setPermitRecords(Array.isArray(res.data) ? res.data : [res.data])).catch(() => setPermitRecords([]));
     }
   }, [targetId]);
 
-  const handleRetry = () => {
-    setLoading(true);
-    setError(false);
-    setTimeout(() => {
-      setLoading(false);
-      showToast(`Refreshed due diligence records for ${property.id}`, "success");
-    }, 500);
-  };
-
   const handlePrint = () => {
-    showToast(`Opening system print dialog for ${property.id}...`, "info");
+    showToast(`Opening system print dialog for ${property?.id || "Workspace"}...`, "info");
     window.print();
   };
 
   const handleShare = () => {
     navigator.clipboard?.writeText(window.location.href);
-    showToast(`Property audit link for ${property.id} copied to clipboard!`, "success");
+    showToast(`Property workspace link copied!`, "success");
   };
+
+  const tabs = [
+    { id: "overview", label: "Overview", icon: Home },
+    { id: "ownership", label: "Ownership Records", icon: User },
+    { id: "tax", label: "Property Tax History", icon: DollarSign },
+    { id: "zoning", label: "Zoning Information", icon: Building2 },
+    { id: "flood", label: "Flood Zone Verification", icon: Waves },
+    { id: "permits", label: "Permit Records", icon: Map },
+    { id: "environmental", label: "Environmental Records", icon: Leaf },
+    { id: "documents", label: "Documents", icon: FolderOpen },
+    { id: "reports", label: "Report History", icon: History },
+  ];
+
+  if (!property && !loading) {
+    return (
+      <MainLayout>
+        <div className="max-w-4xl mx-auto py-12">
+          <EmptyState
+            title="No Property Selected"
+            message="Please select a valid property from the Property Search page to view its details."
+            actionLabel="Go to Property Search"
+            onAction={() => (window.location.href = "/property-search")}
+          />
+        </div>
+      </MainLayout>
+    );
+  }
+
+  const p = property || {};
+  const imgSrc = p.imageUrl || p.image || null;
 
   return (
     <MainLayout>
-      <div className="space-y-5 sm:space-y-6">
-        {/* Back Navigation Bar */}
-        <div className="flex items-center justify-between">
-          <Link
-            to="/property-search"
-            className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-[#CBD5E1] hover:text-blue-600 dark:hover:text-cyan-400 transition-colors"
-          >
-            <ArrowLeft size={16} /> Back to Search Results
-          </Link>
+      <div className="space-y-6 sm:space-y-8 pb-16 max-w-7xl mx-auto">
+        {/* Breadcrumb Navigation Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+          <nav className="flex items-center gap-2 text-slate-500 dark:text-[#CBD5E1] font-semibold">
+            <Link to="/dashboard" className="hover:text-blue-600 dark:hover:text-cyan-400 transition-colors">
+              Dashboard
+            </Link>
+            <ChevronRight size={14} className="text-slate-400" />
+            <Link to="/property-search" className="hover:text-blue-600 dark:hover:text-cyan-400 transition-colors">
+              Property Search
+            </Link>
+            <ChevronRight size={14} className="text-slate-400" />
+            <span className="text-slate-900 dark:text-white font-bold">Property Details</span>
+          </nav>
+
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono font-bold text-slate-500 dark:text-[#CBD5E1] bg-slate-100 dark:bg-[#0F172A] px-2.5 py-1 rounded-md border border-slate-200 dark:border-[#334155]">
-              Parcel ID: {property.id}
-            </span>
-            <Button onClick={handleRetry} variant="secondary" size="sm" icon={RotateCcw}>
-              Refresh Audit
+            <Button onClick={handlePrint} variant="secondary" size="sm" icon={Printer}>
+              Print Workspace
+            </Button>
+            <Button onClick={handleShare} variant="outline" size="sm" icon={Share2}>
+              Share
             </Button>
           </div>
         </div>
 
-        {/* Flagship Hero Header Section (Clean Slate Theme) */}
-        <div className="relative overflow-hidden rounded-2xl bg-slate-900 text-white p-6 sm:p-8 lg:p-8 border border-slate-800 dark:border-[#334155] shadow-lg">
-          <div className="relative z-10 space-y-6">
-            {/* Top Bar: APN Badge & Action Toolbar */}
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-mono font-bold bg-slate-800 text-cyan-300 px-3.5 py-1 rounded-full border border-slate-700">
-                  {property.surveyNo} • APN: {property.id}
+        {/* Professional Workspace Header Card */}
+        <div className="white-card rounded-2xl bg-white dark:bg-[#1E293B] border border-slate-200/80 dark:border-[#334155] shadow-xs overflow-hidden">
+          <div className="grid grid-cols-1 lg:grid-cols-12">
+            {/* Header Image or No Image Available Placeholder */}
+            <div className="lg:col-span-4 h-56 lg:h-auto relative bg-slate-100 dark:bg-[#0F172A] overflow-hidden flex items-center justify-center border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-[#334155]">
+              {imgSrc ? (
+                <img
+                  src={imgSrc}
+                  alt={p.title || p.address}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center p-6 text-center text-slate-400 dark:text-slate-500 space-y-1.5 w-full h-full">
+                  <ImageOff size={36} />
+                  <span className="text-xs font-mono font-bold">No Image Available</span>
+                </div>
+              )}
+              <div className="absolute top-3 left-3">
+                <span className="text-xs font-mono font-bold bg-slate-900/80 backdrop-blur-md text-white px-2.5 py-1 rounded-lg border border-white/20">
+                  APN: {p.id || p.propertyId ? `PR-${p.propertyId || p.id}` : "Not Available"}
                 </span>
-                <Badge variant={property.variant}>{property.status}</Badge>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Button onClick={handlePrint} variant="secondary" size="sm" icon={Printer}>
-                  Print Document
-                </Button>
-                <Button onClick={handleShare} variant="outline" size="sm" icon={Share2}>
-                  Share Audit Link
-                </Button>
               </div>
             </div>
 
-            {/* Property Title & Unique Indian Address */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-              <div className="lg:col-span-8 space-y-2.5">
-                <div className="flex items-center gap-2 text-slate-300 text-xs font-mono">
-                  <MapPin size={14} className="text-rose-400 shrink-0" />
-                  <span>
-                    {property.address} - PIN {property.pincode}
+            {/* Header Info */}
+            <div className="lg:col-span-8 p-6 sm:p-7 flex flex-col justify-between space-y-4">
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-blue-600 dark:text-cyan-400 font-bold bg-blue-50 dark:bg-blue-950/60 px-2.5 py-0.5 rounded border border-blue-200 dark:border-blue-800">
+                    {p.type || "Property Parcel"}
                   </span>
+                  <Badge variant={p.variant || "success"}>{p.status || "Verified"}</Badge>
                 </div>
-                <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight">
-                  {property.title}
+
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-[#F8FAFC] tracking-tight">
+                  {p.title || p.propertyName || p.address || "Property Parcel"}
                 </h1>
-                <p className="text-slate-300 text-sm leading-relaxed max-w-2xl">
-                  {property.description}
+
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-[#CBD5E1] flex items-center gap-1.5 font-medium">
+                  <MapPin size={15} className="text-blue-600 dark:text-cyan-400 shrink-0" />
+                  <span>{p.address || "Address Not Available"}, {p.city || "Not Available"}, {p.state || "Not Available"} - PIN {p.pincode || "Not Available"}</span>
                 </p>
               </div>
 
-              {/* Diligence Score Gauge Card */}
-              <div className="lg:col-span-4 shrink-0">
-                <div className="rounded-2xl p-6 bg-slate-800/90 border border-slate-700 text-center shadow-md">
-                  <p className="text-xs font-mono uppercase font-bold text-cyan-300 tracking-wider">
-                    Due Diligence Score
-                  </p>
-                  <div className="flex items-center justify-center gap-2 mt-2">
-                    <Award size={36} className="text-cyan-400" />
-                    <span className="text-5xl font-extrabold text-white font-mono">
-                      {property.score}
-                    </span>
-                  </div>
-                  <div
-                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold mt-3 border ${
-                      property.variant === "success"
-                        ? "bg-emerald-500/20 text-emerald-300 border-emerald-400/30"
-                        : property.variant === "warning"
-                        ? "bg-amber-500/20 text-amber-300 border-amber-400/30"
-                        : "bg-rose-500/20 text-rose-300 border-rose-400/30"
-                    }`}
-                  >
-                    <ShieldCheck size={14} /> {property.status.toUpperCase()}
-                  </div>
+              {/* Quick Header Specs */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-100 dark:border-[#334155] text-xs">
+                <div>
+                  <span className="text-[10px] font-mono text-slate-400 uppercase">Registered Owner</span>
+                  <p className="font-bold text-slate-900 dark:text-white truncate">{p.owner || "Not Available"}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono text-slate-400 uppercase">Plot Area</span>
+                  <p className="font-bold text-slate-900 dark:text-white">{p.area || "Not Available"}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono text-slate-400 uppercase">Zoning</span>
+                  <p className="font-bold text-slate-900 dark:text-white">{p.zoning || "Not Available"}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono text-slate-400 uppercase">Audit Score</span>
+                  <p className="font-bold text-blue-600 dark:text-cyan-400 font-mono">{p.score || "Not Available"}</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Property Information (Light Blue Section Card) */}
-        <InfoCard
-          title="Property Identification & Attributes"
-          subtitle="Core land parcel metadata retrieved from official land registry records"
-          icon={Home}
-          variant="blue"
-          collapsible
-          defaultOpen
-        >
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Complete Address</p>
-              <p className="text-sm font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">{property.address}</p>
-            </div>
+        {/* Workspace Navigation Tabs Bar */}
+        <div className="flex items-center gap-1 p-1 bg-white dark:bg-[#1E293B] rounded-2xl border border-slate-200/80 dark:border-[#334155] shadow-xs overflow-x-auto scrollbar-none">
+          {tabs.map((tab) => {
+            const IconComp = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  isActive
+                    ? "bg-blue-600 text-white shadow-xs"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#0F172A]"
+                }`}
+              >
+                <IconComp size={15} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
 
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Registered Owner Name</p>
-              <p className="text-sm font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">{property.owner}</p>
-            </div>
+        {/* Workspace Active Tab Panels */}
+        <div className="white-card rounded-2xl p-6 bg-white dark:bg-[#1E293B] border border-slate-200/80 dark:border-[#334155] shadow-xs min-h-[320px]">
+          {/* TAB 1: OVERVIEW */}
+          {activeTab === "overview" && (
+            <div className="space-y-6">
+              <h3 className="text-base font-bold text-slate-900 dark:text-[#F8FAFC]">
+                Property Overview & Audit Summary
+              </h3>
 
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">City & State</p>
-              <p className="text-sm font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">
-                {property.city}, {property.state}
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-[#CBD5E1] leading-relaxed">
+                {p.description || "Not Available"}
               </p>
-            </div>
 
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">PIN Code</p>
-              <p className="text-sm font-bold text-slate-900 dark:text-[#F8FAFC] font-mono mt-1">{property.pincode}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155] space-y-1">
+                  <span className="text-[10px] font-mono uppercase text-slate-400">Assessed Market Value</span>
+                  <p className="font-bold text-slate-900 dark:text-white">{p.marketValue || p.assessedVal || "Not Available"}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155] space-y-1">
+                  <span className="text-[10px] font-mono uppercase text-slate-400">Built Year</span>
+                  <p className="font-bold text-slate-900 dark:text-white">{p.year || "Not Available"}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155] space-y-1">
+                  <span className="text-[10px] font-mono uppercase text-slate-400">Survey Number</span>
+                  <p className="font-bold text-slate-900 dark:text-white font-mono">{p.surveyNo || "Not Available"}</p>
+                </div>
+              </div>
             </div>
+          )}
 
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Property Type</p>
-              <p className="text-sm font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">{property.type}</p>
+          {/* TAB 2: OWNERSHIP RECORDS */}
+          {activeTab === "ownership" && (
+            <div className="space-y-4">
+              <h3 className="text-base font-bold text-slate-900 dark:text-[#F8FAFC]">
+                Ownership Records
+              </h3>
+              {ownershipRecords.length > 0 ? (
+                <div className="space-y-3 text-xs">
+                  {ownershipRecords.map((item, idx) => (
+                    <div key={idx} className="p-4 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+                      <p className="font-bold text-slate-900 dark:text-white">{item.ownerName || item.owner || "Not Available"}</p>
+                      <p className="text-slate-500 font-mono">Deed: {item.deedNumber || "Not Available"}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState title="No ownership records available." message="No ownership deed records were returned by the backend API." />
+              )}
             </div>
+          )}
 
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Plot / Built Area</p>
-              <p className="text-sm font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">{property.area}</p>
+          {/* TAB 3: PROPERTY TAX HISTORY */}
+          {activeTab === "tax" && (
+            <div className="space-y-4">
+              <h3 className="text-base font-bold text-slate-900 dark:text-[#F8FAFC]">
+                Property Tax History
+              </h3>
+              {taxHistory.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-100 dark:border-[#334155] text-slate-400 uppercase font-mono">
+                        <th className="py-2.5 px-3">Year</th>
+                        <th className="py-2.5 px-3">Tax Amount</th>
+                        <th className="py-2.5 px-3">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-[#334155]">
+                      {taxHistory.map((item, idx) => (
+                        <tr key={idx}>
+                          <td className="py-3 px-3 font-bold font-mono">{item.year || "Not Available"}</td>
+                          <td className="py-3 px-3">{item.taxAmount ? `₹${item.taxAmount}` : "Not Available"}</td>
+                          <td className="py-3 px-3"><Badge variant="success">{item.status || "Paid"}</Badge></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <EmptyState title="No tax history available." message="No tax payment records were returned by the backend API." />
+              )}
             </div>
+          )}
 
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Survey / Plot Number</p>
-              <p className="text-sm font-bold text-slate-900 dark:text-[#F8FAFC] font-mono mt-1">{property.surveyNo}</p>
+          {/* TAB 4: ZONING INFORMATION */}
+          {activeTab === "zoning" && (
+            <div className="space-y-4">
+              <h3 className="text-base font-bold text-slate-900 dark:text-[#F8FAFC]">
+                Zoning Information
+              </h3>
+              {zoningInfo ? (
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155] text-xs space-y-1">
+                  <p className="font-bold text-slate-900 dark:text-white">Code: {zoningInfo.zoningCode || "Not Available"}</p>
+                  <p className="text-slate-500">Details: {zoningInfo.description || "Not Available"}</p>
+                </div>
+              ) : (
+                <EmptyState title="No zoning information available." message="No zoning data was returned by the backend API." />
+              )}
             </div>
+          )}
 
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Risk Assessment</p>
-              <Badge variant={property.variant} className="mt-1">{property.status}</Badge>
+          {/* TAB 5: FLOOD ZONE VERIFICATION */}
+          {activeTab === "flood" && (
+            <div className="space-y-4">
+              <h3 className="text-base font-bold text-slate-900 dark:text-[#F8FAFC]">
+                Flood Zone Verification
+              </h3>
+              {floodInfo ? (
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155] text-xs space-y-1">
+                  <p className="font-bold text-slate-900 dark:text-white">Zone: {floodInfo.zoneName || "Not Available"}</p>
+                  <p className="text-slate-500">Risk Rating: {floodInfo.riskRating || "Not Available"}</p>
+                </div>
+              ) : (
+                <EmptyState title="No flood zone information available." message="No flood risk data was returned by the backend API." />
+              )}
             </div>
-          </div>
-        </InfoCard>
+          )}
 
-        {/* Ownership Records (Light Green Section Card) */}
-        <InfoCard
-          title="1. Ownership Records & Sub-Registrar Title"
-          subtitle={`Retrieved from Sub-Registrar Office (${property.city}, ${property.state})`}
-          icon={User}
-          variant="green"
-          collapsible
-          defaultOpen
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Current Registered Owner</p>
-              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">{property.owner}</p>
+          {/* TAB 6: PERMIT RECORDS */}
+          {activeTab === "permits" && (
+            <div className="space-y-4">
+              <h3 className="text-base font-bold text-slate-900 dark:text-[#F8FAFC]">
+                Permit Records
+              </h3>
+              {permitRecords.length > 0 ? (
+                <div className="space-y-2 text-xs">
+                  {permitRecords.map((item, idx) => (
+                    <div key={idx} className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+                      <p className="font-bold text-slate-900 dark:text-white">Permit #{item.permitNumber || "Not Available"}</p>
+                      <p className="text-slate-500">{item.description || "Not Available"}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState title="No permit records available." message="No building permit records were returned by the backend API." />
+              )}
             </div>
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Registration Jurisdiction</p>
-              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">{property.city} Sub-Registrar</p>
-            </div>
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Deed Instrument #</p>
-              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] font-mono mt-1">{property.deedId}</p>
-            </div>
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Encumbrance Status</p>
-              <Badge variant={property.variant} className="mt-1">{property.status}</Badge>
-            </div>
-          </div>
-        </InfoCard>
+          )}
 
-        {/* Tax History (Light Amber Section Card) */}
-        <InfoCard
-          title="2. Property Tax History Records"
-          subtitle={`Verified by Municipal Corporation Tax Assessor (${property.city})`}
-          icon={DollarSign}
-          variant="amber"
-          collapsible
-          defaultOpen
-        >
-          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#0F172A]">
-            <table className="w-full text-left text-sm border-collapse">
-              <thead>
-                <tr className="bg-slate-900 text-slate-200 text-xs font-mono uppercase">
-                  <th className="p-3.5 font-semibold">Tax Assessment Year</th>
-                  <th className="p-3.5 font-semibold">Assessed Market Value</th>
-                  <th className="p-3.5 font-semibold">Annual Tax Assessment</th>
-                  <th className="p-3.5 font-semibold">Status</th>
-                  <th className="p-3.5 font-semibold">Challan Number</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-[#334155] text-slate-700 dark:text-slate-200">
-                <tr className="hover:bg-slate-50 dark:hover:bg-[#1E293B]/60">
-                  <td className="p-3.5 font-mono font-bold text-slate-900 dark:text-[#F8FAFC]">FY 2025-26</td>
-                  <td className="p-3.5 font-medium text-slate-700 dark:text-slate-300">{property.assessedVal}</td>
-                  <td className="p-3.5 font-bold text-slate-900 dark:text-[#F8FAFC] font-mono">{property.taxStatus}</td>
-                  <td className="p-3.5"><Badge variant={property.variant}>{property.status}</Badge></td>
-                  <td className="p-3.5 text-xs text-slate-500 dark:text-[#94A3B8] font-mono">CH-IND-2025-88</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </InfoCard>
+          {/* TAB 7: ENVIRONMENTAL RECORDS */}
+          {activeTab === "environmental" && (
+            <div className="space-y-4">
+              <h3 className="text-base font-bold text-slate-900 dark:text-[#F8FAFC]">
+                Environmental Audit Records
+              </h3>
+              {environmentalRecords.length > 0 ? (
+                <div className="space-y-2 text-xs">
+                  {environmentalRecords.map((item, idx) => (
+                    <div key={idx} className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
+                      <p className="font-bold text-slate-900 dark:text-white">{item.auditName || "Environmental Clearance"}</p>
+                      <p className="text-slate-500">{item.status || "Not Available"}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState title="No environmental records available." message="No environmental assessment data was returned by the backend API." />
+              )}
+            </div>
+          )}
 
-        {/* Zoning Information (Light Blue Section Card) */}
-        <InfoCard
-          title="3. Zoning Information & Development Rules"
-          subtitle={`Urban Development Authority (${property.state})`}
-          icon={Building2}
-          variant="blue"
-          collapsible
-          defaultOpen
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Zoning Code</p>
-              <p className="text-base font-bold text-blue-700 dark:text-cyan-400 font-mono mt-1">{property.zoning}</p>
+          {/* TAB 8: DOCUMENTS */}
+          {activeTab === "documents" && (
+            <div className="space-y-4">
+              <h3 className="text-base font-bold text-slate-900 dark:text-[#F8FAFC]">
+                Associated Documents
+              </h3>
+              <EmptyState title="No documents available." message="No documents were returned by the backend API." />
             </div>
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Max Height Limit</p>
-              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">18 Meters</p>
-            </div>
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Allowable FAR</p>
-              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">2.0 Floor Area Ratio</p>
-            </div>
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Authority</p>
-              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">{property.city} Urban Authority</p>
-            </div>
-          </div>
-        </InfoCard>
+          )}
 
-        {/* Flood Zone & Risk (Light Red Section Card) */}
-        <InfoCard
-          title="4. Flood Zone Information"
-          subtitle="Irrigation & Flood Control Board Assessment"
-          icon={Waves}
-          variant="red"
-          collapsible
-          defaultOpen
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Flood Risk Rating</p>
-              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] font-mono mt-1">{property.floodRisk}</p>
+          {/* TAB 9: REPORT HISTORY */}
+          {activeTab === "reports" && (
+            <div className="space-y-4">
+              <h3 className="text-base font-bold text-slate-900 dark:text-[#F8FAFC]">
+                Generated Due Diligence Report History
+              </h3>
+              <EmptyState title="No reports generated." message="No historical reports exist for this property in the backend." />
             </div>
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Disaster Clearance</p>
-              <Badge variant={property.variant} className="mt-1">{property.status}</Badge>
-            </div>
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Mandatory Insurance</p>
-              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">Not Mandated</p>
-            </div>
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Survey Date</p>
-              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">2025 Regional Survey</p>
-            </div>
-          </div>
-        </InfoCard>
-
-        {/* Environmental Records (Light Cyan Section Card) */}
-        <InfoCard
-          title="5. Environmental Records"
-          subtitle="State Pollution Control Board (SPCB) Assessment"
-          icon={Leaf}
-          variant="cyan"
-          collapsible
-          defaultOpen
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Soil Composition</p>
-              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">Clear (No Lead / Radon)</p>
-            </div>
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Water Quality</p>
-              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">Safe Potable Supply</p>
-            </div>
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Air Quality Index</p>
-              <p className="text-base font-bold text-emerald-700 dark:text-emerald-400 font-mono mt-1">AQI 22 (Good)</p>
-            </div>
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">SPCB Hazard Clearance</p>
-              <Badge variant={property.variant} className="mt-1">{property.status}</Badge>
-            </div>
-          </div>
-        </InfoCard>
-
-        {/* Permit Records (Light Purple Section Card) */}
-        <InfoCard
-          title="6. Permit Records"
-          subtitle="Municipal Corporation Building Permit Archives"
-          icon={Map}
-          variant="purple"
-          collapsible
-          defaultOpen
-        >
-          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#0F172A]">
-            <table className="w-full text-left text-sm border-collapse">
-              <thead>
-                <tr className="bg-slate-900 text-slate-200 text-xs font-mono uppercase">
-                  <th className="p-3.5 font-semibold">Permit Number</th>
-                  <th className="p-3.5 font-semibold">Department Jurisdiction</th>
-                  <th className="p-3.5 font-semibold">Scope of Work</th>
-                  <th className="p-3.5 font-semibold">Status</th>
-                  <th className="p-3.5 font-semibold">Issue Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-[#334155] text-slate-700 dark:text-slate-200">
-                <tr className="hover:bg-slate-50 dark:hover:bg-[#1E293B]/60">
-                  <td className="p-3.5 font-mono font-bold text-blue-600 dark:text-cyan-400">PMT-IND-1024</td>
-                  <td className="p-3.5 font-medium text-slate-800 dark:text-slate-200">{property.city} Municipal DBI</td>
-                  <td className="p-3.5 text-xs text-slate-600 dark:text-slate-300">Building Occupancy & Rooftop Solar PV</td>
-                  <td className="p-3.5"><Badge variant="success">Approved & Closed</Badge></td>
-                  <td className="p-3.5 text-xs font-mono text-slate-500 dark:text-[#94A3B8]">10-Jan-2024</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </InfoCard>
-
-        {/* Utility Information (Light Gray Section Card) */}
-        <InfoCard
-          title="7. Utility Information"
-          subtitle="Electricity Board, Water Supply & Gas Grid Status"
-          icon={Zap}
-          variant="gray"
-          collapsible
-          defaultOpen
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Electricity Grid</p>
-              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">State DISCOM Active</p>
-            </div>
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Water & Sewer</p>
-              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">Municipal Metro Water</p>
-            </div>
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Natural Gas Grid</p>
-              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">Piped City Gas Connected</p>
-            </div>
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155]">
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] font-mono uppercase font-bold">Fiber Internet</p>
-              <p className="text-base font-bold text-slate-900 dark:text-[#F8FAFC] mt-1">Gigabit Fiber Ready</p>
-            </div>
-          </div>
-        </InfoCard>
+          )}
+        </div>
       </div>
     </MainLayout>
   );

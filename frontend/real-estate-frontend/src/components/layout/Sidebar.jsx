@@ -3,19 +3,20 @@ import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
   Search,
+  Building2,
+  ShieldAlert,
+  TrendingUp,
   FileText,
+  History,
   User,
   ClipboardList,
-  Building2,
   Waves,
   Leaf,
   Map,
   Zap,
-  ShieldAlert,
-  TrendingUp,
   Bell,
-  History,
   Activity,
+  Sliders,
   X,
   ChevronRight,
 } from "lucide-react";
@@ -23,45 +24,40 @@ import {
 function Sidebar({ mobileOpen, onCloseMobile }) {
   const menuSections = [
     {
-      title: "OVERVIEW & SEARCH",
+      title: "CORE PLATFORM",
       items: [
         { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
         { name: "Property Search", path: "/property-search", icon: Search },
-        { name: "Property Details", path: "/property-details", icon: FileText, badge: "Flagship" },
+        { name: "Property Details", path: "/property-details", icon: Building2 },
       ],
     },
     {
       title: "ANALYTICS & REPORTS",
       items: [
-        { name: "Risk Assessment", path: "/risk-assessment", icon: ShieldAlert, badge: "AI Matrix" },
+        { name: "Risk Assessment", path: "/risk-assessment", icon: ShieldAlert, badge: "AI Score" },
         { name: "Comparable Properties", path: "/comparable-properties", icon: TrendingUp },
         { name: "Due Diligence Report", path: "/due-diligence-report", icon: FileText, badge: "Full Audit" },
         { name: "Report History", path: "/report-history", icon: History },
-        { name: "Notifications", path: "/notifications", icon: Bell, badge: "Live" },
-        { name: "Admin Dashboard", path: "/admin-dashboard", icon: Activity, badge: "Executive" },
       ],
     },
     {
-      title: "LEGAL & TAX DILIGENCE",
+      title: "PROPERTY RECORDS",
       items: [
-        { name: "Ownership", path: "/ownership", icon: User },
-        { name: "Tax History", path: "/tax-history", icon: ClipboardList },
-        { name: "Zoning", path: "/zoning", icon: Building2 },
-      ],
-    },
-    {
-      title: "RISK & ENVIRONMENT",
-      items: [
-        { name: "Flood Zone", path: "/flood-zone", icon: Waves },
-        { name: "Environmental", path: "/environmental", icon: Leaf },
+        { name: "Ownership & Title", path: "/ownership", icon: User },
+        { name: "Tax History & Liens", path: "/tax-history", icon: ClipboardList },
+        { name: "Zoning & Land Use", path: "/zoning", icon: Building2 },
+        { name: "Flood Zone Hazard", path: "/flood-zone", icon: Waves },
+        { name: "Environmental Audit", path: "/environmental", icon: Leaf },
         { name: "Permit Records", path: "/permit-records", icon: Map },
-        { name: "Utilities", path: "/utilities", icon: Zap },
+        { name: "Utilities Infrastructure", path: "/utilities", icon: Zap },
       ],
     },
     {
-      title: "ACCOUNT & SETTINGS",
+      title: "ADMIN & USER ACCOUNT",
       items: [
-        { name: "Profile", path: "/profile", icon: User },
+        { name: "Notifications", path: "/notifications", icon: Bell },
+        { name: "Audit Logs", path: "/admin-dashboard", icon: Activity, badge: "Admin" },
+        { name: "Profile & Settings", path: "/profile", icon: Sliders },
       ],
     },
   ];
@@ -81,24 +77,24 @@ function Sidebar({ mobileOpen, onCloseMobile }) {
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* Mobile Close Button */}
+        {/* Mobile Header with Close Trigger */}
         <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-[#334155] lg:hidden">
           <span className="text-xs font-bold tracking-wider text-slate-500 dark:text-slate-400 uppercase">
-            Navigation Menu
+            SRS Module Navigation
           </span>
           <button
             onClick={onCloseMobile}
-            className="p-1 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-1 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X size={20} />
           </button>
         </div>
 
-        {/* Navigation Sections */}
-        <nav className="flex-1 overflow-y-auto px-3 py-6 space-y-6">
+        {/* SRS Navigation List */}
+        <nav className="flex-1 overflow-y-auto px-3.5 py-6 space-y-6">
           {menuSections.map((section, idx) => (
             <div key={idx} className="space-y-1.5">
-              <h2 className="px-3 text-[10px] font-mono font-bold tracking-widest text-slate-500 dark:text-[#94A3B8] uppercase">
+              <h2 className="px-3 text-[10px] font-mono font-bold tracking-widest text-slate-400 dark:text-[#94A3B8] uppercase">
                 {section.title}
               </h2>
 
@@ -114,14 +110,14 @@ function Sidebar({ mobileOpen, onCloseMobile }) {
                       className={({ isActive }) =>
                         `group relative flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
                           isActive
-                            ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md shadow-blue-500/25 border-l-4 border-cyan-400 font-bold"
-                            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#1E293B] hover:translate-x-1"
+                            ? "bg-blue-600 text-white shadow-md shadow-blue-500/25 font-bold"
+                            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#1E293B] hover:translate-x-0.5"
                         }`
                       }
                     >
                       {({ isActive }) => (
                         <>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
                             <Icon
                               size={18}
                               className={`transition-colors shrink-0 ${
@@ -135,7 +131,7 @@ function Sidebar({ mobileOpen, onCloseMobile }) {
 
                           {menu.badge ? (
                             <span
-                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors ${
+                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors shrink-0 ${
                                 isActive
                                   ? "bg-white/20 text-white border border-white/30"
                                   : "bg-blue-50 dark:bg-cyan-500/20 text-blue-700 dark:text-cyan-300 border border-blue-200 dark:border-cyan-500/30"

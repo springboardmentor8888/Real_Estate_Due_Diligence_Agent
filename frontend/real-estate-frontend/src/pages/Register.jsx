@@ -125,22 +125,20 @@ function Register() {
       navigate("/login");
     } catch (error) {
       console.warn("Registration API error:", error);
-      const serverMsg = error.response?.data?.message || error.response?.data?.error;
-      if (serverMsg) {
-        showErrorAlert("Registration Failed", serverMsg);
-      } else {
-        localStorage.setItem(
-          "user",
-          JSON.stringify({
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            email: formData.email,
-            phone: formData.phone,
-            role: formData.role,
-          })
+      const isNetworkError =
+        !error.response ||
+        error.code === "ERR_NETWORK" ||
+        error.code === "ECONNABORTED" ||
+        (error.message && error.message.toLowerCase().includes("network error"));
+
+      if (isNetworkError) {
+        showErrorAlert(
+          "Backend Unavailable",
+          "Backend server is unavailable. Please start the server and try again."
         );
-        showToast(`Account registered as ${formData.role}`, "success");
-        navigate("/login");
+      } else {
+        const serverMsg = error.response?.data?.message || error.response?.data?.error || "Registration failed. Please try again.";
+        showErrorAlert("Registration Failed", serverMsg);
       }
     } finally {
       setLoading(false);
