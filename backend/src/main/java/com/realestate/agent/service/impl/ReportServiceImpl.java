@@ -17,6 +17,14 @@ import com.realestate.agent.repository.UserRepository;
 import com.realestate.agent.service.ReportService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.realestate.agent.dto.RiskAssessmentResponse;
+import com.realestate.agent.dto.ComparablePropertyAnalysisResponse;
+import com.realestate.agent.dto.PropertyValuationResponse;
+import java.math.BigDecimal;
+
+import com.realestate.agent.service.RiskService;
+import com.realestate.agent.service.ComparablePropertyService;
+import com.realestate.agent.service.PropertyValuationService;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -29,36 +37,104 @@ public class ReportServiceImpl implements ReportService {
     private final PropertyRepository propertyRepository;
     private final UserRepository userRepository;
     private final ReportMapper reportMapper;
+    private final RiskService riskService;
+
+    private final ComparablePropertyService comparablePropertyService;
+
+    private final PropertyValuationService propertyValuationService;
 
     public ReportServiceImpl(
             DueDiligenceReportRepository reportRepository,
             PropertyDocumentRepository documentRepository,
             PropertyRepository propertyRepository,
             UserRepository userRepository,
-            ReportMapper reportMapper
+            ReportMapper reportMapper,
+            RiskService riskService,
+            ComparablePropertyService comparablePropertyService,
+            PropertyValuationService propertyValuationService
     ) {
         this.reportRepository = reportRepository;
         this.documentRepository = documentRepository;
         this.propertyRepository = propertyRepository;
         this.userRepository = userRepository;
         this.reportMapper = reportMapper;
+        this.riskService = riskService;
+        this.comparablePropertyService = comparablePropertyService;
+        this.propertyValuationService = propertyValuationService;
     }
 
     // REPORT CRUD
     @Override
     @Transactional
     public DueDiligenceReportResponse generateReport(DueDiligenceReportRequest request, String userEmail) {
+
         Property property = propertyRepository.findById(request.getPropertyId())
-                .orElseThrow(() -> new ResourceNotFoundException("Property not found with ID: " + request.getPropertyId()));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Property not found with ID: " + request.getPropertyId()));
 
         User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + userEmail));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User not found with email: " + userEmail));
+
+        // -----------------------------
+        // Existing modules integration
+        // -----------------------------
+
+        List<RiskAssessmentResponse> risks =
+                riskService.getRiskAssessmentsByProperty(property.getPropertyId());
+
+        ComparablePropertyAnalysisResponse comparableAnalysis =
+                comparablePropertyService.analyzeComparableProperty(property.getPropertyId());
+
+        PropertyValuationResponse valuation =
+                propertyValuationService.generateValuation(property.getPropertyId());
+
+        // -----------------------------
+        // Calculate average risk score
+        // -----------------------------
+
+        double averageRisk = 0.0;
+
+        if (!risks.isEmpty()) {
+
+            averageRisk = risks.stream()
+                    .map(RiskAssessmentResponse::getRiskScore)
+                    .mapToDouble(BigDecimal::doubleValue)
+                    .average()
+                    .orElse(0.0);
+        }
+
+        // -----------------------------
+        // Build Executive Summary
+        // -----------------------------
+
+        String executiveSummary =
+                "Property Name: " + property.getPropertyName()
+                        + "\nEstimated Market Value: ₹" + valuation.getEstimatedMarketValue()
+                        + "\nComparable Properties: " + comparableAnalysis.getTotalComparableProperties()
+                        + "\nAverage Risk Score: " + String.format("%.2f", averageRisk)
+                        + "\nValuation Status: " + valuation.getValuationStatus()
+                        + "\nRecommendation: " + valuation.getRecommendation();
+
+        // -----------------------------
+        // Save Report
+        // -----------------------------
 
         DueDiligenceReport report = reportMapper.toReportEntity(request);
+
         report.setProperty(property);
         report.setGeneratedBy(user);
 
-        return reportMapper.toReportResponse(reportRepository.save(report));
+        report.setExecutiveSummary(executiveSummary);
+
+        report.setOverallRiskScore(BigDecimal.valueOf(averageRisk));
+
+        report.setReportStatus("GENERATED");
+
+        DueDiligenceReport savedReport =
+                reportRepository.save(report);
+
+        return reportMapper.toReportResponse(savedReport);
     }
 
     @Override
