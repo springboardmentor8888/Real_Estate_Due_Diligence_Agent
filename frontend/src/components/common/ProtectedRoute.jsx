@@ -15,13 +15,30 @@ const ProtectedRoute = ({ allowedRoles }) => {
 
   // 2. If specific allowedRoles are passed (e.g. allowedRoles={["ADMIN"]}), check user role
   if (allowedRoles && allowedRoles.length > 0) {
-    const rawRole = localStorage.getItem("userRole") || "USER";
-    const userRole = rawRole.toUpperCase();
-    const normalizedAllowedRoles = allowedRoles.map((role) => role.toUpperCase());
+    // Read role from userRole, role, or parsed user object
+    let rawRole = localStorage.getItem("userRole") || localStorage.getItem("role") || "";
+    
+    if (!rawRole) {
+      try {
+        const userObj = JSON.parse(localStorage.getItem("user") || "{}");
+        rawRole = userObj.role || "BUYER";
+      } catch (e) {
+        rawRole = "BUYER";
+      }
+    }
 
-    const hasAccess = normalizedAllowedRoles.includes(userRole);
+    // Clean "ROLE_" prefix (e.g. "ROLE_ADMIN" -> "ADMIN")
+    const cleanUserRole = String(rawRole).replace(/^ROLE_/, "").trim().toUpperCase();
+
+    // Clean "ROLE_" prefix from allowedRoles (e.g. ["ADMIN", "ROLE_ADMIN"] -> ["ADMIN"])
+    const normalizedAllowedRoles = allowedRoles.map((role) =>
+      String(role).replace(/^ROLE_/, "").trim().toUpperCase()
+    );
+
+    const hasAccess = normalizedAllowedRoles.includes(cleanUserRole);
 
     if (!hasAccess) {
+      console.warn(`[RBAC] Access denied for role '${cleanUserRole}'. Allowed:`, normalizedAllowedRoles);
       // Unauthorized role -> redirect back to /dashboard
       return <Navigate to="/dashboard" replace />;
     }

@@ -15,9 +15,9 @@ import {
   HiOutlineShieldCheck,
   HiOutlineChartBar,
 } from "react-icons/hi2";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 
-// 1. Standard User Menu Items (Visible to ALL roles: Buyer, Agent, Legal, Financial, etc.)
+// 1. Standard User Menu Items (Visible to ALL roles)
 const mainMenuItems = [
   {
     icon: <HiOutlineHome />,
@@ -56,7 +56,7 @@ const mainMenuItems = [
   },
 ];
 
-// 2. Admin Only Menu Items (STRICTLY ADMIN)
+// 2. Admin Only Menu Items
 const adminMenuItems = [
   {
     icon: <HiOutlineShieldCheck />,
@@ -71,7 +71,7 @@ const adminMenuItems = [
   {
     icon: <HiOutlineClipboardDocumentList />,
     label: "Audit Logs",
-    path: "/audit-logs",
+    path: "/audit-logs", // Matches the route path
   },
 ];
 
@@ -95,12 +95,31 @@ const secondaryMenuItems = [
 ];
 
 function Sidebar() {
-  // 1. Read role from localStorage and normalize to uppercase safely
-  const rawRole = localStorage.getItem("userRole") || "USER";
+  const navigate = useNavigate();
+
+  // 1. Safely retrieve user data and role from multiple localStorage fallbacks
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const rawRole =
+    localStorage.getItem("role") ||
+    localStorage.getItem("userRole") ||
+    storedUser.role ||
+    "USER";
+
   const userRole = rawRole.toUpperCase();
 
-  // 2. Strict Admin check (Evaluates to true ONLY for "ADMIN")
-  const isAdmin = userRole === "ADMIN";
+  // 2. Flexible Admin check (matches ADMIN or ROLE_ADMIN)
+  const isAdmin = userRole.includes("ADMIN");
+
+  // 3. Get display name
+  const userName =
+    storedUser.name ||
+    (storedUser.email ? storedUser.email.split("@")[0] : "User");
+
+  // Logout handler
+  const handleLogout = () => {
+    localStorage.clear(); // Clear all keys on logout
+    navigate("/login");
+  };
 
   return (
     <aside className="w-72 min-h-screen bg-slate-900 text-white shadow-2xl flex flex-col px-6 py-8">
@@ -118,7 +137,6 @@ function Sidebar() {
 
       {/* Navigation Links */}
       <nav className="flex flex-col gap-6 overflow-y-auto pr-1">
-        
         {/* Main User Menu */}
         <div className="flex flex-col gap-1.5">
           {mainMenuItems.map((item) => (
@@ -139,7 +157,7 @@ function Sidebar() {
           ))}
         </div>
 
-        {/* --- ADMINISTRATION SECTION (STRICTLY SHOWN IF isAdmin IS TRUE) --- */}
+        {/* --- ADMINISTRATION SECTION (SHOWN IF isAdmin IS TRUE) --- */}
         {isAdmin && (
           <div className="pt-2 border-t border-slate-800">
             <p className="px-4 mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -187,22 +205,31 @@ function Sidebar() {
             ))}
           </div>
         </div>
-
       </nav>
 
-      {/* Logout Footer (Clears localStorage on logout) */}
+      {/* Profile Card & Logout Footer */}
       <div className="mt-auto pt-6 border-t border-slate-800">
-        <NavLink
-          to="/login"
-          onClick={() => {
-            localStorage.removeItem("userRole");
-            localStorage.removeItem("authToken");
-          }}
+        <div className="flex items-center gap-3 px-2 mb-4">
+          <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
+            {userName.charAt(0).toUpperCase()}
+          </div>
+          <div className="overflow-hidden">
+            <p className="font-semibold text-white text-sm truncate capitalize">
+              {userName}
+            </p>
+            <p className="text-xs text-slate-400 uppercase tracking-wider">
+              {userRole}
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={handleLogout}
           className="flex items-center gap-4 w-full px-4 py-2.5 rounded-xl text-slate-300 hover:bg-red-600 hover:text-white transition-all duration-300"
         >
           <HiOutlineArrowLeftOnRectangle className="text-xl" />
           <span className="font-medium text-[14px]">Logout</span>
-        </NavLink>
+        </button>
       </div>
     </aside>
   );

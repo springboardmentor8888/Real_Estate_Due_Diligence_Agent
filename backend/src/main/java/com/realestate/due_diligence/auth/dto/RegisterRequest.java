@@ -25,4 +25,7 @@ public class RegisterRequest {
 
     @NotBlank(message = "Password is required")
     private String password;
+
+    // 🚀 Added role field so Spring Boot accepts the role sent from React
+    private String role;
 }

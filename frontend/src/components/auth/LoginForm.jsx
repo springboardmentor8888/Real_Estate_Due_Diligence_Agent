@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios"; // 1. Added axios import
+import axios from "axios";
 import {
   HiOutlineEnvelope,
   HiOutlineLockClosed,
@@ -17,8 +17,8 @@ function LoginForm() {
   });
 
   const [errors, setErrors] = useState({});
-  const [serverError, setServerError] = useState(""); // State for backend error messages
-  const [loading, setLoading] = useState(false); // Loading state for button
+  const [serverError, setServerError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -33,7 +33,7 @@ function LoginForm() {
       ...errors,
       [name]: "",
     });
-    setServerError(""); // Clear server errors on input change
+    setServerError("");
   };
 
   const validate = () => {
@@ -63,13 +63,46 @@ function LoginForm() {
     setServerError("");
 
     try {
-      // 2. Make real HTTP POST request to Spring Boot AuthController
       const response = await axios.post("http://localhost:8080/auth/login", form);
 
-      // 3. Save JWT token to Local Storage
       if (response.data && response.data.token) {
-        localStorage.setItem("token", response.data.token);
-        // Navigate ONLY on successful authentication!
+        // 1. Wipe out any stale session data
+        localStorage.clear();
+
+        const token = response.data.token;
+
+        // 2. Extract raw role from top-level field or user object
+        let rawRole =
+          response.data.role ||
+          response.data.userRole ||
+          response.data.user?.role ||
+          "BUYER";
+
+        // Handle case where role is an object (e.g., { roleName: "ROLE_ADMIN" })
+        if (typeof rawRole === "object" && rawRole !== null) {
+          rawRole = rawRole.roleName || rawRole.name || "BUYER";
+        }
+
+        // 3. Clean "ROLE_" prefix (e.g. "ROLE_ADMIN" -> "ADMIN", "ROLE_AGENT" -> "AGENT")
+        const cleanRole = String(rawRole)
+          .replace(/^ROLE_/, "")
+          .trim()
+          .toUpperCase();
+
+        // 4. Build complete user object
+        const userObj = {
+          email: response.data.email || form.email,
+          name: response.data.name || response.data.user?.name || form.email.split("@")[0],
+          role: cleanRole,
+        };
+
+        // 5. Store across all localStorage keys your frontend reads
+        localStorage.setItem("token", token);
+        localStorage.setItem("role", cleanRole);
+        localStorage.setItem("userRole", cleanRole);
+        localStorage.setItem("user", JSON.stringify(userObj));
+
+        // 6. Redirect to dashboard
         navigate("/dashboard");
       }
     } catch (err) {
@@ -178,7 +211,7 @@ function LoginForm() {
           {loading ? "Logging in..." : "Login"}
         </button>
 
-        {/* Register */}
+        {/* Register Link */}
         <p className="text-center text-slate-300 text-sm">
           Don't have an account?{" "}
           <Link

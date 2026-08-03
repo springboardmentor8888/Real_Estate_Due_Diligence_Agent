@@ -13,11 +13,11 @@ function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  // 1. Add state for form inputs
+  // 1. Form state initialized with standardized role value 'BUYER'
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    role: "Buyer",
+    role: "BUYER",
     password: "",
     confirmPassword: "",
   });
@@ -43,17 +43,20 @@ function RegisterForm() {
     setLoading(true);
 
     try {
+      // Standardize role string before sending to Spring Boot backend
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role.toUpperCase(), // Ensures string like 'AGENT' or 'BUYER'
+      };
+
       const response = await fetch("http://localhost:8080/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-          role: formData.role,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -62,9 +65,21 @@ function RegisterForm() {
       }
 
       const data = await response.json();
-      console.log("Success:", data);
+      console.log("Registration Success:", data);
+
+      // Optional: Store registration info if backend returns token/user immediately
+      if (data.user || data.role) {
+        const userRole = data.role || payload.role;
+        localStorage.setItem("role", userRole);
+        localStorage.setItem("userRole", userRole);
+        localStorage.setItem(
+          "user",
+          JSON.stringify(data.user || { name: payload.name, email: payload.email, role: userRole })
+        );
+      }
+
       alert("Account created successfully!");
-      navigate("/login"); // Redirect to login
+      navigate("/login"); // Redirect to login page
     } catch (err) {
       console.error("Error during registration:", err);
       setError(err.message || "Failed to connect to backend server");
@@ -128,7 +143,7 @@ function RegisterForm() {
           </div>
         </div>
 
-        {/* Role */}
+        {/* Role Select Dropdown (Fixed option values) */}
         <div>
           <label className="block mb-2 text-sm text-slate-200">
             Select Role
@@ -139,10 +154,10 @@ function RegisterForm() {
             onChange={handleChange}
             className="w-full rounded-lg border border-slate-700 bg-slate-800 py-2.5 px-3 text-white outline-none focus:border-teal-500"
           >
-            <option value="Buyer">Buyer</option>
-            <option value="Real Estate Agent">Real Estate Agent</option>
-            <option value="Legal Reviewer">Legal Reviewer</option>
-            <option value="Financial Institution">Financial Institution</option>
+            <option value="BUYER">Buyer</option>
+            <option value="AGENT">Real Estate Agent</option>
+            <option value="LEGAL_REVIEWER">Legal Reviewer</option>
+            <option value="FINANCIAL_INSTITUTION">Financial Institution</option>
           </select>
         </div>
 

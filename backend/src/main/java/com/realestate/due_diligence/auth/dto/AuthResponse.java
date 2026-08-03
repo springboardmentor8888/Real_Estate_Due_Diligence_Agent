@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * DTO for authentication responses, containing the JWT access token.
+ * DTO for authentication responses, containing JWT token, role, and user details.
  */
 @Data
 @Builder
@@ -17,7 +17,12 @@ public class AuthResponse {
     private String token;
 
     /**
-     * Optional message, e.g. for registration success
+     * Optional message, e.g. for registration or login success
      */
     private String message;
+
+    // 🚀 Added fields so Spring Boot serializes role and user info into JSON
+    private String role;
+    private String email;
+    private String name;
 }

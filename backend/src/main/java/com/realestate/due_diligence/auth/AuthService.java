@@ -40,7 +40,7 @@ public class AuthService {
      * User registration flow.
      *
      * @param request the registration details
-     * @return AuthResponse with JWT token and message
+     * @return AuthResponse with JWT token, message, role, and user details
      */
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -51,20 +51,29 @@ public class AuthService {
             );
         }
 
-        // 2. Load the default role "ROLE_USER" from RoleRepository.
-        Role defaultRole = roleRepository.findByRoleName("ROLE_USER")
+        // 2. Dynamically determine role from request (e.g. AGENT, BUYER, etc.)
+        String requestedRoleName = request.getRole() != null && !request.getRole().isBlank()
+                ? request.getRole().trim().toUpperCase()
+                : "BUYER";
+
+        // Format role name to match database conventions (e.g., ROLE_AGENT, ROLE_BUYER)
+        String targetRole = requestedRoleName.startsWith("ROLE_") 
+                ? requestedRoleName 
+                : "ROLE_" + requestedRoleName;
+
+        // Try searching by exact name (ROLE_AGENT), plain name (AGENT), or fallback to default
+        Role userRole = roleRepository.findByRoleName(targetRole)
+                .orElseGet(() -> roleRepository.findByRoleName(requestedRoleName)
+                .orElseGet(() -> roleRepository.findByRoleName("ROLE_USER")
                 .orElseGet(() -> roleRepository.findById(1L)
-                        .orElseThrow(() -> new IllegalStateException(
-                                "Default user role 'ROLE_USER' is not configured in the database."
-                        )));
+                .orElseThrow(() -> new IllegalStateException("Requested role could not be configured.")))));
 
         // 3. Create user entity.
         User user = new User();
         user.setName(request.getName());
         user.setEmail(request.getEmail());
-        // Encode password using configured PasswordEncoder.
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(defaultRole);
+        user.setRole(userRole);
 
         // 4. Save to database.
         User savedUser = userRepository.save(user);
@@ -75,9 +84,15 @@ public class AuthService {
         // 6. Generate JWT token for the newly registered user.
         String token = jwtService.generateToken(userDetails);
 
+        // 7. Extract role string safely
+        String roleName = savedUser.getRole() != null ? savedUser.getRole().getRoleName() : "ROLE_USER";
+
         return AuthResponse.builder()
                 .token(token)
                 .message("User registered successfully")
+                .role(roleName)      // 👈 POPULATE ROLE
+                .email(savedUser.getEmail()) // 👈 POPULATE EMAIL
+                .name(savedUser.getName())   // 👈 POPULATE NAME
                 .build();
     }
 
@@ -85,7 +100,7 @@ public class AuthService {
      * User login flow.
      *
      * @param request the credentials
-     * @return AuthResponse with JWT token and message
+     * @return AuthResponse with JWT token, message, role, and user details
      */
     @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
@@ -103,15 +118,23 @@ public class AuthService {
                         "User not found with email: " + request.getEmail()
                 ));
 
-        // 3. Build UserDetails for token generation.
+        // 3. Extract role string safely
+        String userRoleName = (user.getRole() != null && user.getRole().getRoleName() != null)
+                ? user.getRole().getRoleName()
+                : "ROLE_USER";
+
+        // 4. Build UserDetails for token generation.
         UserDetails userDetails = buildUserDetails(user);
 
-        // 4. Generate JWT token.
+        // 5. Generate JWT token.
         String token = jwtService.generateToken(userDetails);
 
         return AuthResponse.builder()
                 .token(token)
                 .message("Login successful")
+                .role(userRoleName)   // 👈 POPULATE ROLE
+                .email(user.getEmail()) // 👈 POPULATE EMAIL
+                .name(user.getName())   // 👈 POPULATE NAME
                 .build();
     }
 
@@ -125,18 +148,18 @@ public class AuthService {
      */
     private UserDetails buildUserDetails(User user) {
         List<SimpleGrantedAuthority> authorities = List.of();
-        
+
         if (user.getRole() != null && user.getRole().getRoleName() != null) {
             String normalizedRole = user.getRole().getRoleName()
                     .trim()
                     .replace(" ", "_")
                     .toUpperCase();
-            
+
             // Avoid duplicate "ROLE_" prefix if already present
             if (!normalizedRole.startsWith("ROLE_")) {
                 normalizedRole = "ROLE_" + normalizedRole;
             }
-            
+
             authorities = List.of(new SimpleGrantedAuthority(normalizedRole));
         }
 
