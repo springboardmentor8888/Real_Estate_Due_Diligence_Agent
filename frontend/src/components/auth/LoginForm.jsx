@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import axios from "axios"; // 1. Added axios import
 import {
   HiOutlineEnvelope,
   HiOutlineLockClosed,
@@ -16,6 +17,8 @@ function LoginForm() {
   });
 
   const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState(""); // State for backend error messages
+  const [loading, setLoading] = useState(false); // Loading state for button
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -30,6 +33,7 @@ function LoginForm() {
       ...errors,
       [name]: "",
     });
+    setServerError(""); // Clear server errors on input change
   };
 
   const validate = () => {
@@ -50,16 +54,34 @@ function LoginForm() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!validate()) return;
 
-    console.log(form);
+    setLoading(true);
+    setServerError("");
 
-    // Backend API will be added later
-    // axios.post("/login", form);
-    navigate("/dashboard");
+    try {
+      // 2. Make real HTTP POST request to Spring Boot AuthController
+      const response = await axios.post("http://localhost:8080/auth/login", form);
+
+      // 3. Save JWT token to Local Storage
+      if (response.data && response.data.token) {
+        localStorage.setItem("token", response.data.token);
+        // Navigate ONLY on successful authentication!
+        navigate("/dashboard");
+      }
+    } catch (err) {
+      console.error("Login request failed:", err);
+      if (err.response && err.response.status === 401) {
+        setServerError("Invalid email or password.");
+      } else {
+        setServerError("Connection error. Make sure Spring Boot is running!");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -70,7 +92,14 @@ function LoginForm() {
 
       <p className="text-center text-slate-400 mt-2">Login to continue</p>
 
-      <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+      {/* Backend API Error Banner */}
+      {serverError && (
+        <div className="mt-4 p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-sm text-center">
+          {serverError}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="mt-6 space-y-5">
         {/* Email */}
         <div>
           <label className="block text-sm text-slate-200 mb-2">
@@ -143,9 +172,10 @@ function LoginForm() {
         {/* Login Button */}
         <button
           type="submit"
-          className="w-full bg-teal-600 hover:bg-teal-700 text-white py-3 rounded-lg font-semibold transition"
+          disabled={loading}
+          className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-teal-800 text-white py-3 rounded-lg font-semibold transition"
         >
-          Login
+          {loading ? "Logging in..." : "Login"}
         </button>
 
         {/* Register */}
