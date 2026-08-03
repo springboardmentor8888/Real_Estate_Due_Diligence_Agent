@@ -15,8 +15,9 @@ export default function PropertiesPage() {
       title: "Luxury Villa",
       location: "Chennai, Tamil Nadu",
       price: "₹75,00,000",
-      status: "Verified",
+      status: "Verified Title",
       score: "98/100 Title Score",
+      riskLevel: "LOW",
       image: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=600&q=80",
     },
     {
@@ -24,8 +25,9 @@ export default function PropertiesPage() {
       title: "Modern Apartment",
       location: "Bangalore, Karnataka",
       price: "₹55,00,000",
-      status: "Verified",
-      score: "95/100 Title Score",
+      status: "Verified Title",
+      score: "90/100 Title Score",
+      riskLevel: "LOW",
       image: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=600&q=80",
     },
     {
@@ -33,8 +35,9 @@ export default function PropertiesPage() {
       title: "Independent House",
       location: "Coimbatore, Tamil Nadu",
       price: "₹90,00,000",
-      status: "Under Review",
-      score: "In Progress",
+      status: "Under Legal Review",
+      score: "65/100 Title Score",
+      riskLevel: "CONCERNS_FOUND",
       image: "https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600&q=80",
     },
     {
@@ -42,8 +45,9 @@ export default function PropertiesPage() {
       title: "Premium Flat",
       location: "Hyderabad, Telangana",
       price: "₹68,00,000",
-      status: "Verified",
-      score: "92/100 Title Score",
+      status: "High Risk Property",
+      score: "32/100 Title Score",
+      riskLevel: "HIGH_RISK",
       image: "https://images.unsplash.com/photo-1460317442991-0ec209397118?w=600&q=80",
     },
   ];
@@ -72,6 +76,7 @@ export default function PropertiesPage() {
               placeholder="Search by location (e.g. Chennai, Bangalore)..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              suppressHydrationWarning
             />
           </div>
         </div>
@@ -84,16 +89,21 @@ export default function PropertiesPage() {
                   <img src={property.image} alt={property.title} />
 
                   {/* Status Badge */}
-                  <span className={`status-badge ${property.status.toLowerCase().replace(" ", "-")}`}>
-                    {property.status === "Verified" ? (
+                  <span className={`status-badge ${property.riskLevel === "HIGH_RISK" ? "high-risk" : property.riskLevel === "CONCERNS_FOUND" ? "under-review" : "verified"}`}>
+                    {property.riskLevel === "HIGH_RISK" ? (
                       <>
-                        <ShieldCheck size={14} />
-                        Verified Title
+                        <HelpCircle size={14} />
+                        High Risk Property
                       </>
-                    ) : (
+                    ) : property.riskLevel === "CONCERNS_FOUND" ? (
                       <>
                         <HelpCircle size={14} />
                         Under Legal Review
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck size={14} />
+                        Verified Title
                       </>
                     )}
                   </span>
@@ -102,7 +112,9 @@ export default function PropertiesPage() {
                 <div className="property-content">
                   <div className="property-header-row">
                     <h3>{property.title}</h3>
-                    <span className="due-diligence-score">{property.score}</span>
+                    <span className={`due-diligence-score ${property.riskLevel === "HIGH_RISK" ? "score-high-risk" : property.riskLevel === "CONCERNS_FOUND" ? "score-medium-risk" : "score-low-risk"}`}>
+                      {property.score}
+                    </span>
                   </div>
 
                   <div className="property-location">

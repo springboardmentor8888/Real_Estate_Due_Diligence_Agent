@@ -148,6 +148,11 @@
   color: var(--text-inverse);
 }
 
+.status-badge.high-risk {
+  background: rgba(239, 68, 68, 0.9);
+  color: var(--text-inverse);
+}
+
 /* Content */
 .property-content {
   padding: 24px;
@@ -175,10 +180,23 @@
   font-size: 11px;
   font-weight: 700;
   padding: 4px 8px;
-  background: var(--success-light);
-  color: var(--success);
   border-radius: 4px;
   flex-shrink: 0;
+}
+
+.due-diligence-score.score-low-risk {
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.due-diligence-score.score-medium-risk {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.due-diligence-score.score-high-risk {
+  background: #fef2f2;
+  color: var(--danger);
 }
 
 .property-location {
