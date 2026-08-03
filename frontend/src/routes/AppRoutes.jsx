@@ -26,48 +26,50 @@ import Alerts from "../pages/Alerts";
 function AppRouter() {
   return (
     <Routes>
+      {/* 🔓 Public Routes */}
       <Route path="/" element={<Navigate to="/login" replace />} />
-
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/verify-otp" element={<VerifyOtp />} />
       <Route path="/reset-password" element={<ResetPassword />} />
 
-      {/* Main App Routes with Shared Navbar/Sidebar Layout */}
-      <Route element={<Layout />}>
-        <Route path="/dashboard" element={<Dashboard />} />
+      {/* 🔒 PROTECTED APP ROUTES (Requires Valid JWT Token) */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<Layout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
 
-        {/* --- PROTECTED ADMIN ROUTES (Only accessible if role === 'ADMIN') --- */}
-        <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/audit-logs" element={<AuditLogs />} />
+          {/* Protected Admin Only Routes */}
+          <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/audit-logs" element={<AuditLogs />} />
+          </Route>
+
+          {/* Standard User Routes */}
+          <Route path="/search-property" element={<SearchProperty />} />
+          <Route path="/property-details" element={<PropertyDetails />} />
+          <Route path="/property-details/:propertyId" element={<PropertyDetails />} />
+          <Route path="/property-history" element={<PropertyHistory />} />
+          <Route path="/property-history/:propertyId" element={<PropertyHistory />} />
+          <Route path="/reports" element={<DueDiligenceReport />} />
+          <Route path="/reports/:propertyId" element={<DueDiligenceReport />} />
+          <Route path="/saved-properties" element={<SavedProperties />} />
+          <Route path="/property-comparison" element={<PropertyComparison />} />
+          <Route path="/property-comparison/:propertyId" element={<PropertyComparison />} />
+          <Route path="/property-comparison/:propertyId/:compareId" element={<PropertyComparison />} />
+          <Route path="/risk-assessment/:propertyId" element={<RiskAssessment />} />
+          <Route path="/comparable-analysis" element={<ComparableAnalysis />} />
+          <Route path="/comparable-analysis/:propertyId" element={<ComparableAnalysis />} />
+          
+          {/* System Alerts & Notifications */}
+          <Route path="/alerts" element={<Alerts />} />
+
+          {/* Miscellaneous */}
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/help" element={<Help />} />
+          <Route path="/profile" element={<Profile />} />
         </Route>
-
-        {/* Standard User Routes */}
-        <Route path="/search-property" element={<SearchProperty />} />
-        <Route path="/property-details" element={<PropertyDetails />} />
-        <Route path="/property-details/:propertyId" element={<PropertyDetails />} />
-        <Route path="/property-history" element={<PropertyHistory />} />
-        <Route path="/property-history/:propertyId" element={<PropertyHistory />} />
-        <Route path="/reports" element={<DueDiligenceReport />} />
-        <Route path="/reports/:propertyId" element={<DueDiligenceReport />} />
-        <Route path="/saved-properties" element={<SavedProperties />} />
-        <Route path="/property-comparison" element={<PropertyComparison />} />
-        <Route path="/property-comparison/:propertyId" element={<PropertyComparison />} />
-        <Route path="/property-comparison/:propertyId/:compareId" element={<PropertyComparison />} />
-        <Route path="/risk-assessment/:propertyId" element={<RiskAssessment />} />
-        <Route path="/comparable-analysis" element={<ComparableAnalysis />} />
-        <Route path="/comparable-analysis/:propertyId" element={<ComparableAnalysis />} />
-        
-        {/* System Alerts & Notifications */}
-        <Route path="/alerts" element={<Alerts />} />
-
-        {/* Miscellaneous */}
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/help" element={<Help />} />
-        <Route path="/profile" element={<Profile />} />
       </Route>
     </Routes>
   );

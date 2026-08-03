@@ -1,23 +1,33 @@
+import React from "react";
 import { Navigate, Outlet } from "react-router-dom";
 
 /**
  * ProtectedRoute Guard Component
- * Enforces Role-Based Access Control (RBAC) on frontend routes.
+ * Enforces Authentication & Role-Based Access Control (RBAC) on frontend routes.
  */
-const ProtectedRoute = ({ allowedRoles = ["ADMIN"] }) => {
-  // Read from localStorage, defaulting safely to "USER" (least privilege)
-  const rawRole = localStorage.getItem("userRole") || "USER";
-  const userRole = rawRole.toUpperCase();
+const ProtectedRoute = ({ allowedRoles }) => {
+  const token = localStorage.getItem("token");
 
-  // Check if current user's role is permitted (normalized to uppercase)
-  const normalizedAllowedRoles = allowedRoles.map((role) => role.toUpperCase());
-  const hasAccess = normalizedAllowedRoles.includes(userRole);
-
-  if (!hasAccess) {
-    // Redirect unauthorized users back to /dashboard
-    return <Navigate to="/dashboard" replace />;
+  // 1. If not logged in, redirect straight to /login
+  if (!token) {
+    return <Navigate to="/login" replace />;
   }
 
+  // 2. If specific allowedRoles are passed (e.g. allowedRoles={["ADMIN"]}), check user role
+  if (allowedRoles && allowedRoles.length > 0) {
+    const rawRole = localStorage.getItem("userRole") || "USER";
+    const userRole = rawRole.toUpperCase();
+    const normalizedAllowedRoles = allowedRoles.map((role) => role.toUpperCase());
+
+    const hasAccess = normalizedAllowedRoles.includes(userRole);
+
+    if (!hasAccess) {
+      // Unauthorized role -> redirect back to /dashboard
+      return <Navigate to="/dashboard" replace />;
+    }
+  }
+
+  // 3. Authenticated & authorized -> render the requested page
   return <Outlet />;
 };
 
