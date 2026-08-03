@@ -34,6 +34,9 @@ public class PropertyDueDiligenceServiceImpl implements PropertyDueDiligenceServ
     @Autowired
     private DueDiligenceReportRepository reportRepository;
 
+    @Autowired
+    private PublicRecordsService publicRecordsService;
+
     @Override
     public DueDiligenceReport processDueDiligence(Long propertyId) {
         // 1. Property Request (Fetch property)
@@ -74,5 +77,17 @@ public class PropertyDueDiligenceServiceImpl implements PropertyDueDiligenceServ
         }
         
         return report;
+    }
+
+    @Override
+    public byte[] exportReportPdf(Long propertyId) {
+        com.infosys.realestate.dto.PublicRecordsReportResponse data = publicRecordsService.getCombinedPublicRecordsReport(propertyId);
+        return reportGenerationService.generatePdfReport(data);
+    }
+
+    @Override
+    public byte[] exportReportExcel(Long propertyId) {
+        com.infosys.realestate.dto.PublicRecordsReportResponse data = publicRecordsService.getCombinedPublicRecordsReport(propertyId);
+        return reportGenerationService.generateExcelReport(data);
     }
 }

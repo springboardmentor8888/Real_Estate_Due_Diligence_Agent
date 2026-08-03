@@ -4,4 +4,6 @@ import com.infosys.realestate.entity.DueDiligenceReport;
 
 public interface PropertyDueDiligenceService {
     DueDiligenceReport processDueDiligence(Long propertyId);
+    byte[] exportReportPdf(Long propertyId);
+    byte[] exportReportExcel(Long propertyId);
 }
