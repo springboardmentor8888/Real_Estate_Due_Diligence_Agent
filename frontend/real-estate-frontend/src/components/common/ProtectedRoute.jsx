@@ -1,11 +1,13 @@
 import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import { isTokenValid, clearAuthData } from "../../services/authService";
 
 function ProtectedRoute({ children }) {
   const location = useLocation();
   const token = localStorage.getItem("token");
 
-  if (!token) {
+  if (!isTokenValid(token)) {
+    clearAuthData();
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
@@ -13,3 +15,4 @@ function ProtectedRoute({ children }) {
 }
 
 export default ProtectedRoute;
+

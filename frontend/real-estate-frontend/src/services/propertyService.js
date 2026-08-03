@@ -68,4 +68,30 @@ export const getEnvironmentalRecords = async (propertyId) => {
 export const getPermitRecords = async (propertyId) => {
   return apiClient.get(`/api/verification/permits/property/${propertyId}`);
 };
+
+// Get User Notifications
+export const getMyNotifications = async () => {
+  return apiClient.get("/api/notifications");
+};
+
+// Get User Unread Notifications Count
+export const getUnreadNotificationsCount = async () => {
+  return apiClient.get("/api/notifications/unread-count");
+};
+
+// Get Reports for Property
+export const getReportsByProperty = async (propertyId) => {
+  return apiClient.get(`/api/reports/property/${propertyId}`);
+};
+
+// Get Risk Assessments for Property
+export const getRiskAssessmentsByProperty = async (propertyId) => {
+  return apiClient.get(`/api/risk-assessments/property/${propertyId}`);
+};
+
+// Get Comparable Properties for Property
+export const getComparableProperties = async (propertyId) => {
+  return apiClient.get(`/api/market-analysis/property/${propertyId}`);
+};
+
 

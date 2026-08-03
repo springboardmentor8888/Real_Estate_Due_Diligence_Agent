@@ -21,16 +21,20 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor: Handle global errors
+// Response Interceptor: Handle global 401 errors & redirect to login
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
       console.warn("Unauthorized access - clearing session credentials");
-      // Don't auto-redirect if on login or register pages
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("isLoggedIn");
+      localStorage.removeItem("loggedIn");
+      localStorage.removeItem("demoUser");
+      localStorage.removeItem("mockUser");
       if (!window.location.pathname.includes("/login") && !window.location.pathname.includes("/register")) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
+        window.location.href = "/login";
       }
     }
     return Promise.reject(error);
@@ -38,3 +42,4 @@ apiClient.interceptors.response.use(
 );
 
 export default apiClient;
+

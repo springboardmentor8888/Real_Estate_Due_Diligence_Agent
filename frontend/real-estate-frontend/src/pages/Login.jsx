@@ -71,28 +71,32 @@ function Login() {
         password: loginData.password,
       });
 
-      if (response && response.data) {
-        localStorage.setItem("token", response.data.token || "mock-jwt-token");
+      if (response && response.data && response.data.token) {
+        localStorage.setItem("token", response.data.token);
         localStorage.setItem("user", JSON.stringify(response.data));
+        showToast("Signed in successfully", "success");
+        navigate("/dashboard");
+      } else {
+        showErrorAlert("Login Failed", "Server did not return a valid authentication token.");
       }
-
-      showToast("Signed in successfully", "success");
-      navigate("/dashboard");
     } catch (error) {
       console.warn("Backend login error:", error);
-      const serverMsg = error.response?.data?.message || error.response?.data?.error;
-      if (serverMsg) {
-        showErrorAlert("Login Failed", serverMsg);
+      const isNetworkError =
+        !error.response ||
+        error.code === "ERR_NETWORK" ||
+        error.code === "ECONNABORTED" ||
+        (error.message && error.message.toLowerCase().includes("network error"));
+
+      if (isNetworkError) {
+        showErrorAlert(
+          "Backend Unavailable",
+          "Backend server is unavailable. Please start the server and try again."
+        );
       } else if (error.response?.status === 401) {
         showErrorAlert("Invalid Credentials", "Email or password is incorrect.");
       } else {
-        localStorage.setItem("token", "demo-enterprise-jwt-token");
-        localStorage.setItem(
-          "user",
-          JSON.stringify({ firstName: "Rama", lastName: "Charan", email: loginData.email, role: "Real Estate Agent" })
-        );
-        showToast("Signed in successfully", "success");
-        navigate("/dashboard");
+        const serverMsg = error.response?.data?.message || error.response?.data?.error || "Login request failed. Please try again.";
+        showErrorAlert("Login Error", serverMsg);
       }
     } finally {
       setLoading(false);
