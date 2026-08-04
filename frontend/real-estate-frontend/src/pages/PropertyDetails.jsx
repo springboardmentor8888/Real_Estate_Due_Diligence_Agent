@@ -183,7 +183,11 @@ function PropertyDetails() {
               {imgSrc ? (
                 <img
                   src={imgSrc}
-                  alt={p.title || p.address}
+                  alt=""
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80";
+                  }}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -251,11 +255,10 @@ function PropertyDetails() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  isActive
+                className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${isActive
                     ? "bg-blue-600 text-white shadow-xs"
                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#0F172A]"
-                }`}
+                  }`}
               >
                 <IconComp size={15} />
                 <span>{tab.label}</span>

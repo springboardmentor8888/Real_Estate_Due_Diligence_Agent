@@ -23,9 +23,9 @@ export const exportToExcel = (reportTitle = "Audit Data Export", data = []) => {
     // Generate CSV data string
     const headers = ["Report Title", "Property ID", "Owner", "City", "State", "Market Value", "Risk Score", "Status"];
     const rows = [
-      [reportTitle, "PR-1001", "John Smith", "Bengaluru", "Karnataka", "₹4.2 Cr", "92/100 (Low)", "Approved"],
-      [reportTitle, "PR-1002", "Priya Sharma", "Mumbai", "Maharashtra", "₹6.8 Cr", "74/100 (Moderate)", "Conditional"],
-      [reportTitle, "PR-1003", "Vikram Reddy", "Hyderabad", "Telangana", "₹3.5 Cr", "45/100 (High)", "Review Req"],
+      [reportTitle, "PR-1001", "Ananya Rao", "Hyderabad", "Telangana", "₹25.00 Cr", "14/100 (Low)", "Verified Clear Title"],
+      [reportTitle, "PR-1002", "Vikramaditya Reddy", "Hyderabad", "Telangana", "₹18.50 Cr", "18/100 (Low)", "Verified Clear Title"],
+      [reportTitle, "PR-1003", "Suresh Patel", "Bengaluru", "Karnataka", "₹32.00 Cr", "22/100 (Low)", "Verified Clear Title"],
     ];
 
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");

@@ -1,13 +1,13 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { History, Search, ShieldCheck, DollarSign, AlertCircle, FileDown, CheckCircle2 } from "lucide-react";
+import { History, Search, ShieldCheck, DollarSign, FileDown, CheckCircle2 } from "lucide-react";
 
 function RecentActivityFeed() {
   const timelineItems = [
     {
       id: 1,
       type: "Property Searched",
-      detail: 'Searched APN #78701 for "742 Evergreen Terrace"',
+      detail: 'Searched Sy. No. 112/A for "Gachibowli Tech Park Phase 2"',
       time: "10 mins ago",
       icon: Search,
       color: "bg-blue-500 text-white",
@@ -15,7 +15,7 @@ function RecentActivityFeed() {
     {
       id: 2,
       type: "Ownership Verified",
-      detail: "Deed title chain & Grantor index clear for Parcel #104",
+      detail: "Deed title chain & Sub-Registrar index clear for Parcel PR-1001",
       time: "45 mins ago",
       icon: ShieldCheck,
       color: "bg-emerald-500 text-white",
@@ -23,7 +23,7 @@ function RecentActivityFeed() {
     {
       id: 3,
       type: "Tax Records Updated",
-      detail: "2025/2026 Municipal tax receipt verified zero arrears",
+      detail: "2024/2025 Municipal tax receipt verified zero arrears",
       time: "2 hours ago",
       icon: DollarSign,
       color: "bg-indigo-500 text-white",
@@ -92,4 +92,3 @@ function RecentActivityFeed() {
 }
 
 export default RecentActivityFeed;
-

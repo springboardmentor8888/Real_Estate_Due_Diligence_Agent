@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import MainLayout from "../components/layout/MainLayout";
 import ProfileHeader from "../components/profile/ProfileHeader";
 import ProfileCompletionCard from "../components/profile/ProfileCompletionCard";
@@ -16,52 +15,51 @@ import {
   Shield,
   Sliders,
   Bookmark,
-  History,
   Download,
-  AlertTriangle,
   Sparkles,
 } from "lucide-react";
 
 function Profile() {
-  // Initialize Profile Data from localStorage if present, else enterprise defaults
-  const [profileData, setProfileData] = useState(() => {
+  const getInitialUser = () => {
     try {
       const savedUser = localStorage.getItem("user");
       if (savedUser) {
         const parsed = JSON.parse(savedUser);
+        const derivedName = parsed.name || (parsed.firstName ? `${parsed.firstName} ${parsed.lastName || ""}`.trim() : null) || "Rama Charan";
         return {
-          name: parsed.name || parsed.username || "Rama Charan",
-          email: parsed.email || "ramacharan@enterprise.com",
-          role: parsed.role || "Senior Diligence Architect",
-          organization: parsed.organization || "Global Real Estate Capital Inc",
-          phone: parsed.phone || "+1 (555) 234-5678",
-          address: parsed.address || "100 Enterprise Way, Suite 500",
-          city: parsed.city || "Austin",
-          state: parsed.state || "TX",
-          country: parsed.country || "United States",
+          name: derivedName,
+          email: parsed.email || "ramacharan@gmail.com",
+          role: parsed.role || "Buyer",
+          organization: parsed.organization || "Apex Due Diligence Advisors India Pvt. Ltd.",
+          phone: parsed.phone || "+91 98490 12345",
+          address: parsed.address || "Plot 45, Sy. No. 112/A, Financial District",
+          city: parsed.city || "Hyderabad",
+          state: parsed.state || "Telangana",
+          country: parsed.country || "India",
           currentPassword: "",
           newPassword: "",
           confirmPassword: "",
         };
       }
-    } catch (e) {
-      // Fallback
-    }
+    } catch (e) { }
+
     return {
       name: "Rama Charan",
-      email: "ramacharan@enterprise.com",
-      role: "Senior Diligence Architect",
-      organization: "Global Real Estate Capital Inc",
-      phone: "+1 (555) 234-5678",
-      address: "100 Enterprise Way, Suite 500",
-      city: "Austin",
-      state: "TX",
-      country: "United States",
+      email: "ramacharan@gmail.com",
+      role: "Buyer",
+      organization: "Apex Due Diligence Advisors India Pvt. Ltd.",
+      phone: "+91 98490 12345",
+      address: "Plot 45, Sy. No. 112/A, Financial District",
+      city: "Hyderabad",
+      state: "Telangana",
+      country: "India",
       currentPassword: "",
       newPassword: "",
       confirmPassword: "",
     };
-  });
+  };
+
+  const [profileData, setProfileData] = useState(getInitialUser);
 
   const [avatarUrl, setAvatarUrl] = useState(() => {
     return localStorage.getItem("user_avatar_url") || null;
@@ -69,6 +67,15 @@ function Profile() {
 
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
+
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      setProfileData(getInitialUser());
+    };
+
+    window.addEventListener("user_profile_updated", handleProfileUpdate);
+    return () => window.removeEventListener("user_profile_updated", handleProfileUpdate);
+  }, []);
 
   useEffect(() => {
     if (avatarUrl) {
@@ -85,7 +92,7 @@ function Profile() {
     }));
   };
 
-  // Security Credentials Update (PRESERVES EXACT EXISTING FUNCTIONALITY & VALIDATION)
+  // Security Credentials Update
   const handleUpdateSecurity = (e) => {
     e.preventDefault();
 
@@ -116,7 +123,7 @@ function Profile() {
       }));
       showSuccessAlert(
         "Security Credentials Updated",
-        "Your account password and 2FA keys have been updated securely."
+        "Your account password and security tokens have been updated securely."
       );
     }, 600);
   };
@@ -161,11 +168,10 @@ function Profile() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                  isActive
+                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${isActive
                     ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
                     : "bg-slate-100 dark:bg-[#1E293B] text-slate-600 dark:text-[#CBD5E1] hover:bg-slate-200 dark:hover:bg-[#334155]"
-                }`}
+                  }`}
               >
                 <IconC size={15} />
                 {tab.label}
@@ -185,7 +191,7 @@ function Profile() {
               setAvatarUrl={setAvatarUrl}
             />
 
-            {/* 4. PROFILE COMPLETION & 5. USER STATISTICS */}
+            {/* PROFILE COMPLETION & USER STATISTICS */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
               <div className="lg:col-span-1 flex flex-col justify-between">
                 <ProfileCompletionCard
@@ -198,7 +204,7 @@ function Profile() {
               </div>
             </div>
 
-            {/* 2. PERSONAL INFORMATION */}
+            {/* PERSONAL INFORMATION */}
             <PersonalInfoCard
               profileData={profileData}
               setProfileData={setProfileData}
@@ -207,7 +213,7 @@ function Profile() {
         )}
 
         {(activeTab === "all" || activeTab === "security") && (
-          /* 3. ACCOUNT SECURITY */
+          /* ACCOUNT SECURITY */
           <AccountSecurityCard
             profileData={profileData}
             handleChange={handleChange}
@@ -218,21 +224,21 @@ function Profile() {
 
         {(activeTab === "all" || activeTab === "portfolio") && (
           <>
-            {/* 7. SAVED PROPERTIES */}
+            {/* SAVED PROPERTIES */}
             <SavedPropertiesCard />
 
-            {/* 6. RECENT ACTIVITY TIMELINE */}
+            {/* RECENT ACTIVITY TIMELINE */}
             <RecentActivityTimeline />
           </>
         )}
 
         {(activeTab === "all" || activeTab === "settings") && (
-          /* 8, 9, 10. NOTIFICATION, APPEARANCE, AND ACCOUNT PREFERENCES */
+          /* NOTIFICATION, APPEARANCE, AND ACCOUNT PREFERENCES */
           <SettingsAndPreferences />
         )}
 
         {(activeTab === "all" || activeTab === "danger") && (
-          /* 11 & 12. DOWNLOADS AND DANGER ZONE */
+          /* DOWNLOADS AND DANGER ZONE */
           <DownloadsAndDangerZone profileData={profileData} />
         )}
       </div>

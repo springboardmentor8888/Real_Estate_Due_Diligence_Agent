@@ -4,10 +4,6 @@ import { useNavigate } from "react-router-dom";
 import {
   Search,
   MapPin,
-  Building,
-  SlidersHorizontal,
-  ArrowRight,
-  Filter,
   History,
   Sparkles,
 } from "lucide-react";
@@ -18,21 +14,21 @@ function PropertySearchPanel() {
   const [searchParams, setSearchParams] = useState({
     address: "",
     city: "",
-    state: "TX",
+    state: "Telangana",
     pinCode: "",
     filterType: "all",
   });
 
   const recentSearches = [
-    "742 Evergreen Terrace, Austin TX",
-    "1200 Market Street, San Francisco CA",
-    "500 Ocean Drive, Miami FL",
+    "Gachibowli Tech Park Phase 2, Hyderabad",
+    "Whitefield Outer Ring Road, Bengaluru",
+    "BKC Corporate Tower, Mumbai",
   ];
 
   const popularSearches = [
-    "Austin Tech Corridor Commercials",
-    "Miami Coastal Flood Zone 10",
-    "Dallas Downtown High Rise Suites",
+    "Financial District Hyderabad Commercials",
+    "Whitefield IT Corridor Parcels",
+    "Bandra Kurla Complex High Rise Suites",
   ];
 
   const handleChange = (e) => {
@@ -74,7 +70,7 @@ function PropertySearchPanel() {
             Enterprise Real Estate Search Intelligence
           </h2>
           <p className="text-xs text-slate-500 dark:text-[#94A3B8] mt-0.5">
-            Query municipal deeds, APN parcel tax records, title ownership chains, and zoning constraints.
+            Query municipal deeds, survey numbers, title ownership chains, and zoning constraints.
           </p>
         </div>
 
@@ -106,7 +102,7 @@ function PropertySearchPanel() {
         {/* Address */}
         <div className="lg:col-span-4">
           <label className="block text-[10px] font-mono font-bold uppercase text-slate-400 dark:text-[#94A3B8] mb-1">
-            Street Address / APN / Parcel ID
+            Street Address / Survey Number / Parcel ID
           </label>
           <div className="relative">
             <MapPin className="absolute left-3.5 top-3 text-slate-400 dark:text-slate-500" size={16} />
@@ -115,7 +111,7 @@ function PropertySearchPanel() {
               name="address"
               value={searchParams.address}
               onChange={handleChange}
-              placeholder="e.g. 742 Evergreen Terrace"
+              placeholder="e.g. Sy. No. 112/A, Financial District"
               className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -131,7 +127,7 @@ function PropertySearchPanel() {
             name="city"
             value={searchParams.city}
             onChange={handleChange}
-            placeholder="e.g. Austin"
+            placeholder="e.g. Hyderabad"
             className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -147,25 +143,28 @@ function PropertySearchPanel() {
             onChange={handleChange}
             className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="TX">Texas (TX)</option>
-            <option value="CA">California (CA)</option>
-            <option value="FL">Florida (FL)</option>
-            <option value="NY">New York (NY)</option>
-            <option value="WA">Washington (WA)</option>
+            <option value="Telangana">Telangana</option>
+            <option value="Karnataka">Karnataka</option>
+            <option value="Tamil Nadu">Tamil Nadu</option>
+            <option value="Maharashtra">Maharashtra</option>
+            <option value="Gujarat">Gujarat</option>
+            <option value="Delhi">Delhi</option>
+            <option value="Andhra Pradesh">Andhra Pradesh</option>
+            <option value="Kerala">Kerala</option>
           </select>
         </div>
 
-        {/* PIN / Zip Code */}
+        {/* PIN Code */}
         <div className="lg:col-span-2">
           <label className="block text-[10px] font-mono font-bold uppercase text-slate-400 dark:text-[#94A3B8] mb-1">
-            PIN / Zip Code
+            PIN Code
           </label>
           <input
             type="text"
             name="pinCode"
             value={searchParams.pinCode}
             onChange={handleChange}
-            placeholder="78701"
+            placeholder="500032"
             className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>

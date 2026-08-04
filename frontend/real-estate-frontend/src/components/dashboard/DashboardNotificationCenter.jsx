@@ -17,12 +17,11 @@ function DashboardNotificationCenter() {
       })
       .catch((err) => {
         console.error("Failed to load notifications from backend", err);
-        // Fallback structured notifications matching SRS real backend schema
         setNotifications([
           {
             id: 101,
             title: "Report Generated",
-            message: "Due diligence audit report for 742 Evergreen Terrace completed.",
+            message: "Due diligence audit report for Gachibowli Tech Park Phase 2 completed.",
             type: "REPORT",
             read: false,
             timestamp: "10m ago",
@@ -30,7 +29,7 @@ function DashboardNotificationCenter() {
           {
             id: 102,
             title: "Property Updated",
-            message: "Tax lien status updated for Austin Tech Campus Parcel #104.",
+            message: "Municipal tax status updated for Whitefield Outer Ring Road Tech Hub.",
             type: "PROPERTY",
             read: false,
             timestamp: "1h ago",
@@ -46,7 +45,7 @@ function DashboardNotificationCenter() {
           {
             id: 104,
             title: "Ownership Verified",
-            message: "Grantor-grantee title deed chain fully verified by registrar.",
+            message: "Sub-Registrar title deed chain fully verified with nil encumbrance.",
             type: "OWNERSHIP",
             read: true,
             timestamp: "5h ago",
@@ -141,4 +140,3 @@ function DashboardNotificationCenter() {
 }
 
 export default DashboardNotificationCenter;
-

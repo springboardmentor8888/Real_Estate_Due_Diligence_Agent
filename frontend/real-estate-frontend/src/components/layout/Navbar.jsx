@@ -2,23 +2,49 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
   Search,
-  User,
   LogOut,
   Menu,
-  Shield,
-  Building2,
   Sun,
   Moon,
   Bell,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { showConfirmDialog, showToast } from "../../utils/swal";
 import { useTheme } from "../../context/ThemeContext";
 
-function Navbar({ onToggleMobileMenu, onOpenCommandPalette }) {
+function Navbar({ onToggleMobileMenu, onToggleSidebar, isCollapsed, onOpenCommandPalette }) {
   const navigate = useNavigate();
-  const { theme, toggleTheme, isDark } = useTheme();
+  const { toggleTheme, isDark } = useTheme();
   const [searchQuery, setSearchQuery] = useState("");
   const [unreadCount, setUnreadCount] = useState(3);
+
+  const getUserName = () => {
+    try {
+      const saved = localStorage.getItem("user");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.firstName) return `${parsed.firstName} ${parsed.lastName || ""}`.trim();
+        if (parsed.name) return parsed.name;
+        if (parsed.username) return parsed.username;
+      }
+    } catch (e) {}
+    return "Rama Charan";
+  };
+
+  const getUserRole = () => {
+    try {
+      const saved = localStorage.getItem("user");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.role) return parsed.role;
+      }
+    } catch (e) {}
+    return "Buyer";
+  };
+
+  const userName = getUserName();
+  const userRole = getUserRole();
 
   useEffect(() => {
     const updateCount = () => {
@@ -72,8 +98,9 @@ function Navbar({ onToggleMobileMenu, onOpenCommandPalette }) {
   return (
     <header className="sticky top-0 z-30 w-full h-20 bg-white/90 dark:bg-[#0B1120]/90 backdrop-blur-md border-b border-slate-200/80 dark:border-[#334155] transition-colors">
       <div className="h-full px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
-        {/* Left Logo Brand & Mobile Toggle */}
+        {/* Left Section: Sidebar Toggle & App Brand Title */}
         <div className="flex items-center gap-3">
+          {/* Mobile Menu Toggle Button */}
           <button
             onClick={onToggleMobileMenu}
             className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#1E293B] lg:hidden cursor-pointer"
@@ -82,17 +109,19 @@ function Navbar({ onToggleMobileMenu, onOpenCommandPalette }) {
             <Menu size={22} />
           </button>
 
-          <Link to="/dashboard" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 text-white flex items-center justify-center font-extrabold text-xl shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform">
-              <Shield size={22} />
-            </div>
-            <div className="hidden sm:block">
-              <span className="font-extrabold text-base tracking-tight text-slate-900 dark:text-[#F8FAFC] block leading-none">
-                RealEstate<span className="text-blue-600 dark:text-cyan-400">Agent</span>
-              </span>
-              <span className="text-[10px] font-mono text-slate-400 dark:text-[#94A3B8] font-bold tracking-widest uppercase mt-0.5 block">
-                Diligence Platform
-              </span>
+          {/* Desktop Sidebar Toggle Button */}
+          <button
+            onClick={onToggleSidebar}
+            className="hidden lg:flex p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#1E293B] transition-colors cursor-pointer"
+            aria-label="Toggle Collapsible Sidebar"
+            title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          >
+            <Menu size={22} />
+          </button>
+
+          <Link to="/dashboard" className="flex items-center gap-2 group">
+            <div className="top-left-username text-base sm:text-lg font-extrabold text-slate-900 dark:text-[#F8FAFC] tracking-tight hover:text-blue-600 dark:hover:text-cyan-400 transition-colors">
+              Real Estate Due Diligence Agent
             </div>
           </Link>
         </div>
@@ -116,7 +145,7 @@ function Navbar({ onToggleMobileMenu, onOpenCommandPalette }) {
 
         {/* Right User Navigation, Theme Toggle & Actions */}
         <div className="flex items-center gap-3 sm:gap-4">
-          {/* Minimal Icon-Only Sun / Moon Light-Dark Theme Toggle Switch Button */}
+          {/* Light-Dark Theme Toggle Switch Button */}
           <button
             onClick={toggleTheme}
             className="w-9 h-9 rounded-full text-slate-600 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#1E293B] transition-all duration-200 cursor-pointer flex items-center justify-center border border-slate-200 dark:border-[#334155] bg-slate-50 dark:bg-[#111827] shadow-xs"
@@ -150,14 +179,14 @@ function Navbar({ onToggleMobileMenu, onOpenCommandPalette }) {
             className="flex items-center gap-3 p-1.5 sm:px-3 sm:py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1E293B] transition-colors group"
           >
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-bold flex items-center justify-center text-sm shadow-sm group-hover:scale-105 transition-transform">
-              RC
+              {userName ? userName.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2) : "RC"}
             </div>
             <div className="hidden sm:block text-left">
               <p className="text-sm font-bold text-slate-800 dark:text-[#F8FAFC] group-hover:text-blue-600 dark:group-hover:text-cyan-400 transition-colors leading-tight">
-                Rama Charan
+                {userName}
               </p>
               <p className="text-[11px] font-medium text-slate-500 dark:text-[#CBD5E1]">
-                Senior Diligence Architect
+                {userRole}
               </p>
             </div>
           </Link>

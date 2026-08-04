@@ -131,7 +131,7 @@ function ActiveReportsTable() {
             <tbody className="divide-y divide-slate-100 dark:divide-[#334155]/60">
               {properties.map((p, idx) => {
                 const name = p.title || p.addressLine1 || `Property #${p.id || idx + 1}`;
-                const location = [p.city, p.state].filter(Boolean).join(", ") || "Austin, TX";
+                const location = [p.city, p.state].filter(Boolean).join(", ") || "Hyderabad, Telangana";
                 const searchDate = p.createdDate ? new Date(p.createdDate).toLocaleDateString() : "Today";
                 return (
                   <motion.tr

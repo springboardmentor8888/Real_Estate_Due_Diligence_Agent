@@ -7,9 +7,6 @@ import {
   Download,
   History,
   Clock,
-  Building2,
-  Shield,
-  Sparkles,
 } from "lucide-react";
 
 function RecentActivityTimeline() {
@@ -17,37 +14,33 @@ function RecentActivityTimeline() {
     {
       id: "act-1",
       title: "Generated Due Diligence Report",
-      description: "Compiled comprehensive environmental and flood risk assessment for 742 Evergreen Terrace.",
+      description: "Compiled comprehensive environmental and flood risk assessment for Gachibowli Tech Park Phase 2, Financial District, Hyderabad.",
       timestamp: "2 hours ago",
       icon: FileCheck2,
-      badgeColor: "bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
       iconColor: "text-blue-600 dark:text-cyan-400",
     },
     {
       id: "act-2",
       title: "Viewed Property Details",
-      description: "Inspected zoning records and tax assessment history for 1200 Market Street, Suite 400.",
+      description: "Inspected zoning records and tax assessment history for Whitefield Outer Ring Road Tech Hub, Bengaluru.",
       timestamp: "5 hours ago",
       icon: Eye,
-      badgeColor: "bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800",
       iconColor: "text-purple-600 dark:text-purple-400",
     },
     {
       id: "act-3",
       title: "Updated Profile & Security Credentials",
-      description: "Successfully updated account security password and verified organization details.",
+      description: "Successfully updated account security password and verified organization details for Apex Due Diligence Advisors India.",
       timestamp: "Yesterday, 04:30 PM",
       icon: UserCheck,
-      badgeColor: "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
       iconColor: "text-emerald-600 dark:text-emerald-400",
     },
     {
       id: "act-4",
       title: "Downloaded Comprehensive PDF Report",
-      description: "Exported high-resolution due diligence dossier for 500 Ocean Drive, Penthouse 12.",
+      description: "Exported high-resolution due diligence dossier for Bandra Kurla Complex Corporate Tower, BKC Mumbai.",
       timestamp: "3 days ago",
       icon: Download,
-      badgeColor: "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800",
       iconColor: "text-amber-600 dark:text-amber-400",
     },
   ];

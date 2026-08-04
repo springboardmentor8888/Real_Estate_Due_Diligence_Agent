@@ -23,6 +23,7 @@ import DueDiligenceReport from "./pages/DueDiligenceReport";
 import NotificationCenter from "./pages/NotificationCenter";
 import ReportHistory from "./pages/ReportHistory";
 import AdminDashboard from "./pages/AdminDashboard";
+import NotFound from "./pages/NotFound";
 
 import ProtectedRoute from "./components/common/ProtectedRoute";
 
@@ -176,6 +177,8 @@ function App() {
           </ProtectedRoute>
         }
       />
+      {/* 404 NotFound Catch-All Route */}
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }

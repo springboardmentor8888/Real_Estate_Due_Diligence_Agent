@@ -17,9 +17,9 @@ function PropertySearchWorkspaceHeader({
   ];
 
   const recentSearches = [
-    "742 Evergreen Terrace, Austin TX",
-    "1200 Market Street, San Francisco CA",
-    "500 Ocean Drive, Miami FL",
+    "Gachibowli Tech Park Phase 2, Hyderabad",
+    "Whitefield Outer Ring Road, Bengaluru",
+    "BKC Corporate Tower, Mumbai",
   ];
 
   const handleSubmit = (e) => {
@@ -44,7 +44,7 @@ function PropertySearchWorkspaceHeader({
           Property Search Workspace
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 dark:text-[#CBD5E1]">
-          Query title deeds, APN parcel IDs, zoning classifications, and flood maps across state registries.
+          Query title deeds, survey numbers, zoning classifications, and flood maps across state registries.
         </p>
       </div>
 
@@ -56,7 +56,7 @@ function PropertySearchWorkspaceHeader({
             type="text"
             value={searchAddress}
             onChange={(e) => setSearchAddress(e.target.value)}
-            placeholder="Search by address, APN parcel ID, owner name, city, or state..."
+            placeholder="Search by address, survey number, owner name, city, or state..."
             className="w-full pl-11 pr-4 py-3 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-xs"
           />
         </div>
