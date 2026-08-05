@@ -102,6 +102,8 @@ export const showConfirmDialog = async ({
   return result.isConfirmed;
 };
 
+export const showConfirmAlert = (title, text) => showConfirmDialog({ title, text });
+
 /**
  * Toast Notification (Top-Right)
  */

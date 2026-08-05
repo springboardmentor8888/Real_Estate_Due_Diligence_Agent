@@ -31,12 +31,16 @@ import {
 import { showSuccessAlert, showToast } from "../utils/swal";
 import { getFloodZoneInformation, getAllProperties } from "../services/propertyService";
 import { exportToPdf } from "../utils/exportUtils";
+import PropertyContextSwitcher from "../components/common/PropertyContextSwitcher";
+import { getLiveActiveProperty } from "../services/liveStore";
 
 function FloodZone() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const propertyIdParam = searchParams.get("propertyId") || searchParams.get("id") || "1001";
-  const numericId = propertyIdParam.toString().replace(/\D/g, "") || "1001";
+
+  const activeProp = getLiveActiveProperty(searchParams.get("propertyId") || searchParams.get("id"));
+  const propertyIdParam = activeProp ? (activeProp.numericId || activeProp.propertyId || "1001").toString() : "1001";
+  const numericId = propertyIdParam.replace(/\D/g, "") || "1001";
 
   const [flood, setFlood] = useState(null);
   const [propertyList, setPropertyList] = useState([]);
@@ -169,6 +173,9 @@ function FloodZone() {
   return (
     <MainLayout>
       <div className="space-y-6 max-w-7xl mx-auto pb-16">
+        {/* PROPERTY CONTEXT SWITCHER BAR */}
+        <PropertyContextSwitcher currentPropertyId={numericId} />
+
         {/* Page Header */}
         <div className="glass-card rounded-3xl p-6 sm:p-7 border border-slate-200 dark:border-[#334155] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>

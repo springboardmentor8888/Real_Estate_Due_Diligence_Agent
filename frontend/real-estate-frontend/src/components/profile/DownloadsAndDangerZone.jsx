@@ -28,7 +28,7 @@ function DownloadsAndDangerZone({ profileData }) {
       downloadAnchor.remove();
 
       setDownloading(null);
-      showToast("Profile dossier downloaded successfully!", "success");
+      showToast("Profile report downloaded successfully!", "success");
     }, 600);
   };
 
@@ -139,8 +139,8 @@ AUDITED ASSETS SUMMARY
             <h2 className="text-xl font-extrabold text-slate-900 dark:text-[#F8FAFC]">
               Downloads & Export Center
             </h2>
-            <p className="text-xs font-medium text-slate-500 dark:text-[#94A3B8]">
-              Export your profile dossier, compiled audit reports, and complete activity history.
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              Export your profile details, compiled audit reports, and complete activity history.
             </p>
           </div>
         </div>
@@ -155,8 +155,8 @@ AUDITED ASSETS SUMMARY
               <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
                 Download Profile
               </h3>
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8]">
-                Export your full user profile dossier and organization credentials in JSON format.
+              <p className="text-xs text-slate-600 dark:text-slate-300">
+                Export your full user profile details and organization credentials in JSON format.
               </p>
             </div>
             <button

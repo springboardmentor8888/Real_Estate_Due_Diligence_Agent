@@ -3,9 +3,17 @@ import { motion } from "framer-motion";
 import { MapPin, ShieldCheck, ShieldAlert, AlertTriangle, ArrowUpRight, Building2, ImageOff, FileText } from "lucide-react";
 import Badge from "../common/Badge";
 
+import { setLiveActiveProperty } from "../../services/liveStore";
+
 function LinearPropertyCard({ property, onInspect }) {
   const item = property || {};
   const imgSrc = item.imageUrl || item.image || null;
+
+  const handleCardClick = () => {
+    const pid = item.numericId || item.propertyId || item.id;
+    if (pid) setLiveActiveProperty(pid);
+    if (onInspect) onInspect(item);
+  };
 
   const getRiskBadge = () => {
     const variant = item.variant || (item.riskScore > 60 ? "danger" : item.riskScore > 30 ? "warning" : "success");
@@ -33,8 +41,8 @@ function LinearPropertyCard({ property, onInspect }) {
   return (
     <motion.div
       whileHover={{ y: -4 }}
+      onClick={handleCardClick}
       transition={{ duration: 0.2 }}
-      onClick={() => onInspect(item)}
       className="white-card rounded-2xl bg-white dark:bg-[#1E293B] border border-slate-200/80 dark:border-[#334155] shadow-xs hover:shadow-xl dark:hover:shadow-blue-500/10 cursor-pointer overflow-hidden flex flex-col justify-between group transition-all"
     >
       {/* Property Image Banner or Clean "No Image Available" Placeholder */}

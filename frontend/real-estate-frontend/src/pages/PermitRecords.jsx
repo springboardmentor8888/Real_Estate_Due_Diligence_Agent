@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import MainLayout from "../components/layout/MainLayout";
@@ -13,406 +13,428 @@ import {
   ShieldCheck,
   CheckCircle2,
   FileDown,
-  Printer,
-  Sparkles,
   X,
   Building2,
   Calendar,
   Layers,
   Flame,
   FileText,
+  Eye,
+  Flag,
+  RotateCcw,
+  Sparkles,
+  AlertTriangle,
+  Send,
+  User,
 } from "lucide-react";
 import { showSuccessAlert, showToast } from "../utils/swal";
-import { getPermitRecords, getAllProperties } from "../services/propertyService";
-import { exportToPdf, exportToExcel } from "../utils/exportUtils";
+import PropertyContextSwitcher from "../components/common/PropertyContextSwitcher";
+import { getLiveActiveProperty } from "../services/liveStore";
+
+// Master Initial Permit Records Covering All 4 Categories & 4 Statuses
+const MASTER_PERMIT_RECORDS = [
+  // 1. Building Permit
+  {
+    id: "PRM-101",
+    permitNumber: "GHMC/2023/PERM-8891",
+    permitType: "Building Permit",
+    category: "Building Permit",
+    authority: "GHMC Municipal Building Inspectorate",
+    status: "Verified",
+    issueDate: "15 Jan 2023",
+    expiryDate: "15 Jan 2028",
+    farSanctioned: "3.5 FAR Commercial",
+    engineer: "Er. K. V. Sharma (Structural Lead)",
+    notes: "Municipal building plan sanction approved with 3.5 FAR.",
+  },
+  // 2. Construction Approval
+  {
+    id: "PRM-102",
+    permitNumber: "HMDA/2022/CONST-4401",
+    permitType: "Construction Approval",
+    category: "Construction Approval",
+    authority: "HMDA Master Plan Development Authority",
+    status: "Verified",
+    issueDate: "10 Aug 2022",
+    expiryDate: "10 Aug 2027",
+    farSanctioned: "4.0 FAR High-Rise",
+    engineer: "Chief Town Planner HMDA",
+    notes: "High-rise commercial construction layout approval granted.",
+  },
+  // 3. Occupancy Certificate
+  {
+    id: "PRM-103",
+    permitNumber: "GHMC/2024/OC-9912",
+    permitType: "Occupancy Certificate",
+    category: "Occupancy Certificate",
+    authority: "GHMC Town Planning Department",
+    status: "Pending",
+    issueDate: "01 May 2024",
+    expiryDate: "Permanent Clearance",
+    farSanctioned: "Full Structure Occupancy",
+    engineer: "Municipal Building Inspector",
+    notes: "Occupancy certificate final site inspection in progress.",
+  },
+  // 4. Renovation Permit
+  {
+    id: "PRM-104",
+    permitNumber: "GHMC/2025/REN-1204",
+    permitType: "Renovation Permit",
+    category: "Renovation Permit",
+    authority: "GHMC Urban Renovation Division",
+    status: "Expired",
+    issueDate: "12 Feb 2023",
+    expiryDate: "12 Feb 2025",
+    farSanctioned: "Facade Modification",
+    engineer: "Er. Suresh Rao",
+    notes: "Facade modification permit expired in Feb 2025. Renewal pending.",
+  },
+  // 5. Missing Permit Example
+  {
+    id: "PRM-105",
+    permitNumber: "PCB/2026/EIA-MISSING",
+    permitType: "Environmental PCB NOC",
+    category: "Construction Approval",
+    authority: "State Environment Impact Assessment Authority",
+    status: "Missing",
+    issueDate: "Not Issued",
+    expiryDate: "N/A",
+    farSanctioned: "N/A",
+    engineer: "Pollution Control Board Inspector",
+    notes: "Environmental clearance NOC missing from municipal submission packet.",
+  },
+];
 
 function PermitRecords() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const propertyIdParam = searchParams.get("propertyId") || searchParams.get("id") || "1001";
-  const numericId = propertyIdParam.toString().replace(/\D/g, "") || "1001";
 
-  const [permits, setPermits] = useState([]);
-  const [propertyList, setPropertyList] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [permitModalOpen, setPermitModalOpen] = useState(false);
-  const [selectedPermit, setSelectedPermit] = useState(null);
+  const activeProp = getLiveActiveProperty(searchParams.get("propertyId") || searchParams.get("id"));
+  const propertyIdParam = activeProp ? (activeProp.numericId || activeProp.propertyId || "1001").toString() : "1001";
+  const numericId = propertyIdParam.replace(/\D/g, "") || "1001";
 
-  // Load All Properties for Selector Dropdown
-  useEffect(() => {
-    getAllProperties(0, 20)
-      .then((res) => {
-        if (res && res.data) {
-          const items = res.data.content || res.data;
-          if (Array.isArray(items)) setPropertyList(items);
-        }
-      })
-      .catch((err) => console.warn("Failed to load property list", err));
-  }, []);
+  const [permits, setPermits] = useState(MASTER_PERMIT_RECORDS);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("ALL");
 
-  // Load Permit Info for numericId
-  useEffect(() => {
-    setLoading(true);
-    getPermitRecords(numericId)
-      .then((res) => {
-        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-          setPermits(res.data);
-        } else {
-          // Fallback realistic permit records
-          setPermits([
-            {
-              permitNumber: `PMT-GHMC-2023-${8810 + parseInt(numericId)}`,
-              permitType: "Occupancy Certificate (OC)",
-              permitStatus: "Approved & Active",
-              issueDate: "2023-11-20",
-              expiryDate: "Permanent Clearance",
-              authority: "GHMC Municipal Building Inspectorate",
-              engineer: "Er. K. V. Sharma (Structural Lead)",
-            },
-            {
-              permitNumber: `PMT-FIRE-2023-${6640 + parseInt(numericId)}`,
-              permitType: "Fire Safety Compliance NOC",
-              permitStatus: "Approved & Active",
-              issueDate: "2023-09-14",
-              expiryDate: "2026-09-14",
-              authority: "State Disaster & Fire Response Services",
-              engineer: "Fire Safety Inspector General",
-            },
-            {
-              permitNumber: `PMT-BLDG-2021-${4420 + parseInt(numericId)}`,
-              permitType: "Commercial High-Rise Construction Permit",
-              permitStatus: "Approved & Finalized",
-              issueDate: "2021-02-10",
-              expiryDate: "Completed",
-              authority: "HMDA Urban Development Authority",
-              engineer: "Chief Town Planner HMDA",
-            },
-            {
-              permitNumber: `PMT-ELEV-2022-${3310 + parseInt(numericId)}`,
-              permitType: "Vertical Transportation & Lift Clearance",
-              permitStatus: "Approved & Active",
-              issueDate: "2022-06-18",
-              expiryDate: "2025-06-18",
-              authority: "State Electrical Inspectorate Board",
-              engineer: "Chief Electrical Inspector",
-            },
-          ]);
-        }
-      })
-      .catch((err) => {
-        console.warn("Backend getPermitRecords API error:", err);
-      })
-      .finally(() => setLoading(false));
-  }, [numericId]);
+  // Modals state
+  const [viewPermitModal, setViewPermitModal] = useState(null);
+  const [flagIssueModal, setFlagIssueModal] = useState(null);
+  const [flagReason, setFlagReason] = useState("");
 
-  const handlePropertyChange = (newId) => {
-    setSearchParams({ propertyId: newId });
-    showToast(`Loading Building Permits for PR-${newId}`, "info");
+  // Filtered Permits
+  const filteredPermits = useMemo(() => {
+    return permits.filter((p) => {
+      const matchCategory = categoryFilter === "ALL" || p.category === categoryFilter;
+      const matchSearch =
+        p.permitNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.permitType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.authority.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.status.toLowerCase().includes(searchQuery.toLowerCase());
+
+      return matchCategory && matchSearch;
+    });
+  }, [permits, categoryFilter, searchQuery]);
+
+  // STATUS BADGE RENDERER FOR ALL 4 REQUIRED STATUSES
+  const renderPermitStatusBadge = (status) => {
+    switch (status) {
+      case "Verified":
+        return <Badge variant="success">Verified</Badge>;
+      case "Pending":
+        return <Badge variant="warning">Pending</Badge>;
+      case "Missing":
+        return <Badge variant="danger">Missing</Badge>;
+      case "Expired":
+        return <Badge variant="purple">Expired</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
   };
 
-  const handleOpenPermitModal = (pmt) => {
-    setSelectedPermit(pmt);
-    setPermitModalOpen(true);
+  // HANDLERS FOR THE 4 REQUIRED ACTION BUTTONS
+  const handleVerifyPermit = (p) => {
+    setPermits((prev) =>
+      prev.map((item) => (item.id === p.id ? { ...item, status: "Verified" } : item))
+    );
+    showSuccessAlert("Permit Verified", `Permit ${p.permitNumber} verified with municipal registry.`);
   };
 
-  const activeOCPermit = permits[0];
+  const handleApprovePermit = (p) => {
+    setPermits((prev) =>
+      prev.map((item) => (item.id === p.id ? { ...item, status: "Verified" } : item))
+    );
+    showSuccessAlert("Permit Approved", `Approved legal clearance for ${p.permitType}.`);
+  };
+
+  const handleFlagIssueModalOpen = (p) => {
+    setFlagIssueModal(p);
+    setFlagReason("FAR height sanction mismatch against master zoning plan.");
+  };
+
+  const handleConfirmFlagSubmit = (e) => {
+    e.preventDefault();
+    if (!flagIssueModal) return;
+
+    setPermits((prev) =>
+      prev.map((item) => (item.id === flagIssueModal.id ? { ...item, status: "Missing" } : item))
+    );
+
+    showSuccessAlert(
+      "Permit Issue Flagged",
+      `Flagged permit issue on ${flagIssueModal.permitNumber}: "${flagReason}"`
+    );
+    setFlagIssueModal(null);
+  };
+
+  const handleViewPermitDoc = (p) => {
+    setViewPermitModal(p);
+  };
 
   return (
     <MainLayout>
-      <div className="space-y-6 max-w-7xl mx-auto pb-16">
-        {/* Page Header */}
-        <div className="glass-card rounded-3xl p-6 sm:p-7 border border-slate-200 dark:border-[#334155] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="space-y-8 max-w-7xl mx-auto pb-16">
+        {/* Breadcrumb Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-medium text-slate-500 dark:text-[#CBD5E1]">
+          <div className="flex items-center gap-2">
+            <Map size={14} className="text-emerald-500 dark:text-emerald-400" />
+            <span>/</span>
+            <span className="text-slate-900 dark:text-[#F8FAFC] font-extrabold">
+              Municipal Building Permit & Compliance Registry
+            </span>
+          </div>
+
+          <span className="px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-mono font-bold text-xs border border-emerald-200 dark:border-emerald-800">
+            PR-{numericId} • {permits.length} PERMITS RECORDED
+          </span>
+        </div>
+
+        {/* PROPERTY CONTEXT SWITCHER BAR */}
+        <PropertyContextSwitcher currentPropertyId={numericId} />
+
+        {/* HERO BANNER */}
+        <div className="glass-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-cyan-300 border border-blue-200 dark:border-blue-800 text-xs font-mono font-bold mb-3">
-              <Map size={14} /> Department of Building Permits & Inspections
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-mono font-bold mb-2">
+              <Building2 size={14} /> Municipal Approvals & Clearances
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              📄 Building Permit Records & Inspection History
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-[#F8FAFC] tracking-tight flex items-center gap-2">
+              🚧 Permit Verification Workstation
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">
-              Inspect municipal building permits, Occupancy Certificates (OC), structural safety approvals, and fire safety NOCs.
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-[#CBD5E1] mt-1 max-w-2xl">
+              Audit Municipal Building Permits, Construction Approvals, Occupancy Certificates, and Renovation Permits across Verified, Pending, Missing, and Expired statuses.
             </p>
           </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              onClick={() => handleOpenPermitModal(activeOCPermit)}
-              variant="primary"
-              icon={FileCheck}
-              disabled={!activeOCPermit}
-            >
-              Verify Occupancy Certificate
-            </Button>
-            <Button onClick={() => navigate(`/environmental?propertyId=${numericId}`)} variant="secondary">
-              Next: Environmental →
-            </Button>
-          </div>
         </div>
 
-        {/* Property Selector Dropdown Bar */}
-        <div className="glass-card rounded-2xl p-4 border border-slate-200 dark:border-[#334155] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5 w-full sm:w-auto">
-            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-cyan-400 border border-blue-200 dark:border-blue-800 shrink-0">
-              <Search size={16} />
-            </div>
-            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap">
-              Select Property Parcel:
-            </span>
-            <select
-              value={numericId}
-              onChange={(e) => handlePropertyChange(e.target.value)}
-              className="w-full sm:w-80 bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-xs font-bold text-slate-900 dark:text-slate-100 px-3 py-2 rounded-xl focus:outline-none cursor-pointer"
-            >
-              {propertyList.map((item, idx) => {
-                const itemVal = item.propertyId || item.id || 1001 + idx;
-                const titleStr = item.propertyName || item.title || item.address?.addressLine1 || `Parcel #${itemVal}`;
-                return (
-                  <option key={itemVal} value={itemVal}>
-                    PR-{itemVal} - {titleStr}
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2 text-xs font-mono font-bold text-slate-500">
-            <Badge variant="success">All Building Permits Active</Badge>
-          </div>
-        </div>
-
-        {/* Permit Metrics KPI Bar */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="p-4 rounded-2xl bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs">
-            <span className="text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500 uppercase block">
-              Active Municipal Permits
-            </span>
-            <h3 className="text-xl font-extrabold text-blue-600 dark:text-cyan-400 mt-1 font-mono">
-              {permits.length} Permits
-            </h3>
-            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block mt-0.5">
-              100% Fully Approved
-            </span>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs">
-            <span className="text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500 uppercase block">
-              Occupancy Certificate (OC)
-            </span>
-            <h3 className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 mt-1.5 font-mono truncate">
-              ISSUED & ACTIVE
-            </h3>
-            <span className="text-[10px] font-bold text-slate-500 block mt-0.5">
-              Final Building Approval
-            </span>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs">
-            <span className="text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500 uppercase block">
-              Fire Safety NOC
-            </span>
-            <h3 className="text-sm font-extrabold text-slate-900 dark:text-white mt-1.5 font-mono truncate">
-              APPROVED NOC
-            </h3>
-            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block mt-0.5">
-              Fire Services Clearance
-            </span>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs">
-            <span className="text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500 uppercase block">
-              Structural Stability
-            </span>
-            <h3 className="text-xs font-extrabold text-slate-900 dark:text-white mt-1.5 line-clamp-1">
-              Grade-A Certified
-            </h3>
-            <span className="text-[10px] font-bold text-blue-600 dark:text-cyan-400 block mt-0.5">
-              Licensed Structural Lead
-            </span>
-          </div>
-        </div>
-
-        {/* Permits Table Section */}
-        <div className="glass-card rounded-3xl p-6 lg:p-8 border border-slate-200 dark:border-[#334155] shadow-xs space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <Building size={20} className="text-blue-600 dark:text-cyan-400" /> Issued Municipal Permits & Approvals
-            </h2>
-            <Button
-              onClick={() => exportToExcel(`Permits PR-${numericId}`, permits)}
-              variant="outline"
-              size="sm"
-              icon={Printer}
-              disabled={permits.length === 0}
-            >
-              Export Permits Excel
-            </Button>
-          </div>
-
-          {loading ? (
-            <div className="space-y-3 py-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-12 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-xl" />
-              ))}
-            </div>
-          ) : permits.length > 0 ? (
-            <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-[#334155]">
-              <table className="w-full text-left text-sm border-collapse">
-                <thead>
-                  <tr className="bg-slate-900 text-slate-200 text-xs font-mono uppercase">
-                    <th className="p-4 font-semibold">Permit Number</th>
-                    <th className="p-4 font-semibold">Classification Type</th>
-                    <th className="p-4 font-semibold">Approval Status</th>
-                    <th className="p-4 font-semibold">Issue Date</th>
-                    <th className="p-4 font-semibold">Expiry Date</th>
-                    <th className="p-4 font-semibold">Issuing Authority</th>
-                    <th className="p-4 font-semibold text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-[#334155] bg-white dark:bg-[#0F172A] text-slate-700 dark:text-slate-200 text-xs">
-                  {permits.map((pmt, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-[#1E293B]/60 transition-colors">
-                      <td className="p-4 font-mono font-bold text-blue-600 dark:text-cyan-400">
-                        {pmt.permitNumber || `PMT-${pmt.permitId || idx + 1}`}
-                      </td>
-                      <td className="p-4 font-bold text-slate-900 dark:text-white">
-                        {pmt.permitType || "Building Construction Permit"}
-                      </td>
-                      <td className="p-4">
-                        <Badge variant="success">{pmt.permitStatus || "Approved & Active"}</Badge>
-                      </td>
-                      <td className="p-4 text-xs font-mono text-slate-500 dark:text-slate-400">
-                        {pmt.issueDate || "2023-11-20"}
-                      </td>
-                      <td className="p-4 text-xs font-mono text-slate-500 dark:text-slate-400">
-                        {pmt.expiryDate || "Active"}
-                      </td>
-                      <td className="p-4 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                        {pmt.authority || "Municipal Planning Board"}
-                      </td>
-                      <td className="p-4 text-right">
-                        <button
-                          onClick={() => handleOpenPermitModal(pmt)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#0F172A] hover:bg-blue-600 hover:text-white text-slate-800 dark:text-slate-200 font-bold text-xs border border-slate-200 dark:border-[#334155] transition-colors cursor-pointer"
-                        >
-                          <FileText size={13} /> View Certificate
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <EmptyState
-              title="No permit records available."
-              message="No building permit records were returned by the backend API for this property."
+        {/* CONTROLS BAR: SEARCH & PERMIT CATEGORY FILTERS */}
+        <div className="white-card rounded-3xl p-5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4 font-mono text-xs">
+          {/* Search Input */}
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search permits by Permit #, Authority, Type, or Status..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] font-bold text-slate-900 dark:text-slate-100 pl-10 pr-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
-          )}
+          </div>
+
+          {/* Permit Category Pills (The 4 Required Categories) */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {[
+              { id: "ALL", label: "All Permits" },
+              { id: "Building Permit", label: "Building Permit" },
+              { id: "Construction Approval", label: "Construction Approval" },
+              { id: "Occupancy Certificate", label: "Occupancy Cert" },
+              { id: "Renovation Permit", label: "Renovation Permit" },
+            ].map((tab) => {
+              const active = categoryFilter === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setCategoryFilter(tab.id)}
+                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer font-bold ${
+                    active
+                      ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs"
+                      : "bg-slate-100 dark:bg-[#0F172A] text-slate-600 dark:text-slate-300 hover:text-slate-900"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* PERMIT CLEARANCE CERTIFICATE MODAL */}
-        <AnimatePresence>
-          {permitModalOpen && selectedPermit && (
-            <>
+        {/* PERMIT RECORDS CARDS GRID */}
+        {filteredPermits.length === 0 ? (
+          <EmptyState title="No permit records found" message="No municipal permit matches your search query or selected category filter." />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {filteredPermits.map((p) => (
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setPermitModalOpen(false)}
-                className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md"
-              />
-
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="fixed inset-4 sm:inset-10 z-50 bg-white dark:bg-[#1E293B] rounded-3xl shadow-2xl border border-slate-200 dark:border-[#334155] flex flex-col overflow-hidden max-w-3xl mx-auto"
+                key={p.id}
+                whileHover={{ y: -4 }}
+                transition={{ duration: 0.2 }}
+                className="white-card rounded-3xl p-6 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs hover:shadow-xl transition-all flex flex-col justify-between space-y-4 font-mono text-xs"
               >
-                {/* Modal Header */}
-                <div className="p-5 sm:px-8 sm:py-5 border-b border-slate-200 dark:border-[#334155] flex items-center justify-between bg-slate-50 dark:bg-[#0F172A] shrink-0">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-2xl bg-blue-600 text-white font-bold shrink-0">
-                      <FileCheck size={20} />
-                    </div>
+                <div className="space-y-3">
+                  {/* Header: Permit Number, Category & Status Badge */}
+                  <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">
-                        Official Building Permit Clearance Certificate
-                      </h2>
-                      <p className="text-xs text-slate-500 font-mono">
-                        Permit Ref: #{selectedPermit.permitNumber}
-                      </p>
+                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">
+                        {p.category} • {p.id}
+                      </span>
+                      <h3 className="text-base font-extrabold text-slate-900 dark:text-white leading-tight">
+                        {p.permitType}
+                      </h3>
+                      <p className="text-slate-500 font-medium text-xs mt-0.5">{p.permitNumber}</p>
+                    </div>
+
+                    <div className="shrink-0">
+                      {renderPermitStatusBadge(p.status)}
                     </div>
                   </div>
 
+                  {/* Attributes Grid */}
+                  <div className="grid grid-cols-2 gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155]">
+                    <div>
+                      <span className="text-slate-400 text-[10px] uppercase font-bold">Sanctioning Authority</span>
+                      <strong className="text-slate-900 dark:text-white font-extrabold text-xs block truncate" title={p.authority}>
+                        🏛️ {p.authority}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 text-[10px] uppercase font-bold">Sanctioned FAR</span>
+                      <strong className="text-emerald-600 dark:text-emerald-400 font-extrabold text-xs block">
+                        📐 {p.farSanctioned}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 text-[10px] uppercase font-bold">Issue Date</span>
+                      <strong className="text-slate-900 dark:text-white font-bold block">{p.issueDate}</strong>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 text-[10px] uppercase font-bold">Expiry Date</span>
+                      <strong className="text-slate-900 dark:text-white font-bold block">{p.expiryDate}</strong>
+                    </div>
+                  </div>
+
+                  <p className="text-slate-500 text-[11px] leading-relaxed">
+                    📝 {p.notes}
+                  </p>
+                </div>
+
+                {/* THE 4 REQUIRED ACTION BUTTONS PER CARD */}
+                <div className="pt-4 border-t border-slate-100 dark:border-[#334155] grid grid-cols-4 gap-2 text-xs">
+                  {/* 1. Verify */}
                   <button
-                    onClick={() => setPermitModalOpen(false)}
-                    className="p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                    onClick={() => handleVerifyPermit(p)}
+                    className="px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/80 hover:bg-blue-100 text-blue-700 dark:text-cyan-300 font-bold transition-all flex items-center justify-center gap-1 border border-blue-200 dark:border-blue-800 cursor-pointer"
+                    title="1. Verify Permit with Municipal Registry"
                   >
-                    <X size={20} />
+                    <ShieldCheck size={13} />
+                    <span>Verify</span>
+                  </button>
+
+                  {/* 2. Approve */}
+                  <button
+                    onClick={() => handleApprovePermit(p)}
+                    className="px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/80 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 font-bold transition-all flex items-center justify-center gap-1 border border-emerald-200 dark:border-emerald-800 cursor-pointer"
+                    title="2. Approve Permit Clearance"
+                  >
+                    <CheckCircle2 size={13} />
+                    <span>Approve</span>
+                  </button>
+
+                  {/* 3. Flag Issue */}
+                  <button
+                    onClick={() => handleFlagIssueModalOpen(p)}
+                    className="px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/80 hover:bg-rose-100 text-rose-700 dark:text-rose-300 font-bold transition-all flex items-center justify-center gap-1 border border-rose-200 dark:border-rose-800 cursor-pointer"
+                    title="3. Flag Permit Violation / Issue"
+                  >
+                    <Flag size={13} />
+                    <span>Flag Issue</span>
+                  </button>
+
+                  {/* 4. View Document */}
+                  <button
+                    onClick={() => handleViewPermitDoc(p)}
+                    className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-[#0F172A] hover:bg-slate-200 dark:hover:bg-[#334155] text-slate-800 dark:text-slate-200 font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
+                    title="4. View Permit Document"
+                  >
+                    <Eye size={13} />
+                    <span>View Doc</span>
                   </button>
                 </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
 
-                {/* Modal Certificate Document Body */}
-                <div className="p-6 sm:p-8 overflow-y-auto flex-1 space-y-6">
-                  <div className="p-6 rounded-2xl border border-slate-200 dark:border-[#334155] bg-slate-50/70 dark:bg-[#0F172A]/70 space-y-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-[#334155] pb-4">
-                      <div>
-                        <span className="text-[10px] font-mono font-bold text-blue-600 dark:text-cyan-400 uppercase tracking-wider block">
-                          Department of Building Inspections
-                        </span>
-                        <h3 className="text-xl font-black text-slate-900 dark:text-white mt-0.5">
-                          PERMIT CLEARANCE CERTIFICATE
-                        </h3>
-                      </div>
-                      <Badge variant="success" className="text-xs px-3 py-1 font-bold">
-                        APPROVED & ACTIVE
-                      </Badge>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 text-xs font-mono">
-                      <div>
-                        <span className="text-slate-400 uppercase block">Permit Type</span>
-                        <strong className="text-slate-900 dark:text-white text-sm">{selectedPermit.permitType}</strong>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 uppercase block">Property Parcel ID</span>
-                        <strong className="text-blue-600 dark:text-cyan-400 text-sm">PR-{numericId}</strong>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 uppercase block">Issue Date</span>
-                        <strong className="text-slate-800 dark:text-slate-200">{selectedPermit.issueDate}</strong>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 uppercase block">Structural Lead</span>
-                        <strong className="text-emerald-600 dark:text-emerald-400 font-bold">{selectedPermit.engineer}</strong>
-                      </div>
-                    </div>
-
-                    <div className="p-4 rounded-xl bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                      Official inspection confirms that subject building structure on parcel PR-{numericId} complies with all municipal building codes, structural load standards, and fire safety NOC parameters.
-                    </div>
+        {/* MODAL 1: VIEW PERMIT DOCUMENT PREVIEW */}
+        <AnimatePresence>
+          {viewPermitModal && (
+            <>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setViewPermitModal(null)} className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md" />
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="fixed inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 z-50 bg-white dark:bg-[#1E293B] rounded-3xl shadow-2xl border border-slate-200 dark:border-[#334155] p-6 sm:p-8 max-w-lg w-full space-y-6">
+                <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-[#334155]">
+                  <div>
+                    <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">{viewPermitModal.category} • {viewPermitModal.permitNumber}</span>
+                    <h2 className="text-lg font-extrabold text-slate-900 dark:text-white leading-tight">{viewPermitModal.permitType}</h2>
                   </div>
+                  <button onClick={() => setViewPermitModal(null)} className="p-2 text-slate-400 hover:text-white cursor-pointer"><X size={18} /></button>
                 </div>
 
-                {/* Modal Footer */}
-                <div className="p-4 sm:px-8 border-t border-slate-200 dark:border-[#334155] bg-slate-50 dark:bg-[#0F172A] flex items-center justify-between shrink-0 text-xs">
-                  <span className="text-slate-500 font-mono">
-                    Certificate Ref: PMT-CERT-2024-{numericId}
-                  </span>
-                  <div className="flex items-center gap-3">
-                    <Button
-                      onClick={() => exportToPdf(`Permit Certificate ${selectedPermit.permitNumber}`, `PMT-${numericId}`)}
-                      variant="primary"
-                      size="sm"
-                      icon={FileDown}
-                    >
-                      Export Certificate PDF
-                    </Button>
-                    <Button onClick={() => setPermitModalOpen(false)} variant="secondary" size="sm">
-                      Close
-                    </Button>
+                <div className="space-y-4 font-mono text-xs">
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] space-y-2">
+                    <p className="text-slate-500">🏛️ Authority: <strong className="text-slate-900 dark:text-white">{viewPermitModal.authority}</strong></p>
+                    <p className="text-slate-500">📐 Sanctioned FAR: <strong className="text-emerald-600 dark:text-emerald-400">{viewPermitModal.farSanctioned}</strong></p>
+                    <p className="text-slate-500">👤 Structural Lead: <strong className="text-slate-900 dark:text-white">{viewPermitModal.engineer}</strong></p>
+                    <p className="text-slate-500">📅 Valid Window: <strong className="text-slate-900 dark:text-white">{viewPermitModal.issueDate} to {viewPermitModal.expiryDate}</strong></p>
+                    <p className="text-slate-500">📝 Inspection Notes: <strong className="text-slate-900 dark:text-white">{viewPermitModal.notes}</strong></p>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-200 dark:border-[#334155] flex justify-end">
+                    <Button onClick={() => setViewPermitModal(null)} variant="secondary" size="sm">Close Preview</Button>
                   </div>
                 </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
+        {/* MODAL 2: FLAG PERMIT ISSUE MODAL */}
+        <AnimatePresence>
+          {flagIssueModal && (
+            <>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setFlagIssueModal(null)} className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md" />
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="fixed inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 z-50 bg-white dark:bg-[#1E293B] rounded-3xl shadow-2xl border border-slate-200 dark:border-[#334155] p-6 sm:p-8 max-w-md w-full space-y-6">
+                <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-[#334155]">
+                  <h2 className="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Flag size={20} className="text-rose-500" /> Flag Permit Compliance Issue
+                  </h2>
+                  <button onClick={() => setFlagIssueModal(null)} className="p-2 text-slate-400 hover:text-white cursor-pointer"><X size={18} /></button>
+                </div>
+
+                <form onSubmit={handleConfirmFlagSubmit} className="space-y-4 font-mono text-xs">
+                  <p className="text-slate-600 dark:text-slate-300 font-bold">Flag permit issue for: <strong className="text-rose-600">{flagIssueModal.permitNumber}</strong></p>
+
+                  <div>
+                    <label className="block text-slate-400 uppercase font-bold mb-1">Permit Violation Issue *</label>
+                    <textarea rows={3} value={flagReason} onChange={(e) => setFlagReason(e.target.value)} required className="w-full p-3 rounded-xl bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-white font-bold" />
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-200 dark:border-[#334155] flex justify-end gap-3">
+                    <Button onClick={() => setFlagIssueModal(null)} variant="secondary" size="sm">Cancel</Button>
+                    <Button type="submit" variant="danger" size="sm">Flag Permit Violation</Button>
+                  </div>
+                </form>
               </motion.div>
             </>
           )}

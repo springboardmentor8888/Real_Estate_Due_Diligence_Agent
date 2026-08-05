@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import MainLayout from "../components/layout/MainLayout";
 import Badge from "../components/common/Badge";
 import Button from "../components/common/Button";
@@ -8,388 +8,372 @@ import EmptyState from "../components/common/EmptyState";
 import {
   Bell,
   CheckCheck,
-  ShieldCheck,
+  Building2,
+  Users,
   FileText,
-  Info,
-  AlertTriangle,
-  Receipt,
-  CheckCircle2,
-  Trash2,
+  Clock,
+  Search,
   Filter,
+  Trash2,
+  CheckCircle2,
   ArrowUpRight,
+  Send,
+  Calendar,
+  Check,
+  X,
+  UserPlus,
+  Home,
+  ShieldCheck,
+  Eye,
   Sparkles,
-  Sliders,
+  AlertOctagon,
+  AlertTriangle,
+  RotateCcw,
+  FileUp,
+  UserCheck,
+  ShieldAlert,
 } from "lucide-react";
-import { getMyNotifications } from "../services/propertyService";
-import { showToast } from "../utils/swal";
+import { showToast, showConfirmDialog, showSuccessAlert } from "../utils/swal";
+
+// Master Initial Mock Notifications covering all 5 requested Notification Types
+const INITIAL_NOTIFICATIONS = [
+  // 1. New Review Assigned
+  {
+    id: "NTF-901",
+    type: "New Review Assigned",
+    title: "New Review Assigned: Title Audit PR-1001",
+    message: "Gachibowli Tech Park Phase 2 (PR-1001) title deed search assigned to your workstation.",
+    property: "Gachibowli Tech Park Phase 2 (PR-1001)",
+    propertyId: "1001",
+    timestamp: "10 mins ago",
+    read: false,
+    priority: "HIGH",
+    iconName: "UserCheck",
+  },
+  // 2. Document Uploaded
+  {
+    id: "NTF-902",
+    type: "Document Uploaded",
+    title: "Document Uploaded: 30-Year Encumbrance Certificate",
+    message: "Sub-Registrar Form 15 Encumbrance Certificate (EC #EC-2026-9041) uploaded for Whitefield Tech.",
+    property: "Whitefield Horizon Tech Campus (PR-1003)",
+    propertyId: "1003",
+    timestamp: "25 mins ago",
+    read: false,
+    priority: "HIGH",
+    iconName: "FileUp",
+  },
+  // 3. Ownership Updated
+  {
+    id: "NTF-903",
+    type: "Ownership Updated",
+    title: "Ownership Updated: Registered Sale Deed Transferred",
+    message: "Sub-Registrar recorded owner updated to Adani Realty Institutional Fund for PR-1001.",
+    property: "Gachibowli Tech Park Phase 2 (PR-1001)",
+    propertyId: "1001",
+    timestamp: "1 hour ago",
+    read: false,
+    priority: "HIGH",
+    iconName: "UserCheck",
+  },
+  // 4. Permit Expired
+  {
+    id: "NTF-904",
+    type: "Permit Expired",
+    title: "Urgent: Municipal Renovation Permit Expired",
+    message: "GHMC Renovation Permit (PMT-REN-1204) expired on 12 Feb 2025. Renewal clearance required.",
+    property: "BKC Prime Commercial Hub (PR-1005)",
+    propertyId: "1005",
+    timestamp: "2 hours ago",
+    read: false,
+    priority: "CRITICAL",
+    iconName: "AlertTriangle",
+  },
+  // 5. High Risk Property
+  {
+    id: "NTF-905",
+    type: "High Risk Property",
+    title: "High Risk Property Flagged: Civil Court Stay Order #CS-402",
+    property: "Jubilee Hills Commercial Plot 36 (PR-1002)",
+    propertyId: "1002",
+    message: "Risk Score 68/100 FLAGGED due to High Court civil stay order alert.",
+    timestamp: "4 hours ago",
+    read: false,
+    priority: "CRITICAL",
+    iconName: "ShieldAlert",
+  },
+  {
+    id: "NTF-906",
+    type: "New Review Assigned",
+    title: "New Review Assigned: Financial District Commercial Plot",
+    message: "Prestige Capital due diligence clearance request assigned to legal team.",
+    property: "Financial District Commercial Plot (PR-1004)",
+    propertyId: "1004",
+    timestamp: "Yesterday",
+    read: true,
+    priority: "MEDIUM",
+    iconName: "UserCheck",
+  },
+];
 
 function NotificationCenter() {
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("ALL"); // 'ALL', 'UNREAD', 'TITLE', 'REPORT'
+  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
 
-  // Get Logged-in User Name & Role
-  const getLoggedInUser = () => {
-    try {
-      const saved = localStorage.getItem("user");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        const name = parsed.firstName
-          ? `${parsed.firstName} ${parsed.lastName || ""}`.trim()
-          : parsed.name || parsed.username || "Rama Charan";
-        const role = parsed.role || "Buyer";
-        return { name, role };
-      }
-    } catch (e) { }
-    return { name: "Rama Charan", role: "Buyer" };
+  // Filters & Search
+  const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState("ALL");
+
+  // UNREAD BADGE COUNTER
+  const unreadCount = useMemo(() => {
+    return notifications.filter((n) => !n.read).length;
+  }, [notifications]);
+
+  // FILTERED NOTIFICATIONS
+  const filteredNotifications = useMemo(() => {
+    return notifications.filter((ntf) => {
+      const matchType =
+        typeFilter === "ALL" ||
+        (typeFilter === "UNREAD" && !ntf.read) ||
+        ntf.type === typeFilter;
+
+      const matchSearch =
+        ntf.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        ntf.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        ntf.property.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        ntf.type.toLowerCase().includes(searchQuery.toLowerCase());
+
+      return matchType && matchSearch;
+    });
+  }, [notifications, typeFilter, searchQuery]);
+
+  // ACTION: MARK READ (SINGLE)
+  const handleMarkAsRead = (id) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+    );
+    showToast("Notification marked as read", "info");
   };
 
-  const { name: loggedInName, role: loggedInRole } = getLoggedInUser();
-
-  useEffect(() => {
-    setLoading(true);
-    getMyNotifications()
-      .then((res) => {
-        if (res && res.data) {
-          const items = Array.isArray(res.data) ? res.data : res.data.content || [];
-          if (items.length > 0) {
-            setNotifications(items);
-          } else {
-            setNotifications(getFallbackNotifications());
-          }
-        } else {
-          setNotifications(getFallbackNotifications());
-        }
-      })
-      .catch((err) => {
-        console.warn("Failed to load notifications:", err);
-        setNotifications(getFallbackNotifications());
-      })
-      .finally(() => setLoading(false));
-  }, []);
-
-  const getFallbackNotifications = () => [
-    {
-      id: "notif-101",
-      title: "Due Diligence Report Ready - Gachibowli Tech Park (PR-1001)",
-      message: "Comprehensive 6-vector audit dossier has been compiled and verified by Sub-Registrar GIS Engine.",
-      timestamp: "10 mins ago",
-      read: false,
-      category: "REPORT",
-      priority: "HIGH",
-      propertyId: "1001",
-    },
-    {
-      id: "notif-102",
-      title: "Sub-Registrar Title Chain Verified - PR-1002",
-      message: "Nil Encumbrance Certificate (EC) confirmed across 3 historic title deeds under Registration #REG/TS/2023/8891.",
-      timestamp: "1 hour ago",
-      read: false,
-      category: "TITLE",
-      priority: "NORMAL",
-      propertyId: "1002",
-    },
-    {
-      id: "notif-103",
-      title: "Municipal Property Tax Settlement Confirmed - PR-1003",
-      message: "GHMC Circle 14 tax clearance receipt #TAX-HYD-2024-88903 issued. Zero outstanding dues.",
-      timestamp: "3 hours ago",
-      read: false,
-      category: "TAX",
-      priority: "NORMAL",
-      propertyId: "1003",
-    },
-    {
-      id: "notif-104",
-      title: "Building Permit Occupancy Certificate Approved - PR-1004",
-      message: "Department of Building Permits finalized Occupancy Certificate PMT-GHMC-2023-8814.",
-      timestamp: "Yesterday",
-      read: true,
-      category: "PERMIT",
-      priority: "NORMAL",
-      propertyId: "1004",
-    },
-    {
-      id: "notif-105",
-      title: "Environmental Phase I Clearance Issued - PR-1005",
-      message: "State Pollution Control Board NOC #SPCB/TS/2024/7705 approved with 0.00 ppm soil contamination.",
-      timestamp: "2 days ago",
-      read: true,
-      category: "ENVIRONMENT",
-      priority: "NORMAL",
-      propertyId: "1005",
-    },
-  ];
-
+  // ACTION: MARK ALL READ
   const handleMarkAllRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    showToast("All system notifications marked as read", "success");
+    showToast("All notifications marked as read", "success");
   };
 
-  const handleToggleRead = (id, e) => {
-    e.stopPropagation();
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: !n.read } : n))
-    );
-  };
-
-  const handleDeleteNotif = (id, e) => {
-    e.stopPropagation();
+  // ACTION: DELETE (SINGLE)
+  const handleDeleteNotification = (id) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
-    showToast("Notification dismissed", "info");
+    showToast("Notification deleted", "info");
   };
 
-  const filteredNotifications = notifications.filter((n) => {
-    if (activeTab === "UNREAD") return !n.read;
-    if (activeTab === "TITLE") return n.category === "TITLE";
-    if (activeTab === "REPORT") return n.category === "REPORT";
-    return true;
-  });
-
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
-  const getCategoryIcon = (category) => {
-    if (category === "TITLE") return ShieldCheck;
-    if (category === "REPORT") return FileText;
-    if (category === "TAX") return Receipt;
-    return Bell;
+  // ACTION: DELETE ALL
+  const handleDeleteAll = () => {
+    showConfirmDialog(
+      "Clear All Notifications?",
+      "Are you sure you want to delete all notifications from your feed?",
+      "Clear All"
+    ).then((res) => {
+      if (res.isConfirmed) {
+        setNotifications([]);
+        showSuccessAlert("Notifications Cleared", "All notifications deleted from your dispatch feed.");
+      }
+    });
   };
 
   return (
     <MainLayout>
-      <div className="space-y-6 max-w-5xl mx-auto pb-16">
-        {/* Header Action Banner */}
-        <div className="glass-card rounded-3xl p-6 sm:p-7 border border-slate-200 dark:border-[#334155] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+      <div className="space-y-8 max-w-7xl mx-auto pb-16 font-mono text-xs">
+        {/* Breadcrumb Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-medium text-slate-500 dark:text-[#CBD5E1]">
+          <div className="flex items-center gap-2">
+            <Bell size={14} className="text-amber-500 dark:text-amber-400" />
+            <span>/</span>
+            <span className="text-slate-900 dark:text-[#F8FAFC] font-extrabold">
+              System Notifications & Alert Center
+            </span>
+          </div>
+
+          {/* DYNAMIC UNREAD BADGE COUNTER */}
+          <span className="px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-mono font-bold text-xs border border-amber-200 dark:border-amber-800 flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            {unreadCount} UNREAD NOTIFICATIONS
+          </span>
+        </div>
+
+        {/* HERO BANNER & BULK ACTIONS */}
+        <div className="glass-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-cyan-300 border border-blue-200 dark:border-blue-800 text-xs font-mono font-bold mb-3">
-              <Bell size={14} /> Real-Time System Feeds
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-mono font-bold mb-2">
+              <Bell size={14} /> Dispatch & Telemetry Stream
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-[#F8FAFC] tracking-tight">
-              🔔 Notification & Alert Center
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-[#F8FAFC] tracking-tight flex items-center gap-2">
+              🔔 Notifications Center
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-[#CBD5E1] mt-1 max-w-2xl">
-              System feeds for {loggedInName} ({loggedInRole}) tracking title audits, tax clearances, and report triggers.
+              Real-time dispatches for assigned reviews, uploaded documents, ownership updates, expired permits, and high risk properties.
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
             <Button
               onClick={handleMarkAllRead}
-              variant="secondary"
+              variant="outline"
               size="sm"
               icon={CheckCheck}
               disabled={unreadCount === 0}
             >
               Mark All Read
             </Button>
+            <Button
+              onClick={handleDeleteAll}
+              variant="danger"
+              size="sm"
+              icon={Trash2}
+              disabled={notifications.length === 0}
+            >
+              Clear All
+            </Button>
           </div>
         </div>
 
-        {/* Notification KPI Stats Bar */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="p-4 rounded-2xl bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs">
-            <span className="text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500 uppercase block">
-              Total Notifications
-            </span>
-            <h3 className="text-xl font-extrabold text-slate-900 dark:text-white mt-1 font-mono">
-              {notifications.length} Feeds
-            </h3>
-            <span className="text-[10px] font-bold text-blue-600 dark:text-cyan-400 block mt-0.5">
-              Live GIS Substation
-            </span>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs">
-            <span className="text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500 uppercase block">
-              Unread Alerts
-            </span>
-            <h3 className="text-xl font-extrabold text-blue-600 dark:text-cyan-400 mt-1 font-mono">
-              {unreadCount} New
-            </h3>
-            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block mt-0.5">
-              Requires Review
-            </span>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs">
-            <span className="text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500 uppercase block">
-              Auditor Session
-            </span>
-            <h3 className="text-base font-extrabold text-slate-900 dark:text-white mt-1 truncate">
-              {loggedInName}
-            </h3>
-            <span className="text-[10px] font-bold text-blue-600 dark:text-cyan-400 block mt-0.5">
-              Role: {loggedInRole}
-            </span>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs">
-            <span className="text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500 uppercase block">
-              System Feed Status
-            </span>
-            <h3 className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">
-              CONNECTED
-            </h3>
-            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block mt-0.5">
-              Sub-Registrar Live Sync
-            </span>
-          </div>
-        </div>
-
-        {/* Filter Tabs & Controls */}
-        <div className="glass-card rounded-2xl p-4 border border-slate-200 dark:border-[#334155] flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-1.5 overflow-x-auto">
-            <button
-              onClick={() => setActiveTab("ALL")}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${activeTab === "ALL"
-                ? "bg-blue-600 text-white shadow-xs"
-                : "bg-slate-100 dark:bg-[#0F172A] text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#334155]"
-                }`}
-            >
-              All Feeds ({notifications.length})
-            </button>
-
-            <button
-              onClick={() => setActiveTab("UNREAD")}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${activeTab === "UNREAD"
-                ? "bg-blue-600 text-white shadow-xs"
-                : "bg-slate-100 dark:bg-[#0F172A] text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#334155]"
-                }`}
-            >
-              Unread ({unreadCount})
-            </button>
-
-            <button
-              onClick={() => setActiveTab("TITLE")}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${activeTab === "TITLE"
-                ? "bg-blue-600 text-white shadow-xs"
-                : "bg-slate-100 dark:bg-[#0F172A] text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#334155]"
-                }`}
-            >
-              Title Audits
-            </button>
-
-            <button
-              onClick={() => setActiveTab("REPORT")}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${activeTab === "REPORT"
-                ? "bg-blue-600 text-white shadow-xs"
-                : "bg-slate-100 dark:bg-[#0F172A] text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#334155]"
-                }`}
-            >
-              Audit Reports
-            </button>
-          </div>
-
-          <span className="text-xs font-mono text-slate-400">
-            Showing {filteredNotifications.length} Alerts
-          </span>
-        </div>
-
-        {/* Notifications List Container */}
-        <div className="white-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
-          {loading ? (
-            <div className="space-y-3 py-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-20 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-2xl" />
-              ))}
-            </div>
-          ) : filteredNotifications.length === 0 ? (
-            <EmptyState
-              title="No notifications match criteria."
-              message="Adjust your filter tab to view system activity alerts."
+        {/* CONTROLS BAR: SEARCH & TYPE FILTER PILLS */}
+        <div className="white-card rounded-3xl p-5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4 font-mono text-xs">
+          {/* Search Input */}
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search notifications by Title, Message, Property, or Type..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] font-bold text-slate-900 dark:text-slate-100 pl-10 pr-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500"
             />
-          ) : (
-            <div className="space-y-3">
-              <AnimatePresence>
-                {filteredNotifications.map((n) => {
-                  const IconComp = getCategoryIcon(n.category);
+          </div>
 
-                  return (
-                    <motion.div
-                      key={n.id}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      onClick={() => {
-                        if (n.propertyId) {
-                          navigate(`/due-diligence-report?id=PR-${n.propertyId}`);
-                        }
-                      }}
-                      className={`p-4 sm:p-5 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer group ${n.read
-                        ? "bg-slate-50/50 dark:bg-[#0F172A]/50 border-slate-200/60 dark:border-[#334155]"
-                        : "bg-blue-50/50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 shadow-xs"
-                        }`}
-                    >
-                      <div className="flex items-start gap-3.5">
-                        <div className={`p-3 rounded-xl shrink-0 mt-0.5 ${n.priority === "HIGH"
-                          ? "bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800"
-                          : "bg-blue-100 dark:bg-blue-900/60 text-blue-600 dark:text-cyan-400 border border-blue-200 dark:border-blue-800"
-                          }`}>
-                          <IconComp size={20} />
-                        </div>
-
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-sm font-extrabold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-cyan-400 transition-colors">
-                              {n.title}
-                            </h3>
-                            {!n.read && (
-                              <Badge variant="info" className="text-[10px] uppercase font-bold px-2 py-0.5">
-                                New Alert
-                              </Badge>
-                            )}
-                            {n.priority === "HIGH" && (
-                              <span className="text-[10px] font-mono font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 px-2 py-0.5 rounded border border-rose-200 dark:border-rose-800">
-                                High Priority
-                              </span>
-                            )}
-                          </div>
-
-                          <p className="text-xs text-slate-600 dark:text-[#CBD5E1] leading-relaxed">
-                            {n.message}
-                          </p>
-
-                          <div className="flex items-center gap-3 text-[11px] font-mono text-slate-400 pt-1">
-                            <span>{n.timestamp}</span>
-                            {n.propertyId && (
-                              <span className="text-blue-600 dark:text-cyan-400 font-bold">
-                                Property PR-{n.propertyId}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Action buttons */}
-                      <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                        <button
-                          onClick={(e) => handleToggleRead(n.id, e)}
-                          className="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-[#0F172A] hover:bg-slate-200 dark:hover:bg-[#334155] text-slate-700 dark:text-slate-300 text-xs font-mono font-bold transition-colors cursor-pointer"
-                          title={n.read ? "Mark as Unread" : "Mark as Read"}
-                        >
-                          {n.read ? "Unread" : "Read"}
-                        </button>
-
-                        <button
-                          onClick={(e) => handleDeleteNotif(n.id, e)}
-                          className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition-colors cursor-pointer"
-                          title="Dismiss Alert"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-cyan-400 group-hover:underline ml-1">
-                          Inspect <ArrowUpRight size={14} />
-                        </span>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            </div>
-          )}
+          {/* Notification Type Filter Pills (The 5 Required Types + All & Unread) */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {[
+              { id: "ALL", label: "All Feed" },
+              { id: "UNREAD", label: `Unread (${unreadCount})` },
+              { id: "New Review Assigned", label: "New Review" },
+              { id: "Document Uploaded", label: "Doc Uploaded" },
+              { id: "Ownership Updated", label: "Ownership" },
+              { id: "Permit Expired", label: "Permit Expired" },
+              { id: "High Risk Property", label: "High Risk" },
+            ].map((tab) => {
+              const active = typeFilter === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setTypeFilter(tab.id)}
+                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer font-bold ${
+                    active
+                      ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs"
+                      : "bg-slate-100 dark:bg-[#0F172A] text-slate-600 dark:text-slate-300 hover:text-slate-900"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
+
+        {/* NOTIFICATIONS FEED LIST */}
+        {filteredNotifications.length === 0 ? (
+          <EmptyState title="No notifications found" message="No notification dispatch matches your search query or selected type filter." />
+        ) : (
+          <div className="space-y-4">
+            <AnimatePresence>
+              {filteredNotifications.map((ntf) => (
+                <motion.div
+                  key={ntf.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className={`p-5 rounded-3xl border transition-all duration-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs hover:shadow-md ${
+                    !ntf.read
+                      ? "bg-amber-50/40 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/80"
+                      : "bg-white dark:bg-[#1E293B] border-slate-200 dark:border-[#334155]"
+                  }`}
+                >
+                  <div className="flex items-start gap-3.5 min-w-0">
+                    {/* Unread Indicator Dot & Type Icon */}
+                    <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                      {!ntf.read && (
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" title="Unread Notification" />
+                      )}
+                      <div className={`p-2.5 rounded-2xl border ${
+                        ntf.priority === "CRITICAL" ? "bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950/80 dark:text-rose-400 dark:border-rose-800" :
+                        ntf.type === "High Risk Property" ? "bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950/80 dark:text-rose-400 dark:border-rose-800" :
+                        "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950/80 dark:text-amber-400 dark:border-amber-800"
+                      }`}>
+                        <Bell size={18} />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">
+                          {ntf.type} • {ntf.id}
+                        </span>
+                        <span className="text-slate-400 text-[10px] font-bold">• {ntf.timestamp}</span>
+                        {ntf.priority === "CRITICAL" && (
+                          <Badge variant="danger">CRITICAL</Badge>
+                        )}
+                      </div>
+
+                      <h3 className={`text-sm font-extrabold leading-snug ${
+                        !ntf.read ? "text-slate-900 dark:text-white" : "text-slate-700 dark:text-slate-300"
+                      }`}>
+                        {ntf.title}
+                      </h3>
+
+                      <p className="text-slate-600 dark:text-slate-300 text-xs leading-relaxed font-medium">
+                        {ntf.message}
+                      </p>
+
+                      <p className="text-[11px] font-bold text-slate-500 pt-1">
+                        🏢 {ntf.property}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* ACTION BUTTONS: MARK READ & DELETE */}
+                  <div className="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-[#334155]">
+                    {!ntf.read && (
+                      <button
+                        onClick={() => handleMarkAsRead(ntf.id)}
+                        className="px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/80 hover:bg-blue-100 text-blue-700 dark:text-cyan-300 font-bold transition-all flex items-center gap-1 cursor-pointer border border-blue-200 dark:border-blue-800"
+                        title="Mark as Read"
+                      >
+                        <Check size={14} />
+                        <span>Read</span>
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => handleDeleteNotification(ntf.id)}
+                      className="p-2 rounded-xl bg-slate-100 dark:bg-[#0F172A] hover:bg-rose-50 text-slate-500 hover:text-rose-600 transition-all cursor-pointer"
+                      title="Delete Notification"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+
+                    <button
+                      onClick={() => navigate(`/property-details?id=${ntf.propertyId || "1001"}`)}
+                      className="p-2 rounded-xl bg-slate-100 dark:bg-[#0F172A] hover:bg-slate-200 text-slate-700 dark:text-slate-300 transition-all cursor-pointer"
+                      title="Inspect Property Parcel"
+                    >
+                      <ArrowUpRight size={15} />
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
     </MainLayout>
   );

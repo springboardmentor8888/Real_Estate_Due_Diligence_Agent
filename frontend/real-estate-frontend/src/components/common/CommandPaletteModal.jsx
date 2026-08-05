@@ -49,7 +49,7 @@ function CommandPaletteModal({ isOpen, onClose }) {
     { id: "g1", title: "Property Search & Intelligence", category: "Navigation", path: "/property-search", icon: Search },
     { id: "g2", title: "Notifications & Alerts Center", category: "Navigation", path: "/notifications", icon: Bell },
     { id: "g3", title: "Auditor Profile & Account Security", category: "Navigation", path: "/profile", icon: User },
-    { id: "g4", title: "Report History & Document Dossiers", category: "Navigation", path: "/report-history", icon: FileText },
+    { id: "g4", title: "Report History & Documents", category: "Navigation", path: "/report-history", icon: FileText },
   ];
 
   const filteredItems = items.filter((item) =>

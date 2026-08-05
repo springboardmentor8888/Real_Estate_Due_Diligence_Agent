@@ -7,9 +7,14 @@ import {
   ShieldAlert,
   TrendingUp,
   FileText,
+  Database,
   History,
   User,
   ClipboardList,
+  FolderOpen,
+  FileSearch,
+  FileCheck2,
+  Calendar,
   Waves,
   Leaf,
   Map,
@@ -24,8 +29,24 @@ import {
   LogOut,
   Sparkles,
   ExternalLink,
+  Users,
+  Shield,
+  Landmark,
+  FileCheck,
+  CheckSquare,
+  Scale,
+  Receipt,
+  Star,
+  FileSpreadsheet,
+  ArrowRightLeft,
+  DollarSign,
+  ShieldCheck,
+  BarChart3,
+  HelpCircle,
+  Eye,
 } from "lucide-react";
 import { showConfirmDialog, showToast } from "../../utils/swal";
+import { normalizeRole } from "../../utils/roleUtils";
 
 function Sidebar({ mobileOpen, onCloseMobile, isCollapsed, onToggleCollapse }) {
   const navigate = useNavigate();
@@ -50,7 +71,7 @@ function Sidebar({ mobileOpen, onCloseMobile, isCollapsed, onToggleCollapse }) {
     try {
       const saved = localStorage.getItem("user");
       if (saved) return JSON.parse(saved);
-    } catch (e) { }
+    } catch (e) {}
     return { name: "Rama Charan", role: "Buyer", email: "ramacharan@gmail.com" };
   });
 
@@ -59,7 +80,7 @@ function Sidebar({ mobileOpen, onCloseMobile, isCollapsed, onToggleCollapse }) {
       try {
         const saved = localStorage.getItem("user");
         if (saved) setUserData(JSON.parse(saved));
-      } catch (e) { }
+      } catch (e) {}
     };
 
     window.addEventListener("user_profile_updated", handleUpdate);
@@ -68,54 +89,155 @@ function Sidebar({ mobileOpen, onCloseMobile, isCollapsed, onToggleCollapse }) {
 
   const userName = userData.name || (userData.firstName ? `${userData.firstName} ${userData.lastName || ""}`.trim() : "Rama Charan");
   const userRole = userData.role || "Buyer";
+  const normalized = normalizeRole(userRole);
   const userInitials = userName.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2);
 
-  // Recent Audits List
-  const recentAudits = [
-    { id: "1001", name: "PR-1001 Gachibowli Tech Park", path: "/due-diligence-report?id=PR-1001" },
-    { id: "1002", name: "PR-1002 Cyber Towers", path: "/due-diligence-report?id=PR-1002" },
-    { id: "1003", name: "PR-1003 Knowledge City", path: "/due-diligence-report?id=PR-1003" },
-  ];
+  // Role-Specific Navigation Menu Generator according to SRS specifications
+  const getRoleMenuSections = () => {
+    switch (normalized) {
+      case "agent":
+        return [
+          {
+            title: "REAL ESTATE AGENT PORTAL",
+            items: [
+              { name: "Dashboard", path: "/agent/dashboard", icon: LayoutDashboard },
+              { name: "Clients", path: "/agent/clients", icon: Users },
+              { name: "My Properties", path: "/agent/properties", icon: Building2 },
+              { name: "Compare Properties", path: "/comparable-properties", icon: ArrowRightLeft },
+              { name: "DD Requests", path: "/agent/requests", icon: FileSpreadsheet },
+              { name: "Reports", path: "/report-history", icon: FileText },
+              { name: "Tasks", path: "/agent/tasks", icon: ClipboardList },
+              { name: "Calendar", path: "/agent/calendar", icon: Calendar },
+              { name: "Analytics", path: "/agent/analytics", icon: TrendingUp },
+              { name: "Notifications", path: "/notifications", icon: Bell },
+              { name: "Documents", path: "/documents", icon: FolderOpen },
+              { name: "Recent Activity", path: "/agent/activity", icon: Activity },
+              { name: "My Account", path: "/my-account", icon: User },
+            ],
+          },
+          {
+            title: "AUDIT REGISTRIES",
+            items: [
+              { name: "Property Review", path: "/property-review", icon: FileSearch },
+              { name: "Review Checklist", path: "/review-checklist", icon: FileCheck2 },
+              { name: "Case History", path: "/case-history", icon: History },
+              { name: "Legal Analytics", path: "/analytics", icon: TrendingUp },
+              { name: "Risk Assessment", path: "/risk-assessment", icon: ShieldAlert },
+              { name: "Due Diligence Report", path: "/due-diligence-report", icon: FileSpreadsheet },
+            ],
+          },
+        ];
 
-  const menuSections = [
-    {
-      title: "CORE PLATFORM",
-      items: [
-        { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
-        { name: "Property Search", path: "/property-search", icon: Search },
-        { name: "Property Details", path: "/property-details", icon: Building2 },
-      ],
-    },
-    {
-      title: "ANALYTICS & AUDITS",
-      items: [
-        { name: "Risk Assessment", path: "/risk-assessment", icon: ShieldAlert, badge: "AI Score" },
-        { name: "Comparable Properties", path: "/comparable-properties", icon: TrendingUp },
-        { name: "Due Diligence Report", path: "/due-diligence-report", icon: FileText, badge: "Full Audit" },
-        { name: "Report History", path: "/report-history", icon: History },
-      ],
-    },
-    {
-      title: "RECORD REGISTRIES",
-      items: [
-        { name: "Ownership & Title", path: "/ownership", icon: User },
-        { name: "Tax History & Liens", path: "/tax-history", icon: ClipboardList },
-        { name: "Zoning & Land Use", path: "/zoning", icon: Building2 },
-        { name: "Flood Zone Hazard", path: "/flood-zone", icon: Waves },
-        { name: "Environmental Audit", path: "/environmental", icon: Leaf },
-        { name: "Permit Records", path: "/permit-records", icon: Map },
-        { name: "Utilities Infrastructure", path: "/utilities", icon: Zap },
-      ],
-    },
-    {
-      title: "WORKSPACE ADMIN",
-      items: [
-        { name: "Notifications", path: "/notifications", icon: Bell },
-        { name: "Audit Logs", path: "/admin-dashboard", icon: Activity, badge: "Admin" },
-        { name: "Profile & Settings", path: "/profile", icon: Sliders },
-      ],
-    },
-  ];
+      case "legal":
+        return [
+          {
+            title: "LEGAL REVIEWER PORTAL",
+            items: [
+              { name: "Dashboard", path: "/legal/dashboard", icon: LayoutDashboard },
+              { name: "Reviews", path: "/legal/reviews", icon: Scale },
+              { name: "Property Review", path: "/property-review", icon: FileSearch },
+              { name: "Review Checklist", path: "/review-checklist", icon: FileCheck2 },
+              { name: "Case History", path: "/case-history", icon: History },
+              { name: "Legal Analytics", path: "/analytics", icon: TrendingUp },
+              { name: "Ownership", path: "/ownership", icon: FileCheck },
+              { name: "Permits", path: "/permit-records", icon: Map },
+              { name: "Documents", path: "/legal/documents", icon: FileText },
+              { name: "My Account", path: "/my-account", icon: User },
+            ],
+          },
+          {
+            title: "VERIFICATION REGISTRIES",
+            items: [
+              { name: "Tax History & Liens", path: "/tax-history", icon: ClipboardList },
+              { name: "Zoning & Land Use", path: "/zoning", icon: Building2 },
+              { name: "Environmental Audit", path: "/environmental", icon: Leaf },
+            ],
+          },
+        ];
+
+      case "financial":
+        return [
+          {
+            title: "FINANCIAL INSTITUTION PORTAL",
+            items: [
+              { name: "Dashboard", path: "/financial/dashboard", icon: LayoutDashboard },
+              { name: "Financial Risk Analysis", path: "/financial-risk", icon: ShieldAlert },
+              { name: "Legal Risk Assessment", path: "/risk-assessment", icon: ShieldCheck },
+              { name: "Tax Verification", path: "/tax-verification", icon: Receipt },
+              { name: "Financial Reports", path: "/financial-reports", icon: FileSpreadsheet },
+              { name: "Reports History", path: "/report-history", icon: FileText },
+              { name: "Loans", path: "/financial/loans", icon: Landmark },
+              { name: "Loan Review", path: "/loan-review", icon: FileCheck },
+              { name: "Notifications Center", path: "/notifications", icon: Bell },
+              { name: "Financial Analytics", path: "/financial-analytics", icon: BarChart3 },
+              { name: "Recent Activity", path: "/recent-activity", icon: Activity },
+              { name: "Help & Support", path: "/help-support", icon: HelpCircle },
+              { name: "My Account", path: "/my-account", icon: User },
+            ],
+          },
+          {
+            title: "COLLATERAL AUDIT",
+            items: [
+              { name: "Property Valuation", path: "/property-valuation", icon: DollarSign },
+              { name: "Investment Analysis", path: "/investment-analysis", icon: TrendingUp },
+              { name: "Comparable Properties", path: "/comparable-properties", icon: ArrowRightLeft },
+              { name: "Due Diligence Report", path: "/due-diligence-report", icon: FileText },
+            ],
+          },
+        ];
+
+      case "admin":
+        return [
+          {
+            title: "ADMINISTRATOR CONTROL PORTAL",
+            items: [
+              { name: "Dashboard", path: "/admin/dashboard", icon: LayoutDashboard },
+              { name: "Users", path: "/user-management", icon: Users },
+              { name: "Roles", path: "/role-management", icon: Shield },
+              { name: "Properties", path: "/property-management", icon: Building2 },
+              { name: "Reports", path: "/report-management", icon: FileText },
+              { name: "Audit Logs", path: "/recent-activity", icon: Activity },
+              { name: "Analytics", path: "/financial-analytics", icon: TrendingUp },
+              { name: "Notifications", path: "/notifications", icon: Bell },
+              { name: "System Monitoring", path: "/system-monitoring", icon: Sliders },
+              { name: "Security Center", path: "/security-center", icon: ShieldAlert },
+              { name: "Data Management", path: "/data-management", icon: Database },
+              { name: "Platform Settings", path: "/my-account?tab=preferences", icon: Sliders },
+              { name: "Help & Support", path: "/help-support", icon: HelpCircle },
+              { name: "My Account", path: "/my-account", icon: User },
+            ],
+          },
+        ];
+
+      case "buyer":
+      default:
+        return [
+          {
+            title: "BUYER WORKSPACE",
+            items: [
+              { name: "Dashboard", path: "/buyer/dashboard", icon: LayoutDashboard },
+              { name: "Property Search", path: "/property-search", icon: Search },
+              { name: "Saved Properties", path: "/saved-properties", icon: Star },
+              { name: "Property Watchlist", path: "/watchlist", icon: Eye },
+              { name: "Reports", path: "/report-history", icon: FileText },
+              { name: "Compare Properties", path: "/comparable-properties", icon: TrendingUp },
+              { name: "My Account", path: "/my-account", icon: User },
+            ],
+          },
+          {
+            title: "RECORD REGISTRIES",
+            items: [
+              { name: "Risk Assessment", path: "/risk-assessment", icon: ShieldAlert },
+              { name: "Ownership & Title", path: "/ownership", icon: FileCheck },
+              { name: "Tax History", path: "/tax-history", icon: ClipboardList },
+              { name: "Permit Records", path: "/permit-records", icon: Map },
+            ],
+          },
+        ];
+    }
+  };
+
+  const menuSections = getRoleMenuSections();
 
   const handleLogout = async () => {
     const confirmed = await showConfirmDialog({
@@ -145,13 +267,14 @@ function Sidebar({ mobileOpen, onCloseMobile, isCollapsed, onToggleCollapse }) {
       )}
 
       <aside
-        className={`fixed left-0 top-20 z-40 h-[calc(100vh-80px)] bg-white dark:bg-[#0F172A] text-slate-700 dark:text-slate-200 shadow-2xl flex flex-col justify-between border-r border-slate-200 dark:border-[#334155] transition-all duration-300 ease-in-out lg:translate-x-0 ${mobileOpen ? "translate-x-0 w-72" : "-translate-x-full lg:translate-x-0"
-          } ${isCollapsed ? "lg:w-20" : "lg:w-72"}`}
+        className={`fixed left-0 top-20 z-40 h-[calc(100vh-80px)] bg-white dark:bg-[#0F172A] text-slate-700 dark:text-slate-200 shadow-2xl flex flex-col justify-between border-r border-slate-200 dark:border-[#334155] transition-all duration-300 ease-in-out lg:translate-x-0 overflow-x-hidden ${
+          mobileOpen ? "translate-x-0 w-72" : "-translate-x-full lg:translate-x-0"
+        } ${isCollapsed ? "lg:w-20" : "lg:w-72"}`}
       >
         {/* Mobile Header */}
         <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-[#334155] lg:hidden shrink-0">
           <span className="text-xs font-bold tracking-wider text-slate-500 dark:text-slate-400 uppercase">
-            Navigation Menu
+            {userRole} Navigation
           </span>
           <button
             onClick={onCloseMobile}
@@ -161,13 +284,11 @@ function Sidebar({ mobileOpen, onCloseMobile, isCollapsed, onToggleCollapse }) {
           </button>
         </div>
 
-
-
         {/* MAIN NAVIGATION LINKS SCROLL AREA */}
         <nav
           ref={navRef}
           onScroll={handleNavScroll}
-          className="flex-1 overflow-y-auto px-3 py-4 space-y-4 scrollbar-thin"
+          className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 space-y-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden no-scrollbar"
         >
           {menuSections.map((section, idx) => (
             <div key={idx} className="space-y-1">
@@ -179,7 +300,7 @@ function Sidebar({ mobileOpen, onCloseMobile, isCollapsed, onToggleCollapse }) {
 
               <div className="space-y-1">
                 {section.items.map((menu) => {
-                  const Icon = menu.icon;
+                  const Icon = menu.icon || Sparkles;
 
                   return (
                     <NavLink
@@ -193,10 +314,12 @@ function Sidebar({ mobileOpen, onCloseMobile, isCollapsed, onToggleCollapse }) {
                         if (onCloseMobile) onCloseMobile();
                       }}
                       className={({ isActive }) =>
-                        `group relative flex items-center rounded-xl text-xs font-semibold transition-all duration-200 ${isCollapsed ? "justify-center p-3" : "justify-between px-3 py-2.5"
-                        } ${isActive
-                          ? "bg-blue-600 text-white shadow-md shadow-blue-500/25 font-bold"
-                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#1E293B]"
+                        `group relative flex items-center rounded-xl text-xs font-semibold transition-all duration-200 ${
+                          isCollapsed ? "justify-center p-3" : "justify-between px-3 py-2.5"
+                        } ${
+                          isActive
+                            ? "bg-blue-600 text-white shadow-md shadow-blue-500/25 font-bold"
+                            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#1E293B]"
                         }`
                       }
                     >
@@ -205,20 +328,22 @@ function Sidebar({ mobileOpen, onCloseMobile, isCollapsed, onToggleCollapse }) {
                           <div className="flex items-center gap-2.5 min-w-0">
                             <Icon
                               size={18}
-                              className={`transition-colors shrink-0 ${isActive
+                              className={`transition-colors shrink-0 ${
+                                isActive
                                   ? "text-white"
                                   : "text-slate-500 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200"
-                                }`}
+                              }`}
                             />
                             {!isCollapsed && <span className="truncate">{menu.name}</span>}
                           </div>
 
                           {!isCollapsed && menu.badge && (
                             <span
-                              className={`text-[9px] font-bold px-1.5 py-0.5 rounded transition-colors shrink-0 ${isActive
+                              className={`text-[9px] font-bold px-1.5 py-0.5 rounded transition-colors shrink-0 ${
+                                isActive
                                   ? "bg-white/20 text-white border border-white/30"
                                   : "bg-blue-50 dark:bg-cyan-500/20 text-blue-700 dark:text-cyan-300 border border-blue-200 dark:border-cyan-500/30"
-                                }`}
+                              }`}
                             >
                               {menu.badge}
                             </span>
@@ -227,8 +352,9 @@ function Sidebar({ mobileOpen, onCloseMobile, isCollapsed, onToggleCollapse }) {
                           {!isCollapsed && !menu.badge && (
                             <ChevronRight
                               size={13}
-                              className={`opacity-0 group-hover:opacity-100 transition-opacity ${isActive ? "opacity-100 text-white" : "text-slate-400 dark:text-slate-500"
-                                }`}
+                              className={`opacity-0 group-hover:opacity-100 transition-opacity ${
+                                isActive ? "opacity-100 text-white" : "text-slate-400 dark:text-slate-500"
+                              }`}
                             />
                           )}
 
@@ -251,8 +377,9 @@ function Sidebar({ mobileOpen, onCloseMobile, isCollapsed, onToggleCollapse }) {
         {/* BOTTOM USER PROFILE FOOTER */}
         <div className="p-3 border-t border-slate-200 dark:border-[#334155] bg-slate-50/80 dark:bg-[#0F172A] shrink-0">
           <div
-            className={`flex items-center rounded-2xl hover:bg-white dark:hover:bg-[#1E293B] border border-transparent hover:border-slate-200 dark:hover:border-[#334155] transition-all group ${isCollapsed ? "justify-center p-2" : "justify-between p-2"
-              }`}
+            className={`flex items-center rounded-2xl hover:bg-white dark:hover:bg-[#1E293B] border border-transparent hover:border-slate-200 dark:hover:border-[#334155] transition-all group ${
+              isCollapsed ? "justify-center p-2" : "justify-between p-2"
+            }`}
           >
             <div
               onClick={() => {

@@ -38,7 +38,7 @@ function RecentActivityTimeline() {
     {
       id: "act-4",
       title: "Downloaded Comprehensive PDF Report",
-      description: "Exported high-resolution due diligence dossier for Bandra Kurla Complex Corporate Tower, BKC Mumbai.",
+      description: "Exported high-resolution due diligence report for Bandra Kurla Complex Corporate Tower, BKC Mumbai.",
       timestamp: "3 days ago",
       icon: Download,
       iconColor: "text-amber-600 dark:text-amber-400",

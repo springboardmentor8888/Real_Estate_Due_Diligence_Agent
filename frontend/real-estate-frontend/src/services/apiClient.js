@@ -21,20 +21,27 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor: Handle global 401 errors & redirect to login
+// Response Interceptor: Handle global 401 errors & redirect to login (safeguarded for demo/mock sessions)
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      console.warn("Unauthorized access - clearing session credentials");
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      localStorage.removeItem("isLoggedIn");
-      localStorage.removeItem("loggedIn");
-      localStorage.removeItem("demoUser");
-      localStorage.removeItem("mockUser");
-      if (!window.location.pathname.includes("/login") && !window.location.pathname.includes("/register")) {
-        window.location.href = "/login";
+      const token = localStorage.getItem("token") || "";
+      const isMockSession = token.startsWith("mock-") || token.includes("signature") || token.includes("bharath");
+      
+      if (!isMockSession) {
+        console.warn("Unauthorized access - clearing session credentials");
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        localStorage.removeItem("isLoggedIn");
+        localStorage.removeItem("loggedIn");
+        localStorage.removeItem("demoUser");
+        localStorage.removeItem("mockUser");
+        if (!window.location.pathname.includes("/login") && !window.location.pathname.includes("/register")) {
+          window.location.href = "/login";
+        }
+      } else {
+        console.warn("Demo/Mock session API fallback:", error.message);
       }
     }
     return Promise.reject(error);

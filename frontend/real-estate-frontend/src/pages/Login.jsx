@@ -15,10 +15,15 @@ import {
   MapPin,
   Sun,
   Moon,
+  Users,
+  Scale,
+  Landmark,
+  ShieldCheck,
 } from "lucide-react";
 import { loginUser } from "../services/authService";
 import { showErrorAlert, showSuccessAlert, showToast } from "../utils/swal";
 import { useTheme } from "../context/ThemeContext";
+import { getRoleDashboardPath } from "../utils/roleUtils";
 
 function Login() {
   const navigate = useNavigate();
@@ -38,6 +43,23 @@ function Login() {
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handleDemoRoleLogin = (role, name, email) => {
+    const mockToken = `header.${btoa(JSON.stringify({ sub: email, role, exp: Math.floor(Date.now() / 1000) + 86400 }))}.signature`;
+    const mockUser = {
+      name,
+      firstName: name.split(" ")[0],
+      lastName: name.split(" ")[1] || "",
+      email,
+      role,
+      token: mockToken,
+    };
+    localStorage.setItem("token", mockToken);
+    localStorage.setItem("user", JSON.stringify(mockUser));
+    showToast(`Logged in as ${role}`, "success");
+    const targetPath = getRoleDashboardPath(role);
+    navigate(targetPath);
   };
 
   const handleSubmit = async (e) => {
@@ -63,6 +85,24 @@ function Login() {
       return;
     }
 
+    // Development-only Administrator Login
+    if (loginData.email.trim().toLowerCase() === "bharath@gmail.com" && loginData.password === "Admin@123") {
+      const mockPayload = btoa(JSON.stringify({ sub: "bharath@gmail.com", role: "Administrator", exp: Math.floor(Date.now() / 1000) + 864000 }));
+      const adminToken = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${mockPayload}.signature`;
+      const mockAdminUser = {
+        name: "V Bharath",
+        email: "bharath@gmail.com",
+        role: "Administrator",
+        token: adminToken,
+      };
+      localStorage.setItem("token", adminToken);
+      localStorage.setItem("user", JSON.stringify(mockAdminUser));
+      localStorage.setItem("role", "Administrator");
+      showToast("Signed in as Administrator (Demo)", "success");
+      navigate("/admin/dashboard");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -75,7 +115,8 @@ function Login() {
         localStorage.setItem("token", response.data.token);
         localStorage.setItem("user", JSON.stringify(response.data));
         showToast("Signed in successfully", "success");
-        navigate("/dashboard");
+        const userRole = response.data.role || "Buyer";
+        navigate(getRoleDashboardPath(userRole));
       } else {
         showErrorAlert("Login Failed", "Server did not return a valid authentication token.");
       }
@@ -88,10 +129,8 @@ function Login() {
         (error.message && error.message.toLowerCase().includes("network error"));
 
       if (isNetworkError) {
-        showErrorAlert(
-          "Backend Unavailable",
-          "Backend server is unavailable. Please start the server and try again."
-        );
+        // Fallback demo login mode when backend is offline
+        handleDemoRoleLogin("Buyer", "Rama Charan", loginData.email);
       } else if (error.response?.status === 401) {
         showErrorAlert("Invalid Credentials", "Email or password is incorrect.");
       } else {
@@ -202,7 +241,7 @@ function Login() {
         {/* Right Side: Glassmorphism Login Card */}
         <div className="lg:col-span-5 w-full">
           <div className="bg-white/95 dark:bg-[#111827]/95 rounded-3xl p-8 sm:p-10 shadow-xl dark:shadow-2xl dark:shadow-blue-950/40 border border-slate-200/90 dark:border-[#334155] backdrop-blur-xl transition-colors duration-250">
-            <div className="flex flex-col items-center text-center mb-7">
+            <div className="flex flex-col items-center text-center mb-6">
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-purple-600 flex items-center justify-center text-white shadow-md mb-3">
                 <Building2 size={24} />
               </div>
@@ -210,7 +249,7 @@ function Login() {
                 Sign in to your account
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Enter your registered credentials to access your portal
+                Enter credentials or select a role demo below
               </p>
             </div>
 
@@ -274,7 +313,65 @@ function Login() {
               </button>
             </form>
 
-            <div className="mt-6 pt-5 border-t border-slate-100 dark:border-[#334155] text-center">
+            {/* Quick Demo Role Logins */}
+            <div className="mt-5 pt-4 border-t border-slate-100 dark:border-[#334155]">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block mb-2 text-center">
+                Instant Role-Based Demo Portals
+              </span>
+              <div className="grid grid-cols-2 gap-1.5 text-[11px] font-bold">
+                <button
+                  onClick={() => handleDemoRoleLogin("Buyer", "Rama Charan", "buyer@enterprise.com")}
+                  className="p-2 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/80 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 transition-colors text-left flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Building2 size={13} /> Buyer
+                </button>
+                <button
+                  onClick={() => handleDemoRoleLogin("Real Estate Agent", "Ananya Rao", "agent@enterprise.com")}
+                  className="p-2 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/60 dark:hover:bg-purple-900/80 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 transition-colors text-left flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Users size={13} /> Agent
+                </button>
+                <button
+                  onClick={() => handleDemoRoleLogin("Legal Reviewer", "Rajesh Sharma", "legal@enterprise.com")}
+                  className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/80 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 transition-colors text-left flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Scale size={13} /> Legal
+                </button>
+                <button
+                  onClick={() => handleDemoRoleLogin("Financial Institution", "Venkatesh Iyer", "financial@enterprise.com")}
+                  className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 transition-colors text-left flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Landmark size={13} /> Financial
+                </button>
+                {/* Development-only Administrator Login */}
+                <button
+                  onClick={() => {
+                    setLoginData({
+                      email: "bharath@gmail.com",
+                      password: "Admin@123",
+                    });
+                    const mockPayload = btoa(JSON.stringify({ sub: "bharath@gmail.com", role: "Administrator", exp: Math.floor(Date.now() / 1000) + 864000 }));
+                    const adminToken = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${mockPayload}.signature`;
+                    const mockAdminUser = {
+                      name: "V Bharath",
+                      email: "bharath@gmail.com",
+                      role: "Administrator",
+                      token: adminToken,
+                    };
+                    localStorage.setItem("token", adminToken);
+                    localStorage.setItem("user", JSON.stringify(mockAdminUser));
+                    localStorage.setItem("role", "Administrator");
+                    showToast("Signed in as Administrator (Demo)", "success");
+                    navigate("/admin/dashboard");
+                  }}
+                  className="col-span-2 p-2 rounded-xl bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-950/60 dark:hover:bg-cyan-900/80 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 transition-colors text-center flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <ShieldCheck size={14} /> Development Demo Administrator (bharath@gmail.com)
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-[#334155] text-center">
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Don't have an enterprise account?{" "}
                 <Link

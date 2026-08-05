@@ -28,7 +28,7 @@ function Navbar({ onToggleMobileMenu, onToggleSidebar, isCollapsed, onOpenComman
         if (parsed.name) return parsed.name;
         if (parsed.username) return parsed.username;
       }
-    } catch (e) {}
+    } catch (e) { }
     return "Rama Charan";
   };
 
@@ -39,7 +39,7 @@ function Navbar({ onToggleMobileMenu, onToggleSidebar, isCollapsed, onOpenComman
         const parsed = JSON.parse(saved);
         if (parsed.role) return parsed.role;
       }
-    } catch (e) {}
+    } catch (e) { }
     return "Buyer";
   };
 

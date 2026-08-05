@@ -8,6 +8,8 @@ import {
   getMockFloodZoneRecords,
   getMockZoningRecords,
   getMockUtilityRecords,
+  getMockDocuments,
+  getMockPropertyReportHistory,
   getMockRiskAssessment,
   getMockComparableProperties,
   getMockDueDiligenceReports,
@@ -238,11 +240,19 @@ export const getUnreadNotificationsCount = async () => {
   );
 };
 
+// Get Documents for Property
+export const getPropertyDocuments = async (propertyId) => {
+  return withFallback(
+    () => apiClient.get(`/api/documents/property/${propertyId}`),
+    getMockDocuments(propertyId)
+  );
+};
+
 // Get Reports for Property
 export const getReportsByProperty = async (propertyId) => {
   return withFallback(
     () => apiClient.get(`/api/reports/property/${propertyId}`),
-    getMockDueDiligenceReports()
+    getMockPropertyReportHistory(propertyId)
   );
 };
 
