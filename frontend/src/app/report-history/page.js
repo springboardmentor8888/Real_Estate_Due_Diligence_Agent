@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Navbar from "../../components/Navbar";
+import ProtectedRoute from "../../components/ProtectedRoute";
 import "./report-history.css";
 import {
   FileText,
@@ -48,7 +49,7 @@ export default function ReportHistory() {
   );
 
   return (
-    <>
+    <ProtectedRoute>
       <Navbar />
 
       <div className="history-container">
@@ -126,6 +127,6 @@ export default function ReportHistory() {
           </tbody>
         </table>
       </div>
-    </>
+    </ProtectedRoute>
   );
 }

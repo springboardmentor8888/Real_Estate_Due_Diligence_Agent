@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Navbar from "../../components/Navbar";
+import ProtectedRoute from "../../components/ProtectedRoute";
 import {
   Layers,
   CheckCircle,
@@ -27,8 +28,9 @@ export default function ZoningPage() {
   ];
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--bg-main)" }}>
-      <Navbar />
+    <ProtectedRoute>
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--bg-main)" }}>
+        <Navbar />
 
       <main className="zoning-page">
         {/* Header */}
@@ -269,5 +271,6 @@ export default function ZoningPage() {
         </section>
       </main>
     </div>
+    </ProtectedRoute>
   );
 }

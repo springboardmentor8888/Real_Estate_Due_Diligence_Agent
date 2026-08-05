@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Navbar from "../../components/Navbar";
+import ProtectedRoute from "../../components/ProtectedRoute";
 import {
   FileText,
   Search,
@@ -142,8 +143,9 @@ export default function TaxHistoryPage() {
     .reduce((acc, r) => acc + parseInt(r.taxAmount.replace(/[^0-9]/g, "")), 0);
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--bg-main)" }}>
-      <Navbar />
+    <ProtectedRoute>
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--bg-main)" }}>
+        <Navbar />
 
       <main className="tax-page">
         {/* Header section */}
@@ -382,5 +384,6 @@ export default function TaxHistoryPage() {
         )}
       </main>
     </div>
+    </ProtectedRoute>
   );
 }

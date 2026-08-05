@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Navbar from "../components/Navbar";
 import Hero from "../components/Hero";
+import { useAuth } from "../context/AuthContext";
 import {
   ShieldCheck,
   FileText,
@@ -21,6 +22,8 @@ import {
 } from "lucide-react";
 
 export default function Home() {
+  const { isAuthenticated } = useAuth();
+
   const pillars = [
     {
       title: "Property Verification",
@@ -149,12 +152,21 @@ export default function Home() {
                   <span style={{ fontSize: "13px", color: "#10b981", fontWeight: "600" }}>
                     {pillar.stats}
                   </span>
-                  <Link
-                    href={pillar.link}
-                    style={{ display: "inline-flex", alignItems: "center", gap: "6px", color: "var(--primary)", fontWeight: "700", fontSize: "14px", textDecoration: "none" }}
-                  >
-                    Inspect <ArrowRight size={16} />
-                  </Link>
+                  {isAuthenticated ? (
+                    <Link
+                      href={pillar.link}
+                      style={{ display: "inline-flex", alignItems: "center", gap: "6px", color: "var(--primary)", fontWeight: "700", fontSize: "14px", textDecoration: "none" }}
+                    >
+                      Inspect <ArrowRight size={16} />
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/login"
+                      style={{ display: "inline-flex", alignItems: "center", gap: "6px", color: "var(--text-muted)", fontWeight: "600", fontSize: "13px", textDecoration: "none", background: "var(--bg-main)", padding: "4px 10px", borderRadius: "12px", border: "1px solid var(--border)" }}
+                    >
+                      <Lock size={12} /> Login to Access
+                    </Link>
+                  )}
                 </div>
               </div>
             ))}

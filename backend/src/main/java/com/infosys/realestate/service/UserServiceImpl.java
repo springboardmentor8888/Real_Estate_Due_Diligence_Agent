@@ -71,10 +71,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponseDTO getUserByEmail(String email) {
-        User user = userRepository.findByEmail(email);
-        if (user == null) {
-            throw new ResourceNotFoundException("User not found with email: " + email);
-        }
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
         return new UserResponseDTO(
                 user.getUserId(),
                 user.getName(),

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Navbar from "../../components/Navbar";
+import ProtectedRoute from "../../components/ProtectedRoute";
 import {
   FileCheck,
   ShieldAlert,
@@ -95,8 +96,9 @@ export default function PermitsEnvironmentalPage() {
   );
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--bg-main)" }}>
-      <Navbar />
+    <ProtectedRoute>
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--bg-main)" }}>
+        <Navbar />
 
       <main className="permits-page">
         {/* Header */}
@@ -331,5 +333,6 @@ export default function PermitsEnvironmentalPage() {
         )}
       </main>
     </div>
+    </ProtectedRoute>
   );
 }

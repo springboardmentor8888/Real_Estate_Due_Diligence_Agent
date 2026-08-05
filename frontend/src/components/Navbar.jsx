@@ -35,7 +35,7 @@ export default function Navbar() {
       </Link>
 
       <nav className="navbar-links">
-        {navLinks.map((link) => {
+        {isAuthenticated && navLinks.map((link) => {
           const isActive = pathname === link.href;
           return (
             <Link

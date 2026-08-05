@@ -20,8 +20,25 @@ public class DueDiligenceReport {
 
     private String reportUrl;
 
+    /** Who triggered this report (resolved from SecurityContextHolder) */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "requested_by")
+    private User requestedBy;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    /** When the report finished (COMPLETED or FAILED) */
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+
+    /** Total processing time in milliseconds */
+    @Column(name = "duration_ms")
+    private Long durationMs;
+
+    /** Error message if status == FAILED */
+    @Column(name = "error_message", length = 1000)
+    private String errorMessage;
 
     public DueDiligenceReport() {}
 
@@ -37,6 +54,18 @@ public class DueDiligenceReport {
     public String getReportUrl() { return reportUrl; }
     public void setReportUrl(String reportUrl) { this.reportUrl = reportUrl; }
 
+    public User getRequestedBy() { return requestedBy; }
+    public void setRequestedBy(User requestedBy) { this.requestedBy = requestedBy; }
+
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public LocalDateTime getCompletedAt() { return completedAt; }
+    public void setCompletedAt(LocalDateTime completedAt) { this.completedAt = completedAt; }
+
+    public Long getDurationMs() { return durationMs; }
+    public void setDurationMs(Long durationMs) { this.durationMs = durationMs; }
+
+    public String getErrorMessage() { return errorMessage; }
+    public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
 }
