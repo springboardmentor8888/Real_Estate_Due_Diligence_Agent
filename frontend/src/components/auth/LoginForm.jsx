@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import {
   HiOutlineEnvelope,
@@ -7,6 +7,7 @@ import {
   HiOutlineEye,
   HiOutlineEyeSlash,
 } from "react-icons/hi2";
+import { FcGoogle } from "react-icons/fc";
 
 function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
@@ -20,6 +21,14 @@ function LoginForm() {
   const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("error") === "register_first") {
+      setServerError("No account found. Please register first.");
+    }
+  }, [searchParams]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -63,7 +72,10 @@ function LoginForm() {
     setServerError("");
 
     try {
-      const response = await axios.post("http://localhost:8080/auth/login", form);
+      const response = await axios.post(
+        "http://localhost:8080/auth/login",
+        form,
+      );
 
       if (response.data && response.data.token) {
         // 1. Wipe out any stale session data
@@ -92,7 +104,10 @@ function LoginForm() {
         // 4. Build complete user object
         const userObj = {
           email: response.data.email || form.email,
-          name: response.data.name || response.data.user?.name || form.email.split("@")[0],
+          name:
+            response.data.name ||
+            response.data.user?.name ||
+            form.email.split("@")[0],
           role: cleanRole,
         };
 
@@ -115,6 +130,10 @@ function LoginForm() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleLogin = () => {
+    window.location.href = "http://localhost:8080/oauth2/authorization/google";
   };
 
   return (
@@ -209,6 +228,25 @@ function LoginForm() {
           className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-teal-800 text-white py-3 rounded-lg font-semibold transition"
         >
           {loading ? "Logging in..." : "Login"}
+        </button>
+
+        {/* Divider */}
+        <div className="flex items-center my-4">
+          <div className="flex-1 border-t border-slate-700"></div>
+
+          <span className="px-3 text-slate-400 text-sm">OR</span>
+
+          <div className="flex-1 border-t border-slate-700"></div>
+        </div>
+
+        {/* Google Login */}
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-100 text-gray-800 py-3 rounded-lg font-medium transition"
+        >
+          <FcGoogle size={22} />
+          Continue with Google
         </button>
 
         {/* Register Link */}

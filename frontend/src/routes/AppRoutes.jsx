@@ -22,6 +22,7 @@ import AuditLogs from "../pages/AuditLogs";
 import Analytics from "../pages/Analytics";
 import ProtectedRoute from "../components/common/ProtectedRoute";
 import Alerts from "../pages/Alerts";
+import OAuth2Success from "../components/auth/OAuth2Success";
 
 function AppRouter() {
   return (
@@ -33,6 +34,7 @@ function AppRouter() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/verify-otp" element={<VerifyOtp />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/oauth2/success" element={<OAuth2Success />} />
 
       {/* 🔒 PROTECTED APP ROUTES (Requires Valid JWT Token) */}
       <Route element={<ProtectedRoute />}>
@@ -49,19 +51,37 @@ function AppRouter() {
           {/* Standard User Routes */}
           <Route path="/search-property" element={<SearchProperty />} />
           <Route path="/property-details" element={<PropertyDetails />} />
-          <Route path="/property-details/:propertyId" element={<PropertyDetails />} />
+          <Route
+            path="/property-details/:propertyId"
+            element={<PropertyDetails />}
+          />
           <Route path="/property-history" element={<PropertyHistory />} />
-          <Route path="/property-history/:propertyId" element={<PropertyHistory />} />
+          <Route
+            path="/property-history/:propertyId"
+            element={<PropertyHistory />}
+          />
           <Route path="/reports" element={<DueDiligenceReport />} />
           <Route path="/reports/:propertyId" element={<DueDiligenceReport />} />
           <Route path="/saved-properties" element={<SavedProperties />} />
           <Route path="/property-comparison" element={<PropertyComparison />} />
-          <Route path="/property-comparison/:propertyId" element={<PropertyComparison />} />
-          <Route path="/property-comparison/:propertyId/:compareId" element={<PropertyComparison />} />
-          <Route path="/risk-assessment/:propertyId" element={<RiskAssessment />} />
+          <Route
+            path="/property-comparison/:propertyId"
+            element={<PropertyComparison />}
+          />
+          <Route
+            path="/property-comparison/:propertyId/:compareId"
+            element={<PropertyComparison />}
+          />
+          <Route
+            path="/risk-assessment/:propertyId"
+            element={<RiskAssessment />}
+          />
           <Route path="/comparable-analysis" element={<ComparableAnalysis />} />
-          <Route path="/comparable-analysis/:propertyId" element={<ComparableAnalysis />} />
-          
+          <Route
+            path="/comparable-analysis/:propertyId"
+            element={<ComparableAnalysis />}
+          />
+
           {/* System Alerts & Notifications */}
           <Route path="/alerts" element={<Alerts />} />
 

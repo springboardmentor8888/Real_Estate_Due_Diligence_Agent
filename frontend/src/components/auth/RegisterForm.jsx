@@ -48,7 +48,7 @@ function RegisterForm() {
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        role: formData.role.toUpperCase(), // Ensures string like 'AGENT' or 'BUYER'
+        role: formData.role, // Ensures string like 'AGENT' or 'BUYER'
       };
 
       const response = await fetch("http://localhost:8080/auth/register", {
@@ -74,12 +74,18 @@ function RegisterForm() {
         localStorage.setItem("userRole", userRole);
         localStorage.setItem(
           "user",
-          JSON.stringify(data.user || { name: payload.name, email: payload.email, role: userRole })
+          JSON.stringify(
+            data.user || {
+              name: payload.name,
+              email: payload.email,
+              role: userRole,
+            },
+          ),
         );
       }
 
       alert("Account created successfully!");
-      navigate("/login"); // Redirect to login page
+      navigate("/login");
     } catch (err) {
       console.error("Error during registration:", err);
       setError(err.message || "Failed to connect to backend server");
@@ -107,9 +113,7 @@ function RegisterForm() {
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         {/* Full Name */}
         <div>
-          <label className="block mb-2 text-sm text-slate-200">
-            Full Name
-          </label>
+          <label className="block mb-2 text-sm text-slate-200">Full Name</label>
           <div className="relative">
             <HiOutlineUser className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -155,7 +159,7 @@ function RegisterForm() {
             className="w-full rounded-lg border border-slate-700 bg-slate-800 py-2.5 px-3 text-white outline-none focus:border-teal-500"
           >
             <option value="BUYER">Buyer</option>
-            <option value="AGENT">Real Estate Agent</option>
+            <option value="REAL_ESTATE_AGENT">Real Estate Agent</option>
             <option value="LEGAL_REVIEWER">Legal Reviewer</option>
             <option value="FINANCIAL_INSTITUTION">Financial Institution</option>
           </select>
@@ -163,9 +167,7 @@ function RegisterForm() {
 
         {/* Password */}
         <div>
-          <label className="block mb-2 text-sm text-slate-200">
-            Password
-          </label>
+          <label className="block mb-2 text-sm text-slate-200">Password</label>
           <div className="relative">
             <HiOutlineLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
