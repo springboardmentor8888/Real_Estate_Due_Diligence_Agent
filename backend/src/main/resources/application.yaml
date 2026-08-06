@@ -5,7 +5,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/real_estate_due_diligence
     username: postgres
-    password: Charan@2006
+    password: tiger 
     driver-class-name: org.postgresql.Driver
 
   jpa:
