@@ -1,6 +1,16 @@
-import { FaBell, FaSearch, FaChevronDown, FaFilter } from "react-icons/fa";
+import { FaBell, FaSearch, FaChevronDown, FaFilter, FaPlus } from "react-icons/fa";
+import { Link } from "react-router-dom";
 
 const Navbar = ({ showFilter = false, showSearch = true, onToggleFilter }) => {
+  // Read user role and name from localStorage
+  const userRole = localStorage.getItem("userRole") || localStorage.getItem("role") || "";
+  const userName = localStorage.getItem("userName") || "User";
+
+  // Check if current user has permission to post properties
+  const canPostProperty =
+    userRole.includes("REAL_ESTATE_AGENT") ||
+    userRole.includes("ADMIN");
+
   return (
     <header className="flex items-center justify-between bg-white px-8 py-4 shadow-sm border-b">
       <div className="flex items-center gap-3">
@@ -26,7 +36,19 @@ const Navbar = ({ showFilter = false, showSearch = true, onToggleFilter }) => {
           </button>
         )}
       </div>
-      <div className="flex items-center gap-8">
+
+      <div className="flex items-center gap-6">
+        {/* 👔 RESTRICTED: Only visible for Real Estate Agents and Admins */}
+        {canPostProperty && (
+          <Link
+            to="/add-property"
+            className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition"
+          >
+            <FaPlus />
+            Post Property
+          </Link>
+        )}
+
         <div className="relative cursor-pointer">
           <FaBell className="text-2xl text-gray-700 hover:text-blue-600 transition" />
 
@@ -34,14 +56,17 @@ const Navbar = ({ showFilter = false, showSearch = true, onToggleFilter }) => {
             3
           </span>
         </div>
+
         <div className="flex items-center gap-3 cursor-pointer">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-200 font-semibold text-gray-700">
-            U
+            {userName.charAt(0).toUpperCase()}
           </div>
           <div>
-            <h2 className="font-semibold text-gray-800">User</h2>
+            <h2 className="font-semibold text-gray-800">{userName}</h2>
 
-            <p className="text-sm text-gray-500">Buyer</p>
+            <p className="text-sm text-gray-500 capitalize">
+              {userRole.replace("ROLE_", "").replace("_", " ").toLowerCase() || "Buyer"}
+            </p>
           </div>
 
           <FaChevronDown className="text-gray-500" />

@@ -10,6 +10,7 @@ import ResetPassword from "../pages/ResetPassword";
 import Dashboard from "../pages/Dashboard";
 import AdminDashboard from "../pages/AdminDashboard";
 import SearchProperty from "../pages/SearchProperty";
+import AddProperty from "../pages/AddProperty"; // 📸 Imported AddProperty page
 import PropertyDetails from "../pages/PropertyDetails";
 import PropertyHistory from "../pages/PropertyHistory";
 import Layout from "../components/common/Layout";
@@ -37,6 +38,14 @@ function AppRouter() {
     "ROLE_ADMIN",
   ];
 
+  // 👔 Posting Roles: Restricted to Agents and Admins
+  const AGENT_ROLES = [
+    "REAL_ESTATE_AGENT",
+    "ADMIN",
+    "ROLE_REAL_ESTATE_AGENT",
+    "ROLE_ADMIN",
+  ];
+
   const ADMIN_ROLES = ["ADMIN", "ROLE_ADMIN"];
 
   return (
@@ -55,11 +64,16 @@ function AppRouter() {
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<Dashboard />} />
 
-          {/* 🛡️ Protected Admin Only Routes (UNTOUCHED) */}
+          {/* 🛡️ Protected Admin Only Routes */}
           <Route element={<ProtectedRoute allowedRoles={ADMIN_ROLES} />}>
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/audit-logs" element={<AuditLogs />} />
+          </Route>
+
+          {/* 👔 Protected Agent/Admin Only Routes (Property Posting) */}
+          <Route element={<ProtectedRoute allowedRoles={AGENT_ROLES} />}>
+            <Route path="/add-property" element={<AddProperty />} />
           </Route>
 
           {/* ⚖️ Protected Pro-Tier Tools (Restricted from Standard BUYER role) */}

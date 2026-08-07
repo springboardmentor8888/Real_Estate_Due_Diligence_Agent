@@ -14,6 +14,7 @@ import {
   HiOutlineArrowLeftOnRectangle,
   HiOutlineShieldCheck,
   HiOutlineChartBar,
+  HiOutlinePlusCircle, // 📸 Added icon for Post Property
 } from "react-icons/hi2";
 import { NavLink, useNavigate } from "react-router-dom";
 
@@ -30,6 +31,13 @@ const mainMenuItems = [
     label: "Search Property",
     path: "/search-property",
     roles: ["BUYER", "REAL_ESTATE_AGENT", "LEGAL_REVIEWER", "FINANCIAL_INSTITUTION", "ADMIN", "USER"],
+  },
+  {
+    icon: <HiOutlinePlusCircle />,
+    label: "Post Property",
+    path: "/add-property",
+    // 👔 Restricted to Real Estate Agents and Admins
+    roles: ["REAL_ESTATE_AGENT", "ADMIN"],
   },
   {
     icon: <HiOutlineDocumentText />,

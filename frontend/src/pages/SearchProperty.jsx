@@ -14,27 +14,9 @@ import axios from "axios";
 
 import { formatCurrency } from "../data/comparableData";
 
-// 🏡 Expanded pool of high-res architecture & property images
-const PROPERTY_IMAGES = [
-  "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800", // Modern House
-  "https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800", // Suburban Villa
-  "https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=800", // Contemporary Glass Villa
-  "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800", // Luxury Estate
-  "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800", // White Minimalist Villa
-  "https://images.unsplash.com/photo-1613977257363-707ba9348227?w=800", // Modern Mansion
-  "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=800", // Classic Brick House
-  "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800", // Cozy Home
-  "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=800", // Resort Style Villa
-  "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800", // Contemporary Bungalow
-  "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800", // Modern Exterior
-  "https://images.unsplash.com/photo-1515263487990-61b07816b324?w=800", // High-rise Apartment
-  "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800", // Luxury Apartment Complex
-  "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800", // Commercial Tower
-  "https://images.unsplash.com/photo-1577495508048-b635879837f1?w=800", // Modern Loft
-  "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800", // Modern Condo
-  "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800", // Interior/Apartment
-  "https://images.unsplash.com/photo-1600565193348-f74bd3c7ccdf?w=800", // Pool House
-];
+// Static fallback image for properties without uploaded photos
+const DEFAULT_PROPERTY_IMAGE =
+  "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=800&q=80";
 
 const PROPERTY_TYPES = [
   "Residential",
@@ -43,17 +25,6 @@ const PROPERTY_TYPES = [
   "Commercial",
   "Independent House",
 ];
-
-// Helper: Enhanced Hash algorithm for distinct image distribution
-const getImageForAddress = (str = "") => {
-  let hash = 2166136261;
-  for (let i = 0; i < str.length; i++) {
-    hash ^= str.charCodeAt(i);
-    hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
-  }
-  const index = Math.abs(hash) % PROPERTY_IMAGES.length;
-  return PROPERTY_IMAGES[index];
-};
 
 const SearchProperty = () => {
   const { showFilters, setShowFilters } = useOutletContext() || {};
@@ -81,65 +52,71 @@ const SearchProperty = () => {
   const [successMsg, setSuccessMsg] = useState("");
 
   useEffect(() => {
+    // Clear out any old mock local storage properties once
+    localStorage.removeItem("custom_properties");
     fetchPropertiesFromBackend();
   }, []);
 
+  // 🎯 FETCH PROPERTIES FROM BOTH API ENDPOINTS TO PREVENT MISSING LISTINGS
   const fetchPropertiesFromBackend = async () => {
     try {
       setFetchingProps(true);
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const localSaved = JSON.parse(
-        localStorage.getItem("custom_properties") || "[]"
-      );
+      const [mainRes, ddRes] = await Promise.allSettled([
+        axios.get("http://localhost:8080/api/properties", { headers }),
+        axios.get("http://localhost:8080/api/properties/due-diligence", { headers }),
+      ]);
 
-      let dbProps = [];
-      try {
-        const response = await axios.get(
-          "http://localhost:8080/api/v1/properties",
-          {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          }
-        );
-        dbProps = Array.isArray(response.data)
-          ? response.data
-          : response.data?.content || [];
-      } catch (err) {
-        console.error("Backend GET failed, using local backup:", err);
+      let combinedProperties = [];
+
+      // Extract from main /api/properties endpoint
+      if (mainRes.status === "fulfilled" && mainRes.value.data) {
+        const mainData = Array.isArray(mainRes.value.data)
+          ? mainRes.value.data
+          : mainRes.value.data?.content || [];
+        combinedProperties = [...mainData];
       }
 
-      const combined = [...localSaved];
-      dbProps.forEach((dbItem) => {
-        if (!combined.some((c) => c.id === dbItem.id)) {
-          combined.push(dbItem);
-        }
-      });
+      // Extract from /api/properties/due-diligence endpoint and merge unique items
+      if (ddRes.status === "fulfilled" && ddRes.value.data) {
+        const ddData = Array.isArray(ddRes.value.data)
+          ? ddRes.value.data
+          : ddRes.value.data?.content || [];
 
-      setProperties(combined);
+        ddData.forEach((item) => {
+          if (!combinedProperties.some((p) => p.id === item.id)) {
+            combinedProperties.push(item);
+          }
+        });
+      }
+
+      setProperties(combinedProperties);
+    } catch (err) {
+      console.error("Backend GET failed:", err);
+      setProperties([]);
     } finally {
       setFetchingProps(false);
     }
   };
 
-  // 🗑️ REMOVE CARD FUNCTION
+  // 🗑️ PERMANENTLY REMOVE PROPERTY FROM UI & DATABASE
   const handleRemoveProperty = async (id, e) => {
     e.stopPropagation();
 
+    // 1. Remove from React State immediately
     setProperties((prev) => prev.filter((item) => item.id !== id));
 
-    const localSaved = JSON.parse(
-      localStorage.getItem("custom_properties") || "[]"
-    );
-    const updatedLocal = localSaved.filter((item) => item.id !== id);
-    localStorage.setItem("custom_properties", JSON.stringify(updatedLocal));
-
+    // 2. Call Backend API to delete from Database
     try {
-      const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:8080/api/v1/properties/${id}`, {
+      const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+      await axios.delete(`http://localhost:8080/api/properties/${id}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
+      console.log(`Property ${id} deleted successfully from backend.`);
     } catch (err) {
-      console.warn("Backend delete endpoint not reachable or unsupported.");
+      console.warn("Backend delete endpoint failed or property only existed in local state.", err);
     }
   };
 
@@ -153,38 +130,10 @@ const SearchProperty = () => {
     setError("");
     setSuccessMsg("");
 
-    const token = localStorage.getItem("token");
-
-    // Dynamic photo assignment via hashing address + city
-    const uniqueImage = getImageForAddress(
-      formData.address.trim().toLowerCase() + formData.city.trim().toLowerCase()
-    );
-    const randomType =
-      PROPERTY_TYPES[Math.floor(Math.random() * PROPERTY_TYPES.length)];
-    const randomPrice =
-      Math.floor(Math.random() * (250 - 45 + 1) + 45) * 100000;
-
-    // Random Risk level generator for new properties
-    const riskLevels = ["Low Risk", "Medium Risk", "High Risk"];
-    const randomRisk = riskLevels[Math.floor(Math.random() * riskLevels.length)];
-
-    const newProperty = {
-      id: Date.now(),
-      title: `${randomType} in ${formData.city}`,
-      address: `${formData.address}, ${formData.city}`,
-      city: formData.city,
-      state: formData.state,
-      pincode: formData.zipCode,
-      status: "Pending",
-      riskLevel: randomRisk,
-      owner: "Under Verification",
-      propertyType: randomType,
-      marketValueValue: randomPrice,
-      image: uniqueImage,
-    };
+    const token = localStorage.getItem("token") || localStorage.getItem("authToken");
 
     try {
-      const response = await axios.post(
+      await axios.post(
         "http://localhost:8080/api/properties/due-diligence",
         formData,
         {
@@ -195,28 +144,20 @@ const SearchProperty = () => {
         }
       );
 
-      if (response.data && response.data.id) {
-        newProperty.id = response.data.id;
-      }
-      setSuccessMsg("Property submitted successfully & saved!");
-    } catch (err) {
-      console.warn("Backend POST call failed, saving locally anyway:", err);
-      setSuccessMsg("Property saved locally!");
-    } finally {
-      const existing = JSON.parse(
-        localStorage.getItem("custom_properties") || "[]"
-      );
-      const updatedLocal = [newProperty, ...existing];
-      localStorage.setItem("custom_properties", JSON.stringify(updatedLocal));
-
-      setProperties((prev) => [newProperty, ...prev]);
-
+      setSuccessMsg("Due diligence triggered successfully!");
+      
+      // Refresh the property list directly from database
       setTimeout(() => {
+        fetchPropertiesFromBackend();
         setShowAddModal(false);
         setSuccessMsg("");
         setFormData({ address: "", city: "", state: "", zipCode: "" });
       }, 1000);
 
+    } catch (err) {
+      console.error("Failed to trigger due diligence:", err);
+      setError("Failed to process request. Please try again.");
+    } finally {
       setLoading(false);
     }
   };
@@ -236,7 +177,7 @@ const SearchProperty = () => {
         .toLowerCase()
         .includes(normalizedQuery);
 
-    const priceVal = property.priceValue || property.marketValueValue || 0;
+    const priceVal = property.price || property.priceValue || property.marketValueValue || 0;
 
     const matchesPrice =
       filters.price === "All" ||
@@ -395,27 +336,32 @@ const SearchProperty = () => {
           </div>
         ) : filteredProperties.length === 0 ? (
           <div className="bg-white rounded-xl shadow p-8 text-center text-gray-500">
-            No properties found matching your criteria. Try submitting a new address using the "Run New Due Diligence Check" button above.
+            No properties found matching your criteria.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {filteredProperties.map((property) => {
               const displayImage =
-                property.image || getImageForAddress(property.address);
+                (property.imageUrls && property.imageUrls.length > 0 && property.imageUrls[0]) ||
+                property.image ||
+                DEFAULT_PROPERTY_IMAGE;
 
-              // Standardized Risk Status Determination
+              const priceVal = property.price || property.priceValue || property.marketValueValue;
               const riskText = property.riskLevel || (property.riskScore > 70 ? "High Risk" : property.riskScore > 30 ? "Medium Risk" : "Low Risk");
 
               return (
                 <div
                   key={property.id}
-                  className="bg-white rounded-xl shadow hover:shadow-xl transition duration-300 overflow-hidden group relative"
+                  className="bg-white rounded-xl shadow hover:shadow-xl transition duration-300 overflow-hidden group relative flex flex-col justify-between"
                 >
                   <div className="overflow-hidden relative">
                     <img
                       src={displayImage}
                       alt={property.title || "Property"}
                       className="w-full h-52 object-cover transition duration-500 group-hover:scale-105"
+                      onError={(e) => {
+                        e.target.src = DEFAULT_PROPERTY_IMAGE;
+                      }}
                     />
 
                     {/* 🗑️ REMOVE CARD BUTTON */}
@@ -429,75 +375,86 @@ const SearchProperty = () => {
                     </button>
                   </div>
 
-                  <div className="p-5">
-                    <div className="flex justify-between items-start gap-2">
-                      <div>
-                        <h3 className="font-bold text-lg">
-                          {property.title || property.address || "Property Item"}
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          {property.city || "Location"} -{" "}
-                          {property.pincode || property.zipCode || "N/A"}
-                        </p>
+                  <div className="p-5 flex-1 flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between items-start gap-2">
+                        <div>
+                          <h3 className="font-bold text-lg line-clamp-1">
+                            {property.title || property.address || "Property Item"}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            {property.city || "Location"} -{" "}
+                            {property.zipCode || property.pincode || "N/A"}
+                          </p>
+                        </div>
+
+                        {/* BADGES CONTAINER */}
+                        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                          {/* 1. Verification Badge */}
+                          <span
+                            className={`text-xs px-3 py-1 rounded-full font-medium ${
+                              property.status === "Verified"
+                                ? "bg-green-100 text-green-700"
+                                : property.status === "Pending"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : "bg-red-100 text-red-700"
+                            }`}
+                          >
+                            {property.status || "Pending"}
+                          </span>
+
+                          {/* 2. Risk Level Badge */}
+                          <span
+                            className={`text-xs px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1 ${
+                              riskText.includes("High")
+                                ? "bg-red-100 text-red-700 border border-red-200"
+                                : riskText.includes("Medium")
+                                ? "bg-amber-100 text-amber-700 border border-amber-200"
+                                : "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                            }`}
+                          >
+                            {riskText.includes("High") && <FaExclamationTriangle className="text-[10px]" />}
+                            {riskText}
+                          </span>
+                        </div>
                       </div>
 
-                      {/* BADGES CONTAINER: Verification + Risk Indicator */}
-                      <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                        {/* 1. Verification Badge */}
-                        <span
-                          className={`text-xs px-3 py-1 rounded-full font-medium ${
-                            property.status === "Verified"
-                              ? "bg-green-100 text-green-700"
-                              : property.status === "Pending"
-                              ? "bg-yellow-100 text-yellow-700"
-                              : "bg-red-100 text-red-700"
-                          }`}
-                        >
-                          {property.status || "Pending"}
-                        </span>
-
-                        {/* 2. Risk Level Badge (Spec Requirement) */}
-                        <span
-                          className={`text-xs px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1 ${
-                            riskText.includes("High")
-                              ? "bg-red-100 text-red-700 border border-red-200"
-                              : riskText.includes("Medium")
-                              ? "bg-amber-100 text-amber-700 border border-amber-200"
-                              : "bg-emerald-100 text-emerald-700 border border-emerald-200"
-                          }`}
-                        >
-                          {riskText.includes("High") && <FaExclamationTriangle className="text-[10px]" />}
-                          {riskText}
-                        </span>
-                      </div>
-                    </div>
-
-                    <p className="mt-3 flex items-center gap-2 text-gray-600">
-                      <FaMapMarkerAlt className="text-red-500 flex-shrink-0" />
-                      <span className="truncate">{property.address}</span>
-                    </p>
-
-                    <p className="flex items-center gap-2 text-gray-600">
-                      <FaUser className="text-blue-600 flex-shrink-0" />
-                      <span>{property.owner || "Pending Verification"}</span>
-                    </p>
-
-                    <p className="flex items-center gap-2 text-gray-600">
-                      <FaHome className="text-green-600 flex-shrink-0" />
-                      <span>{property.propertyType || "Residential"}</span>
-                    </p>
-
-                    {property.marketValueValue ? (
-                      <p className="text-blue-600 font-semibold mt-2">
-                        {formatCurrency(property.marketValueValue)}
+                      <p className="mt-3 flex items-center gap-2 text-gray-600">
+                        <FaMapMarkerAlt className="text-red-500 flex-shrink-0" />
+                        <span className="truncate">{property.address}</span>
                       </p>
-                    ) : null}
+
+                      <p className="flex items-center gap-2 text-gray-600">
+                        <FaUser className="text-blue-600 flex-shrink-0" />
+                        <span>{property.owner || "Pending Verification"}</span>
+                      </p>
+
+                      <p className="flex items-center gap-2 text-gray-600">
+                        <FaHome className="text-green-600 flex-shrink-0" />
+                        <span>{property.propertyType || "Residential"}</span>
+                      </p>
+
+                      {/* Specs bar */}
+                      {(property.bedrooms || property.bathrooms || property.sqft) && (
+                        <div className="flex items-center gap-3 text-xs font-semibold text-gray-500 my-2 pt-2 border-t border-gray-100">
+                          {property.bedrooms > 0 && <span>🛏️ {property.bedrooms} Beds</span>}
+                          {property.bathrooms > 0 && <span>🚿 {property.bathrooms} Baths</span>}
+                          {property.sqft > 0 && <span>📐 {property.sqft} sqft</span>}
+                        </div>
+                      )}
+
+                      {priceVal ? (
+                        <p className="text-blue-600 font-bold text-lg mt-2">
+                          {formatCurrency(priceVal)}
+                        </p>
+                      ) : null}
+                    </div>
 
                     <button
                       onClick={() =>
                         navigate(`/property-details/${property.id}`)
                       }
-                      className="w-full mt-5 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition cursor-pointer"
+                      className="w-full mt-5 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition cursor-pointer font-semibold"
                     >
                       Start Due Diligence
                     </button>
