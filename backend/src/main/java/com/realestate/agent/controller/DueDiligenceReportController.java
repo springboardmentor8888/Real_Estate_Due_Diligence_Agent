@@ -18,6 +18,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+
 import java.util.List;
 
 @RestController
@@ -98,5 +101,32 @@ public class DueDiligenceReportController {
     public ResponseEntity<Void> deleteReport(@PathVariable("id") Long id) {
         reportService.deleteReport(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/pdf")
+    @Operation(summary = "Export report as PDF")
+    public ResponseEntity<byte[]> exportPdf(@PathVariable Long id) {
+
+        byte[] pdf = reportService.exportPdf(id);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=Due_Diligence_Report_" + id + ".pdf")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
+    @GetMapping("/{id}/excel")
+    @Operation(summary = "Export report as Excel")
+    public ResponseEntity<byte[]> exportExcel(@PathVariable Long id) {
+
+        byte[] excel = reportService.exportExcel(id);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=Due_Diligence_Report_" + id + ".xlsx")
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excel);
     }
 }

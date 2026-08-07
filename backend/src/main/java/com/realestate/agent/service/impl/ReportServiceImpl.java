@@ -26,6 +26,9 @@ import com.realestate.agent.service.RiskService;
 import com.realestate.agent.service.ComparablePropertyService;
 import com.realestate.agent.service.PropertyValuationService;
 
+import com.realestate.agent.util.PdfGenerator;
+import com.realestate.agent.util.ExcelGenerator;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -43,6 +46,10 @@ public class ReportServiceImpl implements ReportService {
 
     private final PropertyValuationService propertyValuationService;
 
+    private final PdfGenerator pdfGenerator;
+
+    private final ExcelGenerator excelGenerator;
+
     public ReportServiceImpl(
             DueDiligenceReportRepository reportRepository,
             PropertyDocumentRepository documentRepository,
@@ -51,7 +58,9 @@ public class ReportServiceImpl implements ReportService {
             ReportMapper reportMapper,
             RiskService riskService,
             ComparablePropertyService comparablePropertyService,
-            PropertyValuationService propertyValuationService
+            PropertyValuationService propertyValuationService,
+            PdfGenerator pdfGenerator,
+            ExcelGenerator excelGenerator
     ) {
         this.reportRepository = reportRepository;
         this.documentRepository = documentRepository;
@@ -61,6 +70,8 @@ public class ReportServiceImpl implements ReportService {
         this.riskService = riskService;
         this.comparablePropertyService = comparablePropertyService;
         this.propertyValuationService = propertyValuationService;
+        this.pdfGenerator = pdfGenerator;
+        this.excelGenerator = excelGenerator;
     }
 
     // REPORT CRUD
@@ -261,5 +272,29 @@ public class ReportServiceImpl implements ReportService {
         PropertyDocument doc = documentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Document not found with ID: " + id));
         documentRepository.delete(doc);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] exportPdf(Long reportId) {
+
+        DueDiligenceReport report = reportRepository.findById(reportId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Report not found with ID: " + reportId));
+
+        return pdfGenerator.generatePdf(report);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] exportExcel(Long reportId) {
+
+        DueDiligenceReport report = reportRepository.findById(reportId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Report not found with ID: " + reportId));
+
+        return excelGenerator.generateExcel(report);
     }
 }

@@ -23,4 +23,8 @@ public interface ReportService {
     List<PropertyDocumentResponse> getDocumentsByReport(Long reportId);
     PropertyDocumentResponse updateDocument(Long id, PropertyDocumentRequest request);
     void deleteDocument(Long id);
+
+    byte[] exportPdf(Long reportId);
+
+    byte[] exportExcel(Long reportId);
 }
