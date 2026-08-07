@@ -7,6 +7,7 @@ import {
   FaUser,
   FaPlus,
   FaTrash,
+  FaExclamationTriangle,
 } from "react-icons/fa";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import axios from "axios";
@@ -43,7 +44,7 @@ const PROPERTY_TYPES = [
   "Independent House",
 ];
 
-// Helper: Enhanced Hash algorithm (FNV-1a variant) for distinct image distribution
+// Helper: Enhanced Hash algorithm for distinct image distribution
 const getImageForAddress = (str = "") => {
   let hash = 2166136261;
   for (let i = 0; i < str.length; i++) {
@@ -163,6 +164,10 @@ const SearchProperty = () => {
     const randomPrice =
       Math.floor(Math.random() * (250 - 45 + 1) + 45) * 100000;
 
+    // Random Risk level generator for new properties
+    const riskLevels = ["Low Risk", "Medium Risk", "High Risk"];
+    const randomRisk = riskLevels[Math.floor(Math.random() * riskLevels.length)];
+
     const newProperty = {
       id: Date.now(),
       title: `${randomType} in ${formData.city}`,
@@ -171,6 +176,7 @@ const SearchProperty = () => {
       state: formData.state,
       pincode: formData.zipCode,
       status: "Pending",
+      riskLevel: randomRisk,
       owner: "Under Verification",
       propertyType: randomType,
       marketValueValue: randomPrice,
@@ -360,7 +366,7 @@ const SearchProperty = () => {
               </select>
 
               <button
-                className="w-full bg-blue-600 text-white rounded-lg py-3"
+                className="w-full bg-blue-600 text-white rounded-lg py-3 cursor-pointer"
                 onClick={() =>
                   setFilters({
                     type: "All",
@@ -397,6 +403,9 @@ const SearchProperty = () => {
               const displayImage =
                 property.image || getImageForAddress(property.address);
 
+              // Standardized Risk Status Determination
+              const riskText = property.riskLevel || (property.riskScore > 70 ? "High Risk" : property.riskScore > 30 ? "Medium Risk" : "Low Risk");
+
               return (
                 <div
                   key={property.id}
@@ -421,7 +430,7 @@ const SearchProperty = () => {
                   </div>
 
                   <div className="p-5">
-                    <div className="flex justify-between gap-3">
+                    <div className="flex justify-between items-start gap-2">
                       <div>
                         <h3 className="font-bold text-lg">
                           {property.title || property.address || "Property Item"}
@@ -432,17 +441,35 @@ const SearchProperty = () => {
                         </p>
                       </div>
 
-                      <span
-                        className={`h-fit text-xs px-3 py-1 rounded-full ${
-                          property.status === "Verified"
-                            ? "bg-green-100 text-green-700"
-                            : property.status === "Pending"
-                            ? "bg-yellow-100 text-yellow-700"
-                            : "bg-red-100 text-red-700"
-                        }`}
-                      >
-                        {property.status || "Pending"}
-                      </span>
+                      {/* BADGES CONTAINER: Verification + Risk Indicator */}
+                      <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                        {/* 1. Verification Badge */}
+                        <span
+                          className={`text-xs px-3 py-1 rounded-full font-medium ${
+                            property.status === "Verified"
+                              ? "bg-green-100 text-green-700"
+                              : property.status === "Pending"
+                              ? "bg-yellow-100 text-yellow-700"
+                              : "bg-red-100 text-red-700"
+                          }`}
+                        >
+                          {property.status || "Pending"}
+                        </span>
+
+                        {/* 2. Risk Level Badge (Spec Requirement) */}
+                        <span
+                          className={`text-xs px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1 ${
+                            riskText.includes("High")
+                              ? "bg-red-100 text-red-700 border border-red-200"
+                              : riskText.includes("Medium")
+                              ? "bg-amber-100 text-amber-700 border border-amber-200"
+                              : "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                          }`}
+                        >
+                          {riskText.includes("High") && <FaExclamationTriangle className="text-[10px]" />}
+                          {riskText}
+                        </span>
+                      </div>
                     </div>
 
                     <p className="mt-3 flex items-center gap-2 text-gray-600">

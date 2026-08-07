@@ -17,46 +17,54 @@ import {
 } from "react-icons/hi2";
 import { NavLink, useNavigate } from "react-router-dom";
 
-// 1. Standard User Menu Items (Visible to ALL roles)
+// 1. Menu items with role-based accessibility settings
 const mainMenuItems = [
   {
     icon: <HiOutlineHome />,
     label: "Dashboard",
     path: "/dashboard",
+    roles: ["BUYER", "REAL_ESTATE_AGENT", "LEGAL_REVIEWER", "FINANCIAL_INSTITUTION", "ADMIN", "USER"],
   },
   {
     icon: <HiMagnifyingGlass />,
     label: "Search Property",
     path: "/search-property",
+    roles: ["BUYER", "REAL_ESTATE_AGENT", "LEGAL_REVIEWER", "FINANCIAL_INSTITUTION", "ADMIN", "USER"],
   },
   {
     icon: <HiOutlineDocumentText />,
     label: "My Reports",
     path: "/reports",
+    roles: ["BUYER", "REAL_ESTATE_AGENT", "LEGAL_REVIEWER", "FINANCIAL_INSTITUTION", "ADMIN", "USER"],
   },
   {
     icon: <HiOutlineBookmark />,
     label: "Saved Properties",
     path: "/saved-properties",
+    roles: ["BUYER", "REAL_ESTATE_AGENT", "LEGAL_REVIEWER", "FINANCIAL_INSTITUTION", "ADMIN", "USER"],
   },
   {
     icon: <HiOutlineScale />,
     label: "Comparable Properties",
     path: "/property-comparison",
+    // 🔒 Hidden from standard BUYER role
+    roles: ["REAL_ESTATE_AGENT", "LEGAL_REVIEWER", "FINANCIAL_INSTITUTION", "ADMIN"],
   },
   {
     icon: <HiOutlineClock />,
     label: "Property History",
     path: "/property-history",
+    roles: ["BUYER", "REAL_ESTATE_AGENT", "LEGAL_REVIEWER", "FINANCIAL_INSTITUTION", "ADMIN", "USER"],
   },
   {
     icon: <HiOutlineBell />,
     label: "Alerts & Notifications",
     path: "/alerts",
+    roles: ["BUYER", "REAL_ESTATE_AGENT", "LEGAL_REVIEWER", "FINANCIAL_INSTITUTION", "ADMIN", "USER"],
   },
 ];
 
-// 2. Admin Only Menu Items
+// 2. Admin Only Menu Items (UNTOUCHED)
 const adminMenuItems = [
   {
     icon: <HiOutlineShieldCheck />,
@@ -71,7 +79,7 @@ const adminMenuItems = [
   {
     icon: <HiOutlineClipboardDocumentList />,
     label: "Audit Logs",
-    path: "/audit-logs", // Matches the route path
+    path: "/audit-logs",
   },
 ];
 
@@ -103,21 +111,31 @@ function Sidebar() {
     localStorage.getItem("role") ||
     localStorage.getItem("userRole") ||
     storedUser.role ||
-    "USER";
+    "BUYER";
 
   const userRole = rawRole.toUpperCase();
 
-  // 2. Flexible Admin check (matches ADMIN or ROLE_ADMIN)
+  // 2. Admin check (matches ADMIN or ROLE_ADMIN)
   const isAdmin = userRole.includes("ADMIN");
 
-  // 3. Get display name
+  // 3. Filter main menu items based on the user's role
+  const visibleMenuItems = mainMenuItems.filter((item) =>
+    item.roles.some((role) => userRole.includes(role))
+  );
+
+  // 4. Get display name
   const userName =
     storedUser.name ||
     (storedUser.email ? storedUser.email.split("@")[0] : "User");
 
-  // Logout handler
+  // Logout handler - Removes session keys safely without clearing custom saved properties
   const handleLogout = () => {
-    localStorage.clear(); // Clear all keys on logout
+    localStorage.removeItem("token");
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("role");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("user");
+    localStorage.removeItem("currentUser");
     navigate("/login");
   };
 
@@ -137,9 +155,9 @@ function Sidebar() {
 
       {/* Navigation Links */}
       <nav className="flex flex-col gap-6 overflow-y-auto pr-1">
-        {/* Main User Menu */}
+        {/* Main User Menu (Filtered by Role) */}
         <div className="flex flex-col gap-1.5">
-          {mainMenuItems.map((item) => (
+          {visibleMenuItems.map((item) => (
             <NavLink
               key={item.label}
               to={item.path}
@@ -218,7 +236,7 @@ function Sidebar() {
               {userName}
             </p>
             <p className="text-xs text-slate-400 uppercase tracking-wider">
-              {userRole}
+              {userRole.replace("_", " ")}
             </p>
           </div>
         </div>

@@ -74,34 +74,56 @@ function LoginForm() {
     try {
       const response = await axios.post(
         "http://localhost:8080/auth/login",
-        form,
+        form
       );
 
       if (response.data && response.data.token) {
-        // 1. Wipe out any stale session data
-        localStorage.clear();
+        const emailKey = form.email.toLowerCase().trim();
+
+        // 1. Read registered role cache BEFORE clearing localStorage
+        const registeredRolesCache = JSON.parse(
+          localStorage.getItem("registeredRolesCache") || "{}"
+        );
+        const cachedRole = registeredRolesCache[emailKey];
+
+        // 2. Clear session tokens safely
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
+        localStorage.removeItem("userRole");
+        localStorage.removeItem("user");
 
         const token = response.data.token;
 
-        // 2. Extract raw role from top-level field or user object
+        // 3. Extract raw role from backend response
         let rawRole =
           response.data.role ||
           response.data.userRole ||
           response.data.user?.role ||
-          "BUYER";
+          "";
 
-        // Handle case where role is an object (e.g., { roleName: "ROLE_ADMIN" })
+        // Handle nested role objects
         if (typeof rawRole === "object" && rawRole !== null) {
-          rawRole = rawRole.roleName || rawRole.name || "BUYER";
+          rawRole = rawRole.roleName || rawRole.authority || rawRole.name || "";
         }
 
-        // 3. Clean "ROLE_" prefix (e.g. "ROLE_ADMIN" -> "ADMIN", "ROLE_AGENT" -> "AGENT")
-        const cleanRole = String(rawRole)
+        // Clean formatting (e.g. "ROLE_LEGAL_REVIEWER" -> "LEGAL_REVIEWER")
+        let cleanRole = String(rawRole)
           .replace(/^ROLE_/, "")
           .trim()
-          .toUpperCase();
+          .toUpperCase()
+          .replace(/\s+/g, "_");
 
-        // 4. Build complete user object
+        // 4. Smart Fallback: Use cached registration role if backend returned empty, USER, or BUYER
+        if ((!cleanRole || cleanRole === "USER" || cleanRole === "BUYER") && cachedRole) {
+          cleanRole = cachedRole;
+        }
+
+        // Ultimate default
+        if (!cleanRole || cleanRole === "USER") {
+          cleanRole = "BUYER";
+        }
+
+        // 5. Build normalized user object
         const userObj = {
           email: response.data.email || form.email,
           name:
@@ -111,13 +133,16 @@ function LoginForm() {
           role: cleanRole,
         };
 
-        // 5. Store across all localStorage keys your frontend reads
+        // 6. Store synchronized keys across localStorage
         localStorage.setItem("token", token);
         localStorage.setItem("role", cleanRole);
         localStorage.setItem("userRole", cleanRole);
         localStorage.setItem("user", JSON.stringify(userObj));
 
-        // 6. Redirect to dashboard
+        // Preserve role cache for subsequent logins
+        localStorage.setItem("registeredRolesCache", JSON.stringify(registeredRolesCache));
+
+        // 7. Redirect to Dashboard
         navigate("/dashboard");
       }
     } catch (err) {

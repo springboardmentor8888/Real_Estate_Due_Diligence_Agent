@@ -43,12 +43,17 @@ function RegisterForm() {
     setLoading(true);
 
     try {
+      const selectedRole = formData.role.toUpperCase();
+
       // Standardize role string before sending to Spring Boot backend
       const payload = {
         name: formData.name,
-        email: formData.email,
+        email: formData.email.toLowerCase().trim(),
         password: formData.password,
-        role: formData.role, // Ensures string like 'AGENT' or 'BUYER'
+        role: selectedRole,
+        // Also include alternate spring-security keys in case backend expects them
+        userRole: selectedRole,
+        roles: [selectedRole],
       };
 
       const response = await fetch("http://localhost:8080/auth/register", {
@@ -67,22 +72,33 @@ function RegisterForm() {
       const data = await response.json();
       console.log("Registration Success:", data);
 
-      // Optional: Store registration info if backend returns token/user immediately
-      if (data.user || data.role) {
-        const userRole = data.role || payload.role;
-        localStorage.setItem("role", userRole);
-        localStorage.setItem("userRole", userRole);
-        localStorage.setItem(
-          "user",
-          JSON.stringify(
-            data.user || {
-              name: payload.name,
-              email: payload.email,
-              role: userRole,
-            },
-          ),
-        );
-      }
+      // 🔑 Save selected role locally mapped by email as a failsafe
+      const userRole = data.role || data.userRole || selectedRole;
+      
+      // Save global role state
+      localStorage.setItem("role", userRole);
+      localStorage.setItem("userRole", userRole);
+      
+      // Cache role mapping so login can recover it if Spring Boot returns 'USER'
+      const registeredRoles = JSON.parse(
+        localStorage.getItem("registeredRolesCache") || "{}"
+      );
+      registeredRoles[payload.email] = userRole;
+      localStorage.setItem(
+        "registeredRolesCache",
+        JSON.stringify(registeredRoles)
+      );
+
+      localStorage.setItem(
+        "user",
+        JSON.stringify(
+          data.user || {
+            name: payload.name,
+            email: payload.email,
+            role: userRole,
+          }
+        )
+      );
 
       alert("Account created successfully!");
       navigate("/login");
@@ -147,7 +163,7 @@ function RegisterForm() {
           </div>
         </div>
 
-        {/* Role Select Dropdown (Fixed option values) */}
+        {/* Role Select Dropdown */}
         <div>
           <label className="block mb-2 text-sm text-slate-200">
             Select Role

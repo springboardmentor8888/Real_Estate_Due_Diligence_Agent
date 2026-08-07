@@ -25,6 +25,20 @@ import Alerts from "../pages/Alerts";
 import OAuth2Success from "../components/auth/OAuth2Success";
 
 function AppRouter() {
+  // Define Role Groups for Route Guards (Supports standard and Spring Boot "ROLE_" formats)
+  const PRO_ROLES = [
+    "REAL_ESTATE_AGENT",
+    "LEGAL_REVIEWER",
+    "FINANCIAL_INSTITUTION",
+    "ADMIN",
+    "ROLE_REAL_ESTATE_AGENT",
+    "ROLE_LEGAL_REVIEWER",
+    "ROLE_FINANCIAL_INSTITUTION",
+    "ROLE_ADMIN",
+  ];
+
+  const ADMIN_ROLES = ["ADMIN", "ROLE_ADMIN"];
+
   return (
     <Routes>
       {/* 🔓 Public Routes */}
@@ -41,14 +55,32 @@ function AppRouter() {
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<Dashboard />} />
 
-          {/* Protected Admin Only Routes */}
-          <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
+          {/* 🛡️ Protected Admin Only Routes (UNTOUCHED) */}
+          <Route element={<ProtectedRoute allowedRoles={ADMIN_ROLES} />}>
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/audit-logs" element={<AuditLogs />} />
           </Route>
 
-          {/* Standard User Routes */}
+          {/* ⚖️ Protected Pro-Tier Tools (Restricted from Standard BUYER role) */}
+          <Route element={<ProtectedRoute allowedRoles={PRO_ROLES} />}>
+            <Route path="/property-comparison" element={<PropertyComparison />} />
+            <Route
+              path="/property-comparison/:propertyId"
+              element={<PropertyComparison />}
+            />
+            <Route
+              path="/property-comparison/:propertyId/:compareId"
+              element={<PropertyComparison />}
+            />
+            <Route path="/comparable-analysis" element={<ComparableAnalysis />} />
+            <Route
+              path="/comparable-analysis/:propertyId"
+              element={<ComparableAnalysis />}
+            />
+          </Route>
+
+          {/* 🌐 Common Routes (Accessible to All Authenticated Roles) */}
           <Route path="/search-property" element={<SearchProperty />} />
           <Route path="/property-details" element={<PropertyDetails />} />
           <Route
@@ -63,23 +95,9 @@ function AppRouter() {
           <Route path="/reports" element={<DueDiligenceReport />} />
           <Route path="/reports/:propertyId" element={<DueDiligenceReport />} />
           <Route path="/saved-properties" element={<SavedProperties />} />
-          <Route path="/property-comparison" element={<PropertyComparison />} />
-          <Route
-            path="/property-comparison/:propertyId"
-            element={<PropertyComparison />}
-          />
-          <Route
-            path="/property-comparison/:propertyId/:compareId"
-            element={<PropertyComparison />}
-          />
           <Route
             path="/risk-assessment/:propertyId"
             element={<RiskAssessment />}
-          />
-          <Route path="/comparable-analysis" element={<ComparableAnalysis />} />
-          <Route
-            path="/comparable-analysis/:propertyId"
-            element={<ComparableAnalysis />}
           />
 
           {/* System Alerts & Notifications */}
