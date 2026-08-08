@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: agent
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/real_estate_due_diligence
+    username: postgres
+    password: tiger
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: 8081
+
+application:
+  security:
+    jwt:
+      secret-key: dGVzdHNlY3JldGtleWZvcmhlbHBpbmdidWlsZGluZ3RoZXJlYWxlc3RhdGVkdWVkaWxpZ2VuY2VwbGF0Zm9ybQ==
+      expiration: 86400000 # 24 hours in milliseconds
