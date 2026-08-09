@@ -10,32 +10,32 @@ const AuditLogs = () => {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("ALL");
-  const [selectedSeverity, setSelectedSeverity] = useState("ALL");
+  const [selectedModule, setSelectedModule] = useState("ALL");
+  const [selectedAction, setSelectedAction] = useState("ALL");
 
-  // Fallback logs if API returns empty or fails
+  // Fallback logs if API returns empty or offline
   const mockLogs = [
     {
-      id: "LOG-8901",
-      timestamp: "2026-08-03 14:15:22",
-      user: "Sarah Jenkins",
+      id: 1,
+      username: "Sarah Jenkins",
       role: "ANALYST",
-      ipAddress: "192.168.1.45",
+      ipEndpoint: "/api/properties/4092",
       action: "GENERATE_REPORT",
-      category: "REPORT",
+      module: "REPORT",
       severity: "INFO",
-      details: "Generated comprehensive due diligence report for Property #4092."
+      details: "Generated comprehensive due diligence report for Property #4092.",
+      createdAt: "2026-08-03T14:15:22"
     },
     {
-      id: "LOG-8902",
-      timestamp: "2026-08-03 13:40:05",
-      user: "Sameen",
+      id: 2,
+      username: "Sameen",
       role: "ADMIN",
-      ipAddress: "10.0.0.1",
+      ipEndpoint: "/api/users/8812/role",
       action: "UPDATE_PERMISSIONS",
-      category: "SECURITY",
+      module: "SECURITY",
       severity: "CRITICAL",
-      details: "Elevated user permissions for user ID #8812."
+      details: "Elevated user permissions for user ID #8812.",
+      createdAt: "2026-08-03T13:40:05"
     }
   ];
 
@@ -44,11 +44,15 @@ const AuditLogs = () => {
     setErrorMessage("");
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:8080/api/v1/audit-logs", {
-        headers: { Authorization: `Bearer ${token}` }
+      
+      // Connected directly to teammate's Spring Boot controller path: /api/audit
+      const res = await axios.get("http://localhost:8080/api/audit", {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
       });
 
-      // Handle both List<AuditLog> and Page<AuditLog> response formats
       const logsArray = Array.isArray(res.data) 
         ? res.data 
         : (res.data?.content || []);
@@ -56,7 +60,7 @@ const AuditLogs = () => {
       setAuditData(logsArray.length > 0 ? logsArray : mockLogs);
     } catch (err) {
       console.warn("Backend API unavailable or error occurred:", err);
-      setErrorMessage("Could not connect to Spring Boot backend. Displaying offline demo logs.");
+      setErrorMessage("Could not connect to Spring Boot backend (/api/audit). Displaying offline demo logs.");
       setAuditData(mockLogs);
     } finally {
       setLoading(false);
@@ -67,7 +71,6 @@ const AuditLogs = () => {
     fetchLogs();
   }, []);
 
-  // Helper function to safely extract string display text from string OR object
   const getSafeString = (val, defaultVal = "") => {
     if (!val) return defaultVal;
     if (typeof val === "string") return val;
@@ -75,16 +78,15 @@ const AuditLogs = () => {
     return String(val);
   };
 
-  // Safe Filtering Logic
   const safeData = Array.isArray(auditData) ? auditData : [];
   
   const filteredLogs = safeData.filter((log) => {
     if (!log) return false;
 
-    const userStr = getSafeString(log.user || log.userName || log.username, "System").toLowerCase();
-    const detailsStr = getSafeString(log.details || log.description, "").toLowerCase();
+    const userStr = getSafeString(log.username || log.user || log.userName, "System").toLowerCase();
+    const detailsStr = getSafeString(log.details || log.description || log.reportName || log.apiEndpoint, "").toLowerCase();
     const actionStr = getSafeString(log.action, "").toLowerCase();
-    const ipStr = getSafeString(log.ipAddress || log.ip, "").toLowerCase();
+    const endpointStr = getSafeString(log.apiEndpoint || log.ipAddress || log.ip, "").toLowerCase();
 
     const searchLower = searchTerm.toLowerCase();
 
@@ -92,30 +94,28 @@ const AuditLogs = () => {
       userStr.includes(searchLower) ||
       detailsStr.includes(searchLower) ||
       actionStr.includes(searchLower) ||
-      ipStr.includes(searchLower);
+      endpointStr.includes(searchLower);
 
-    const categoryStr = getSafeString(log.category, "ALL");
-    const severityStr = getSafeString(log.severity, "ALL");
+    const moduleStr = getSafeString(log.module || log.category, "ALL").toUpperCase();
+    const actionVal = getSafeString(log.action, "ALL").toUpperCase();
 
-    const matchesCategory = selectedCategory === "ALL" || categoryStr === selectedCategory;
-    const matchesSeverity = selectedSeverity === "ALL" || severityStr === selectedSeverity;
+    const matchesModule = selectedModule === "ALL" || moduleStr === selectedModule;
+    const matchesAction = selectedAction === "ALL" || actionVal.includes(selectedAction);
 
-    return matchesSearch && matchesCategory && matchesSeverity;
+    return matchesSearch && matchesModule && matchesAction;
   });
 
-  // 📥 Working CSV Exporter
   const handleExportCSV = () => {
-    const headers = ["Log ID", "Timestamp", "User", "Role", "IP Address", "Action", "Category", "Severity", "Details"];
+    const headers = ["Log ID", "Timestamp", "User", "Role", "API / Location", "Action", "Module", "Details"];
     const rows = filteredLogs.map(log => [
       getSafeString(log.id, "N/A"),
-      getSafeString(log.timestamp || log.createdAt, "N/A"),
-      getSafeString(log.user || log.userName || log.username, "System"),
-      getSafeString(log.role || log.userRole, "USER"),
-      getSafeString(log.ipAddress || log.ip, "127.0.0.1"),
+      getSafeString(log.createdAt || log.timestamp, "N/A"),
+      getSafeString(log.username || log.user, "System"),
+      getSafeString(log.role || "USER"),
+      getSafeString(log.apiEndpoint || log.ipAddress || "N/A"),
       getSafeString(log.action, "EVENT"),
-      getSafeString(log.category, "N/A"),
-      getSafeString(log.severity, "INFO"),
-      `"${getSafeString(log.details || log.description, "").replace(/"/g, '""')}"`
+      getSafeString(log.module || log.category, "N/A"),
+      `"${getSafeString(log.details || log.reportName || log.description, "").replace(/"/g, '""')}"`
     ]);
 
     const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].map(e => e.join(",")).join("\n");
@@ -137,7 +137,7 @@ const AuditLogs = () => {
             <FaShieldAlt className="text-blue-600" /> System Audit Logs
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Immutable audit trail tracking all user actions, security events, and system modifications.
+            Immutable audit trail tracking all user actions, property changes, and system activities.
           </p>
         </div>
 
@@ -146,8 +146,8 @@ const AuditLogs = () => {
             type="button"
             onClick={() => { 
               setSearchTerm(""); 
-              setSelectedCategory("ALL"); 
-              setSelectedSeverity("ALL"); 
+              setSelectedModule("ALL"); 
+              setSelectedAction("ALL"); 
               fetchLogs();
             }} 
             className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 shadow-sm cursor-pointer"
@@ -164,7 +164,7 @@ const AuditLogs = () => {
         </div>
       </div>
 
-      {/* Connection Notice / Error Banner */}
+      {/* Connection Banner */}
       {errorMessage && (
         <div className="p-4 bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl">
           ⚠️ {errorMessage}
@@ -184,9 +184,9 @@ const AuditLogs = () => {
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
           <div className="p-3 bg-rose-50 text-rose-600 rounded-lg"><FaExclamationTriangle className="text-xl" /></div>
           <div>
-            <p className="text-xs text-gray-500 font-medium">Critical Alerts</p>
+            <p className="text-xs text-gray-500 font-medium">Critical / Delete Events</p>
             <p className="text-xl font-bold text-gray-900">
-              {safeData.filter(l => getSafeString(l?.severity) === "CRITICAL").length}
+              {safeData.filter(l => getSafeString(l?.action).toUpperCase().includes("DELETE")).length}
             </p>
           </div>
         </div>
@@ -194,9 +194,9 @@ const AuditLogs = () => {
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
           <div className="p-3 bg-emerald-50 text-emerald-600 rounded-lg"><FaFileInvoice className="text-xl" /></div>
           <div>
-            <p className="text-xs text-gray-500 font-medium">Report Actions</p>
+            <p className="text-xs text-gray-500 font-medium">Property Modules</p>
             <p className="text-xl font-bold text-gray-900">
-              {safeData.filter(l => getSafeString(l?.category) === "REPORT").length}
+              {safeData.filter(l => getSafeString(l?.module).toUpperCase().includes("PROPERTY")).length}
             </p>
           </div>
         </div>
@@ -204,9 +204,9 @@ const AuditLogs = () => {
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
           <div className="p-3 bg-amber-50 text-amber-600 rounded-lg"><FaUserShield className="text-xl" /></div>
           <div>
-            <p className="text-xs text-gray-500 font-medium">Admin Actions</p>
+            <p className="text-xs text-gray-500 font-medium">User Actions</p>
             <p className="text-xl font-bold text-gray-900">
-              {safeData.filter(l => getSafeString(l?.role).toUpperCase().includes("ADMIN")).length}
+              {safeData.filter(l => getSafeString(l?.username || l?.user) !== "System").length}
             </p>
           </div>
         </div>
@@ -218,7 +218,7 @@ const AuditLogs = () => {
           <FaSearch className="absolute left-3 top-3 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by user, IP address, or action..."
+            placeholder="Search by user, endpoint, or action..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -229,27 +229,30 @@ const AuditLogs = () => {
           <div className="flex items-center gap-2">
             <FaFilter className="text-gray-400 text-xs" />
             <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
+              value={selectedModule}
+              onChange={(e) => setSelectedModule(e.target.value)}
               className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             >
-              <option value="ALL">All Categories</option>
-              <option value="AUTH">Authentication</option>
+              <option value="ALL">All Modules</option>
               <option value="PROPERTY">Property</option>
-              <option value="REPORT">Report</option>
-              <option value="SECURITY">Security</option>
+              <option value="DUE_DILIGENCE">Due Diligence</option>
+              <option value="TAX">Tax History</option>
+              <option value="ZONING">Zoning</option>
+              <option value="PERMIT">Building Permits</option>
+              <option value="USER">User / Auth</option>
             </select>
           </div>
 
           <select
-            value={selectedSeverity}
-            onChange={(e) => setSelectedSeverity(e.target.value)}
+            value={selectedAction}
+            onChange={(e) => setSelectedAction(e.target.value)}
             className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
           >
-            <option value="ALL">All Severities</option>
-            <option value="INFO">Info</option>
-            <option value="WARNING">Warning</option>
-            <option value="CRITICAL">Critical</option>
+            <option value="ALL">All Actions</option>
+            <option value="CREATE">CREATE</option>
+            <option value="UPDATE">UPDATE</option>
+            <option value="DELETE">DELETE</option>
+            <option value="READ">READ / VIEW</option>
           </select>
         </div>
       </div>
@@ -261,10 +264,10 @@ const AuditLogs = () => {
             <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wider border-b border-gray-200">
               <tr>
                 <th className="px-6 py-3 font-medium">Log ID & Time</th>
-                <th className="px-6 py-3 font-medium">User & Role</th>
-                <th className="px-6 py-3 font-medium">IP Address</th>
-                <th className="px-6 py-3 font-medium">Action Event</th>
-                <th className="px-6 py-3 font-medium">Severity</th>
+                <th className="px-6 py-3 font-medium">Username</th>
+                <th className="px-6 py-3 font-medium">API Endpoint / Route</th>
+                <th className="px-6 py-3 font-medium">Action</th>
+                <th className="px-6 py-3 font-medium">Module</th>
                 <th className="px-6 py-3 font-medium">Details</th>
               </tr>
             </thead>
@@ -277,13 +280,12 @@ const AuditLogs = () => {
                 </tr>
               ) : filteredLogs.length > 0 ? (
                 filteredLogs.map((log, idx) => {
-                  const displayUser = getSafeString(log.user || log.userName || log.username, "System");
-                  const displayRole = getSafeString(log.role || log.userRole, "USER");
-                  const displayIp = getSafeString(log.ipAddress || log.ip, "127.0.0.1");
+                  const displayUser = getSafeString(log.username || log.user, "System");
+                  const displayEndpoint = getSafeString(log.apiEndpoint || log.ipAddress, "N/A");
                   const displayAction = getSafeString(log.action, "EVENT");
-                  const displaySeverity = getSafeString(log.severity, "INFO");
-                  const displayDetails = getSafeString(log.details || log.description, "No details provided");
-                  const displayTime = getSafeString(log.timestamp || log.createdAt, "N/A");
+                  const displayModule = getSafeString(log.module || log.category, "GENERAL");
+                  const displayDetails = getSafeString(log.details || log.reportName || log.description, "No extra details");
+                  const displayTime = getSafeString(log.createdAt || log.timestamp, "N/A");
 
                   const rawId = getSafeString(log.id, String(idx + 1));
                   const displayLogId = rawId.startsWith("LOG-") ? rawId : `LOG-${rawId}`;
@@ -296,23 +298,16 @@ const AuditLogs = () => {
                       </td>
                       <td className="px-6 py-4">
                         <p className="font-medium text-gray-900">{displayUser}</p>
-                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded font-mono">
-                          {displayRole}
-                        </span>
                       </td>
-                      <td className="px-6 py-4 font-mono text-xs text-gray-500">{displayIp}</td>
+                      <td className="px-6 py-4 font-mono text-xs text-gray-500">{displayEndpoint}</td>
                       <td className="px-6 py-4">
                         <span className="font-mono text-xs font-semibold text-gray-800 bg-gray-100 px-2 py-1 rounded">
                           {displayAction}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`inline-block px-2.5 py-1 text-xs rounded-full font-medium ${
-                          displaySeverity === "CRITICAL" ? "bg-rose-100 text-rose-700" :
-                          displaySeverity === "WARNING" ? "bg-amber-100 text-amber-700" :
-                          "bg-blue-100 text-blue-700"
-                        }`}>
-                          {displaySeverity}
+                        <span className="inline-block px-2.5 py-1 text-xs rounded-full font-medium bg-blue-100 text-blue-700">
+                          {displayModule}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-xs text-gray-600 max-w-xs truncate" title={displayDetails}>
