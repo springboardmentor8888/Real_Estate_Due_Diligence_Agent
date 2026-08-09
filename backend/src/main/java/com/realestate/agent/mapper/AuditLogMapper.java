@@ -16,7 +16,6 @@ public class AuditLogMapper {
                 .action(request.getAction())
                 .entityName(request.getEntityName())
                 .entityId(request.getEntityId())
-                .description(request.getDescription())
                 .ipAddress(request.getIpAddress())
                 .build();
     }
@@ -38,7 +37,7 @@ public class AuditLogMapper {
                 .action(auditLog.getAction())
                 .entityName(auditLog.getEntityName())
                 .entityId(auditLog.getEntityId())
-                .description(auditLog.getDescription())
+                .description(null)
                 .ipAddress(auditLog.getIpAddress())
                 .createdAt(auditLog.getCreatedAt())
                 .build();
