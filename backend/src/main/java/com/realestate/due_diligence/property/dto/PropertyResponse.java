@@ -2,7 +2,6 @@ package com.realestate.due_diligence.property.dto;
 
 import lombok.Getter;
 import lombok.Setter;
-
 import java.time.LocalDateTime;
 
 @Getter
@@ -14,5 +13,11 @@ public class PropertyResponse {
     private String state;
     private String zipCode;
     private String propertyType;
+
+    // ✅ ADDED PRICE & IMAGE URL
+    private Double price;
+    private String imageUrl;
+
+    // ✅ ADD THIS FIELD TO FIX THE setCreatedAt ERROR IN MAPPER
     private LocalDateTime createdAt;
 }

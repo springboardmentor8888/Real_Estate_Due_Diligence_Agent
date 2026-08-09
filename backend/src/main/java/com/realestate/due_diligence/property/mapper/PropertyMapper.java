@@ -18,6 +18,11 @@ public class PropertyMapper {
         response.setState(property.getState());
         response.setZipCode(property.getZipCode());
         response.setPropertyType(property.getPropertyType());
+        
+        // ✅ MAP PRICE & IMAGE URL TO RESPONSE DTO FOR REACT
+        response.setPrice(property.getPrice());
+        response.setImageUrl(property.getImageUrl());
+        
         response.setCreatedAt(property.getCreatedAt());
 
         return response;
@@ -32,6 +37,10 @@ public class PropertyMapper {
         property.setState(request.getState());
         property.setZipCode(request.getZipCode());
         property.setPropertyType(request.getPropertyType());
+        
+        // ✅ MAP PRICE & IMAGE URL TO ENTITY FOR POSTGRESQL
+        property.setPrice(request.getPrice());
+        property.setImageUrl(request.getImageUrl());
 
         return property;
     }

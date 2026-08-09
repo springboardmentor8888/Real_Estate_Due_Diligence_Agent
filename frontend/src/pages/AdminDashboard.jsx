@@ -18,10 +18,10 @@ import axios from "axios";
 const AdminDashboard = () => {
   // Live metric counters
   const [metrics, setMetrics] = useState({
-    totalUsers: 120,
+    totalUsers: 0,
     totalProperties: 0,
-    reportsGenerated: 45,
-    highRiskCount: 7,
+    reportsGenerated: 0,
+    highRiskCount: 0,
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -33,74 +33,89 @@ const AdminDashboard = () => {
     { name: "Due Diligence Engine", status: "99.8% Uptime", icon: <FaShieldAlt className="text-blue-500" /> },
   ]);
 
-  // Activity Stream State
-  const [recentActivities] = useState([
-    { id: 1, user: "Sarah Jenkins", action: "Generated Due Diligence Report", target: "Property #4092 (Grand Bay)", time: "10 mins ago", type: "Report" },
-    { id: 2, user: "Michael Chen", action: "Flagged High Risk Factor", target: "Property #1029 (Oakridge)", time: "25 mins ago", type: "Alert" },
-    { id: 3, user: "Admin (You)", action: "Updated System Permissions", target: "User Role: Analyst", time: "1 hour ago", type: "System" },
-    { id: 4, user: "David Miller", action: "Registered New Account", target: "d.miller@investments.com", time: "2 hours ago", type: "User" },
-  ]);
+  // Activity Stream State (Pulls from Durga Prasad's Audit API)
+  const [recentActivities, setRecentActivities] = useState([]);
 
   useEffect(() => {
-    fetchLiveMetrics();
+    fetchAllDashboardData();
   }, []);
 
-  const fetchLiveMetrics = async () => {
+  const fetchAllDashboardData = async () => {
     setLoading(true);
+    const token = localStorage.getItem("token");
+    const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+
     try {
-      const token = localStorage.getItem("token");
-
-      // 1. Safe parsing for LocalStorage to avoid refresh crashes
-      let localProps = [];
-      try {
-        const rawStorage = localStorage.getItem("custom_properties");
-        if (rawStorage) {
-          const parsed = JSON.parse(rawStorage);
-          localProps = Array.isArray(parsed) ? parsed : [];
-        }
-      } catch (e) {
-        console.warn("Could not parse custom_properties from localStorage", e);
-        localProps = [];
-      }
-
-      // 2. Safely fetch properties from Backend API (Corrected endpoint)
-      let dbCount = 0;
-      let apiSuccess = false;
+      // 1. Fetch Real Properties from Backend (/api/properties)
+      let livePropsCount = 0;
+      let highRiskPropsCount = 0;
 
       try {
-        const response = await axios.get("http://localhost:8080/api/properties", {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+        const propRes = await axios.get("http://localhost:8080/api/properties", { headers: authHeaders });
+        const propList = Array.isArray(propRes.data) 
+          ? propRes.data 
+          : Array.isArray(propRes.data?.content) 
+            ? propRes.data.content 
+            : propRes.data?.properties || [];
 
-        // Ensure safe array extraction regardless of backend response shape
-        const dataList = Array.isArray(response.data) 
-          ? response.data 
-          : Array.isArray(response.data?.content) 
-            ? response.data.content 
-            : Array.isArray(response.data?.properties)
-              ? response.data.properties
-              : [];
+        livePropsCount = propList.length;
 
-        dbCount = dataList.length;
-        apiSuccess = true;
+        highRiskPropsCount = propList.filter(
+          (p) => p.riskScore > 70 || p.riskLevel === "HIGH" || p.status === "HIGH_RISK"
+        ).length;
       } catch (err) {
-        console.warn("Backend API offline or unreachable; falling back to local storage.", err);
+        console.warn("Could not fetch properties from API.", err);
       }
 
-      // 3. Accurate count calculation
-      let totalProps = 0;
-      if (apiSuccess) {
-        // If API succeeded, use max of backend vs local custom properties
-        totalProps = Math.max(localProps.length, dbCount);
-      } else {
-        // If API failed/offline, use local storage count or fallback demo count (85)
-        totalProps = localProps.length > 0 ? localProps.length : 85;
+      // 2. Fetch Real Users from Backend (/api/users)
+      let liveUsersCount = 1;
+      try {
+        const userRes = await axios.get("http://localhost:8080/api/users", { headers: authHeaders });
+        const userList = Array.isArray(userRes.data) 
+          ? userRes.data 
+          : Array.isArray(userRes.data?.content) 
+            ? userRes.data.content 
+            : userRes.data?.users || [];
+
+        if (userList.length > 0) {
+          liveUsersCount = userList.length;
+        }
+      } catch (err) {
+        console.warn("Could not fetch users list with token; defaulting to active session count.", err);
       }
 
-      setMetrics((prev) => ({
-        ...prev,
-        totalProperties: totalProps,
-      }));
+      // 3. Fetch Audit Stream / Activity Logs from Audit API (/api/audit)
+      let liveActivities = [];
+      try {
+        const auditRes = await axios.get("http://localhost:8080/api/audit?limit=5", { headers: authHeaders });
+        const auditList = Array.isArray(auditRes.data) ? auditRes.data : auditRes.data?.content || [];
+
+        if (auditList.length > 0) {
+          liveActivities = auditList.slice(0, 5).map((log, idx) => ({
+            id: log.id || idx + 1,
+            user: log.username || log.userEmail || log.performedBy || "System User",
+            action: log.action || log.description || "Performed Action",
+            target: log.details || log.entityType || log.targetEntity || "Database Record",
+            time: log.timestamp 
+              ? new Date(log.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) 
+              : "Recently",
+            type: (log.action || "").includes("REPORT") ? "Report" : (log.action || "").includes("ALERT") ? "Alert" : (log.action || "").includes("USER") ? "User" : "System",
+          }));
+        }
+      } catch (err) {
+        console.warn("Could not fetch audit activity stream.", err);
+      }
+
+      // 4. Update Metrics with Real Values
+      setMetrics({
+        totalUsers: liveUsersCount,
+        totalProperties: livePropsCount,
+        reportsGenerated: livePropsCount,
+        highRiskCount: highRiskPropsCount,
+      });
+
+      setRecentActivities(liveActivities);
+
     } finally {
       setLoading(false);
     }
@@ -109,7 +124,7 @@ const AdminDashboard = () => {
   const handleRefreshDiagnostics = () => {
     setRefreshing(true);
     setTimeout(() => {
-      fetchLiveMetrics();
+      fetchAllDashboardData();
       setRefreshing(false);
     }, 800);
   };
@@ -148,8 +163,8 @@ const AdminDashboard = () => {
         <StatCard
           icon={<FaUsers />}
           title="Total Users"
-          value={String(metrics.totalUsers)}
-          change="+10% this month"
+          value={loading ? "..." : String(metrics.totalUsers)}
+          change="Active Accounts"
           changeColor="text-emerald-600"
           iconBg="bg-blue-100"
           iconColor="text-blue-600"
@@ -159,7 +174,7 @@ const AdminDashboard = () => {
           icon={<FaBuilding />}
           title="Total Properties"
           value={loading ? "..." : String(metrics.totalProperties)}
-          change="+8% this month"
+          change="Live PostgreSQL Count"
           changeColor="text-emerald-600"
           iconBg="bg-emerald-100"
           iconColor="text-emerald-600"
@@ -168,8 +183,8 @@ const AdminDashboard = () => {
         <StatCard
           icon={<FaFileAlt />}
           title="Reports Generated"
-          value={String(metrics.reportsGenerated)}
-          change="+12% this month"
+          value={loading ? "..." : String(metrics.reportsGenerated)}
+          change="Completed Analyses"
           changeColor="text-emerald-600"
           iconBg="bg-amber-100"
           iconColor="text-amber-600"
@@ -178,9 +193,9 @@ const AdminDashboard = () => {
         <StatCard
           icon={<FaExclamationTriangle />}
           title="High Risk Properties"
-          value={String(metrics.highRiskCount)}
-          change="Needs attention"
-          changeColor="text-rose-600"
+          value={loading ? "..." : String(metrics.highRiskCount)}
+          change={metrics.highRiskCount > 0 ? "Requires Review" : "No active threats"}
+          changeColor={metrics.highRiskCount > 0 ? "text-rose-600" : "text-emerald-600"}
           iconBg="bg-rose-100"
           iconColor="text-rose-600"
         />
@@ -267,24 +282,32 @@ const AdminDashboard = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
-              {recentActivities.map((act) => (
-                <tr key={act.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-gray-900">{act.user}</td>
-                  <td className="px-6 py-4">{act.action}</td>
-                  <td className="px-6 py-4 text-gray-500">{act.target}</td>
-                  <td className="px-6 py-4 text-gray-400 text-xs">{act.time}</td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-block px-2.5 py-1 text-xs rounded-full font-medium ${
-                      act.type === "Alert" ? "bg-red-100 text-red-700" :
-                      act.type === "Report" ? "bg-amber-100 text-amber-700" :
-                      act.type === "User" ? "bg-blue-100 text-blue-700" :
-                      "bg-gray-100 text-gray-700"
-                    }`}>
-                      {act.type}
-                    </span>
+              {recentActivities.length > 0 ? (
+                recentActivities.map((act) => (
+                  <tr key={act.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 font-medium text-gray-900">{act.user}</td>
+                    <td className="px-6 py-4">{act.action}</td>
+                    <td className="px-6 py-4 text-gray-500">{act.target}</td>
+                    <td className="px-6 py-4 text-gray-400 text-xs">{act.time}</td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-block px-2.5 py-1 text-xs rounded-full font-medium ${
+                        act.type === "Alert" ? "bg-red-100 text-red-700" :
+                        act.type === "Report" ? "bg-amber-100 text-amber-700" :
+                        act.type === "User" ? "bg-blue-100 text-blue-700" :
+                        "bg-gray-100 text-gray-700"
+                      }`}>
+                        {act.type}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" className="px-6 py-8 text-center text-sm text-gray-400">
+                    No recent audit activity recorded in database yet.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

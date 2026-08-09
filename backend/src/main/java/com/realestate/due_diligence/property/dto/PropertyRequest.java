@@ -22,4 +22,9 @@ public class PropertyRequest {
 
     @NotBlank
     private String propertyType;
+
+    // ✅ ADD THESE TWO FIELDS
+    private Double price;
+
+    private String imageUrl;
 }

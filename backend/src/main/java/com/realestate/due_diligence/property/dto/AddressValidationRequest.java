@@ -19,4 +19,9 @@ public class AddressValidationRequest {
 
     @NotBlank
     private String zipCode;
+
+    // ✅ ADD THESE TWO FIELDS
+    private Double price;
+    
+    private String imageUrl;
 }

@@ -2,6 +2,7 @@ package com.realestate.due_diligence.property.controller;
 
 import com.realestate.due_diligence.property.dto.AddressValidationRequest;
 import com.realestate.due_diligence.property.dto.AddressValidationResponse;
+import com.realestate.due_diligence.property.dto.PropertyRequest; // ✅ Import PropertyRequest or create DTO if needed
 import com.realestate.due_diligence.property.dto.PropertyResponse;
 import com.realestate.due_diligence.property.dto.PropertySearchRequest;
 import com.realestate.due_diligence.property.service.PropertyService;
@@ -10,6 +11,8 @@ import jakarta.validation.Valid;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,7 +31,6 @@ public class PropertyController {
 
     @GetMapping
     public List<PropertyResponse> getAllProperties() {
-
         return propertyService.getAllProperties();
     }
 
@@ -39,8 +41,18 @@ public class PropertyController {
     @GetMapping("/{id}")
     public PropertyResponse getPropertyById(
             @PathVariable Long id) {
-
         return propertyService.getPropertyById(id);
+    }
+
+    // =====================================================
+    // CREATE NEW PROPERTY (POST /api/properties)
+    // =====================================================
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public PropertyResponse createProperty(
+            @Valid @RequestBody AddressValidationRequest request) { // Or PropertyRequest depending on Gautham's DTO
+        return propertyService.performDueDiligence(request);
     }
 
     // =====================================================
@@ -50,7 +62,6 @@ public class PropertyController {
     @PostMapping("/search")
     public List<PropertyResponse> searchProperties(
             @RequestBody PropertySearchRequest request) {
-
         return propertyService.searchProperties(request);
     }
 
@@ -61,7 +72,6 @@ public class PropertyController {
     @PostMapping("/validate-address")
     public AddressValidationResponse validateAddress(
             @Valid @RequestBody AddressValidationRequest request) {
-
         return propertyService.validateAddress(request);
     }
 
@@ -72,7 +82,6 @@ public class PropertyController {
     @PostMapping("/due-diligence")
     public PropertyResponse performDueDiligence(
             @Valid @RequestBody AddressValidationRequest request) {
-
         return propertyService.performDueDiligence(request);
     }
 
@@ -84,7 +93,6 @@ public class PropertyController {
     public PropertyResponse updateProperty(
             @PathVariable Long id,
             @Valid @RequestBody AddressValidationRequest request) {
-
         return propertyService.updateProperty(
                 id,
                 request

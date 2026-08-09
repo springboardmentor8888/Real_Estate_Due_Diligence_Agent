@@ -14,9 +14,9 @@ import axios from "axios";
 
 import { formatCurrency } from "../data/comparableData";
 
-// Static fallback image for properties without uploaded photos
+// Fixed: Changed default fallback image from car photo to a real estate property photo
 const DEFAULT_PROPERTY_IMAGE =
-  "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=800&q=80";
+  "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80";
 
 const PROPERTY_TYPES = [
   "Residential",
@@ -46,18 +46,18 @@ const SearchProperty = () => {
     city: "",
     state: "",
     zipCode: "",
+    price: "",
+    imageUrl: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
   useEffect(() => {
-    // Clear out any old mock local storage properties once
     localStorage.removeItem("custom_properties");
     fetchPropertiesFromBackend();
   }, []);
 
-  // 🎯 FETCH PROPERTIES FROM BOTH API ENDPOINTS TO PREVENT MISSING LISTINGS
   const fetchPropertiesFromBackend = async () => {
     try {
       setFetchingProps(true);
@@ -71,7 +71,6 @@ const SearchProperty = () => {
 
       let combinedProperties = [];
 
-      // Extract from main /api/properties endpoint
       if (mainRes.status === "fulfilled" && mainRes.value.data) {
         const mainData = Array.isArray(mainRes.value.data)
           ? mainRes.value.data
@@ -79,7 +78,6 @@ const SearchProperty = () => {
         combinedProperties = [...mainData];
       }
 
-      // Extract from /api/properties/due-diligence endpoint and merge unique items
       if (ddRes.status === "fulfilled" && ddRes.value.data) {
         const ddData = Array.isArray(ddRes.value.data)
           ? ddRes.value.data
@@ -101,22 +99,17 @@ const SearchProperty = () => {
     }
   };
 
-  // 🗑️ PERMANENTLY REMOVE PROPERTY FROM UI & DATABASE
   const handleRemoveProperty = async (id, e) => {
     e.stopPropagation();
-
-    // 1. Remove from React State immediately
     setProperties((prev) => prev.filter((item) => item.id !== id));
 
-    // 2. Call Backend API to delete from Database
     try {
       const token = localStorage.getItem("token") || localStorage.getItem("authToken");
       await axios.delete(`http://localhost:8080/api/properties/${id}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      console.log(`Property ${id} deleted successfully from backend.`);
     } catch (err) {
-      console.warn("Backend delete endpoint failed or property only existed in local state.", err);
+      console.warn("Backend delete endpoint failed.", err);
     }
   };
 
@@ -135,7 +128,10 @@ const SearchProperty = () => {
     try {
       await axios.post(
         "http://localhost:8080/api/properties/due-diligence",
-        formData,
+        {
+          ...formData,
+          price: formData.price ? parseFloat(formData.price) : null,
+        },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -144,14 +140,13 @@ const SearchProperty = () => {
         }
       );
 
-      setSuccessMsg("Due diligence triggered successfully!");
+      setSuccessMsg("Property added successfully!");
       
-      // Refresh the property list directly from database
       setTimeout(() => {
         fetchPropertiesFromBackend();
         setShowAddModal(false);
         setSuccessMsg("");
-        setFormData({ address: "", city: "", state: "", zipCode: "" });
+        setFormData({ address: "", city: "", state: "", zipCode: "", price: "", imageUrl: "" });
       }, 1000);
 
     } catch (err) {
@@ -164,7 +159,7 @@ const SearchProperty = () => {
 
   const filteredProperties = properties.filter((property) => {
     const normalizedQuery = query.trim().toLowerCase();
-    const propAddress = property.address || "";
+    const propAddress = property.address || property.street || "";
     const propPincode = property.pincode || property.zipCode || "";
     const propOwner = property.owner || "";
     const propType = property.propertyType || property.type || "";
@@ -182,21 +177,15 @@ const SearchProperty = () => {
     const matchesPrice =
       filters.price === "All" ||
       (filters.price === "Below50" && priceVal < 5000000) ||
-      (filters.price === "50to100" &&
-        priceVal >= 5000000 &&
-        priceVal <= 10000000) ||
-      (filters.price === "100to200" &&
-        priceVal > 10000000 &&
-        priceVal <= 20000000) ||
+      (filters.price === "50to100" && priceVal >= 5000000 && priceVal <= 10000000) ||
+      (filters.price === "100to200" && priceVal > 10000000 && priceVal <= 20000000) ||
       (filters.price === "Above200" && priceVal > 20000000);
 
     return (
       matchesQuery &&
       (filters.type === "All" || propType === filters.type) &&
       (filters.status === "All" || property.status === filters.status) &&
-      (filters.city === "All" ||
-        (property.city &&
-          property.city.toLowerCase() === filters.city.toLowerCase())) &&
+      (filters.city === "All" || (property.city && property.city.toLowerCase() === filters.city.toLowerCase())) &&
       matchesPrice
     );
   });
@@ -248,9 +237,7 @@ const SearchProperty = () => {
               <select
                 className="w-full border rounded-lg p-2 mb-5"
                 value={filters.type}
-                onChange={(event) =>
-                  setFilters({ ...filters, type: event.target.value })
-                }
+                onChange={(event) => setFilters({ ...filters, type: event.target.value })}
               >
                 <option>All</option>
                 <option>Residential</option>
@@ -264,9 +251,7 @@ const SearchProperty = () => {
               <select
                 className="w-full border rounded-lg p-2 mb-5"
                 value={filters.status}
-                onChange={(event) =>
-                  setFilters({ ...filters, status: event.target.value })
-                }
+                onChange={(event) => setFilters({ ...filters, status: event.target.value })}
               >
                 <option>All</option>
                 <option>Verified</option>
@@ -278,9 +263,7 @@ const SearchProperty = () => {
               <select
                 className="w-full border rounded-lg p-2 mb-6"
                 value={filters.city}
-                onChange={(event) =>
-                  setFilters({ ...filters, city: event.target.value })
-                }
+                onChange={(event) => setFilters({ ...filters, city: event.target.value })}
               >
                 <option>All</option>
                 <option>Hyderabad</option>
@@ -289,15 +272,14 @@ const SearchProperty = () => {
                 <option>Bengaluru</option>
                 <option>Chennai</option>
                 <option>Pune</option>
+                <option>Mumbai</option>
               </select>
 
               <label className="block mb-2 font-medium">Price Range</label>
               <select
                 className="w-full border rounded-lg p-2 mb-5"
                 value={filters.price}
-                onChange={(event) =>
-                  setFilters({ ...filters, price: event.target.value })
-                }
+                onChange={(event) => setFilters({ ...filters, price: event.target.value })}
               >
                 <option value="All">All</option>
                 <option value="Below50">Below Rs. 50 Lakhs</option>
@@ -308,14 +290,7 @@ const SearchProperty = () => {
 
               <button
                 className="w-full bg-blue-600 text-white rounded-lg py-3 cursor-pointer"
-                onClick={() =>
-                  setFilters({
-                    type: "All",
-                    status: "All",
-                    city: "All",
-                    price: "All",
-                  })
-                }
+                onClick={() => setFilters({ type: "All", status: "All", city: "All", price: "All" })}
               >
                 Reset Filters
               </button>
@@ -341,9 +316,12 @@ const SearchProperty = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {filteredProperties.map((property) => {
+              // FIXED IMAGE EXTRACTION: Checks imageUrl, image, images array, and imageUrls array
               const displayImage =
-                (property.imageUrls && property.imageUrls.length > 0 && property.imageUrls[0]) ||
+                property.imageUrl ||
                 property.image ||
+                (property.images && property.images.length > 0 && (property.images[0].imageUrl || property.images[0])) ||
+                (property.imageUrls && property.imageUrls.length > 0 && property.imageUrls[0]) ||
                 DEFAULT_PROPERTY_IMAGE;
 
               const priceVal = property.price || property.priceValue || property.marketValueValue;
@@ -357,14 +335,13 @@ const SearchProperty = () => {
                   <div className="overflow-hidden relative">
                     <img
                       src={displayImage}
-                      alt={property.title || "Property"}
+                      alt={property.title || property.address || "Property"}
                       className="w-full h-52 object-cover transition duration-500 group-hover:scale-105"
                       onError={(e) => {
                         e.target.src = DEFAULT_PROPERTY_IMAGE;
                       }}
                     />
 
-                    {/* 🗑️ REMOVE CARD BUTTON */}
                     <button
                       type="button"
                       onClick={(e) => handleRemoveProperty(property.id, e)}
@@ -380,7 +357,7 @@ const SearchProperty = () => {
                       <div className="flex justify-between items-start gap-2">
                         <div>
                           <h3 className="font-bold text-lg line-clamp-1">
-                            {property.title || property.address || "Property Item"}
+                            {property.title || property.street || property.address || "Property Item"}
                           </h3>
                           <p className="text-sm text-gray-500">
                             {property.city || "Location"} -{" "}
@@ -388,9 +365,7 @@ const SearchProperty = () => {
                           </p>
                         </div>
 
-                        {/* BADGES CONTAINER */}
                         <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                          {/* 1. Verification Badge */}
                           <span
                             className={`text-xs px-3 py-1 rounded-full font-medium ${
                               property.status === "Verified"
@@ -403,7 +378,6 @@ const SearchProperty = () => {
                             {property.status || "Pending"}
                           </span>
 
-                          {/* 2. Risk Level Badge */}
                           <span
                             className={`text-xs px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1 ${
                               riskText.includes("High")
@@ -421,33 +395,35 @@ const SearchProperty = () => {
 
                       <p className="mt-3 flex items-center gap-2 text-gray-600">
                         <FaMapMarkerAlt className="text-red-500 flex-shrink-0" />
-                        <span className="truncate">{property.address}</span>
+                        <span className="truncate">{property.street || property.address || "N/A"}</span>
                       </p>
 
                       <p className="flex items-center gap-2 text-gray-600">
                         <FaUser className="text-blue-600 flex-shrink-0" />
-                        <span>{property.owner || "Pending Verification"}</span>
+                        <span>{property.owner || property.ownerName || "Pending Verification"}</span>
                       </p>
 
                       <p className="flex items-center gap-2 text-gray-600">
                         <FaHome className="text-green-600 flex-shrink-0" />
-                        <span>{property.propertyType || "Residential"}</span>
+                        <span>{property.propertyType || property.type || "Residential"}</span>
                       </p>
 
-                      {/* Specs bar */}
-                      {(property.bedrooms || property.bathrooms || property.sqft) && (
+                      {(property.bedrooms || property.bathrooms || property.sqft || property.squareFeet) && (
                         <div className="flex items-center gap-3 text-xs font-semibold text-gray-500 my-2 pt-2 border-t border-gray-100">
                           {property.bedrooms > 0 && <span>🛏️ {property.bedrooms} Beds</span>}
                           {property.bathrooms > 0 && <span>🚿 {property.bathrooms} Baths</span>}
-                          {property.sqft > 0 && <span>📐 {property.sqft} sqft</span>}
+                          {(property.sqft || property.squareFeet) > 0 && <span>📐 {property.sqft || property.squareFeet} sqft</span>}
                         </div>
                       )}
 
+                      {/* PRICE DISPLAY */}
                       {priceVal ? (
                         <p className="text-blue-600 font-bold text-lg mt-2">
-                          {formatCurrency(priceVal)}
+                          {formatCurrency ? formatCurrency(priceVal) : `₹${priceVal.toLocaleString('en-IN')}`}
                         </p>
-                      ) : null}
+                      ) : (
+                        <p className="text-gray-400 text-sm mt-2 italic">Price on Request</p>
+                      )}
                     </div>
 
                     <button
@@ -483,7 +459,7 @@ const SearchProperty = () => {
               Trigger Property Due Diligence
             </h2>
             <p className="text-sm text-gray-500 mb-6">
-              Enter address details to submit to backend API.
+              Enter property details to submit to backend API.
             </p>
 
             <form onSubmit={handleDueDiligenceSubmit} className="space-y-4">
@@ -497,7 +473,7 @@ const SearchProperty = () => {
                   value={formData.address}
                   onChange={handleFormChange}
                   required
-                  placeholder="e.g. 100 Jubilee Hills"
+                  placeholder="e.g. 102 Hill Road"
                   className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -513,7 +489,7 @@ const SearchProperty = () => {
                     value={formData.city}
                     onChange={handleFormChange}
                     required
-                    placeholder="Hyderabad"
+                    placeholder="Mumbai"
                     className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -528,7 +504,7 @@ const SearchProperty = () => {
                     value={formData.state}
                     onChange={handleFormChange}
                     required
-                    placeholder="Telangana"
+                    placeholder="Maharashtra"
                     className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -543,10 +519,40 @@ const SearchProperty = () => {
                     value={formData.zipCode}
                     onChange={handleFormChange}
                     required
-                    placeholder="500033"
+                    placeholder="400050"
                     className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
+              </div>
+
+              {/* ADDED INPUT FOR PRICE */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Price (in ₹ INR)
+                </label>
+                <input
+                  type="number"
+                  name="price"
+                  value={formData.price}
+                  onChange={handleFormChange}
+                  placeholder="e.g. 35000000 for 3.5 Cr"
+                  className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* ADDED INPUT FOR IMAGE URL */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Property Image URL
+                </label>
+                <input
+                  type="url"
+                  name="imageUrl"
+                  value={formData.imageUrl}
+                  onChange={handleFormChange}
+                  placeholder="https://images.unsplash.com/photo-..."
+                  className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+                />
               </div>
 
               {error && <p className="text-red-500 text-sm mt-2">{error}</p>}

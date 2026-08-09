@@ -28,12 +28,6 @@ import { formatCurrency } from "../data/comparableData";
 const DEFAULT_PROPERTY_IMAGE =
   "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=800&q=80";
 
-const statusClass = {
-  Verified: "bg-green-100 text-green-700",
-  Pending: "bg-yellow-100 text-yellow-700",
-  "Under Review": "bg-red-100 text-red-700",
-};
-
 const PropertyDetails = () => {
   const { id, propertyId } = useParams();
   const targetId = id || propertyId;
@@ -47,11 +41,11 @@ const PropertyDetails = () => {
   const [selectedImages, setSelectedImages] = useState({});
 
   useEffect(() => {
-    // 2. If property state wasn't passed directly, fetch from Spring Boot API using URL ID
-    if (!property && targetId) {
+    // 2. Fetch from backend if property is missing or needs zoning list
+    if (targetId) {
       fetchPropertyFromBackend(targetId);
     }
-  }, [targetId, property]);
+  }, [targetId]);
 
   const fetchPropertyFromBackend = async (propId) => {
     try {
@@ -60,11 +54,23 @@ const PropertyDetails = () => {
         localStorage.getItem("token") || localStorage.getItem("authToken");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const response = await axios.get(
-        `http://localhost:8080/api/properties/${propId}`,
-        { headers }
-      );
-      setProperty(response.data);
+      // Concurrent request for both property details and zoning info list
+      const [propRes, zoningRes] = await Promise.allSettled([
+        axios.get(`http://localhost:8080/api/properties/${propId}`, { headers }),
+        axios.get(`http://localhost:8080/api/zoning/property/${propId}`, { headers }),
+      ]);
+
+      let propertyData = propRes.status === "fulfilled" ? propRes.value.data : {};
+
+      // Attach zoning list directly to property state
+      if (zoningRes.status === "fulfilled" && zoningRes.value.data) {
+        propertyData = {
+          ...propertyData,
+          zoningList: zoningRes.value.data,
+        };
+      }
+
+      setProperty(propertyData);
     } catch (err) {
       console.error("Failed to fetch property details:", err);
       setError("Unable to load property details from backend.");
@@ -102,12 +108,14 @@ const PropertyDetails = () => {
     );
   }
 
-  // Handle Images Array
+  // ✅ Fixed Images Array handling to check property.imageUrl from backend
   const propertyImages =
     property.imageUrls && property.imageUrls.length > 0
       ? property.imageUrls
       : property.images && property.images.length > 0
       ? property.images
+      : property.imageUrl
+      ? [property.imageUrl]
       : property.image
       ? [property.image]
       : [DEFAULT_PROPERTY_IMAGE];
@@ -115,9 +123,14 @@ const PropertyDetails = () => {
   const selectedImage =
     selectedImages[property.id] || propertyImages[0] || DEFAULT_PROPERTY_IMAGE;
 
+  // ✅ Fixed displayPrice formatting
   const displayPrice =
     property.marketValue ||
-    (property.price ? formatCurrency(property.price) : "N/A");
+    (property.price
+      ? typeof property.price === "number"
+        ? formatCurrency(property.price)
+        : property.price
+      : "N/A");
 
   return (
     <div className="px-8 pt-5 pb-8">
@@ -330,6 +343,7 @@ const PropertyDetails = () => {
           </div>
         </div>
 
+        {/* ✅ Dynamic Zoning Information mapped to backend List<ZoningInfoResponse> */}
         <div className="bg-white rounded-2xl shadow p-6 transition-all duration-300 hover:shadow-lg">
           <div className="flex items-center gap-3 mb-6">
             <FaMapMarkedAlt className="text-2xl text-blue-600" />
@@ -338,41 +352,43 @@ const PropertyDetails = () => {
             </h2>
           </div>
 
-          <div className="space-y-4">
-            {[
-              ["Zone Type", property.zoning?.zoneType || "R1 - Residential"],
-              ["Land Use", property.zoning?.landUse || "Primary Residential"],
-              ["FAR / FSI", property.zoning?.far || "2.5"],
-              ["Maximum Height", property.zoning?.maxHeight || "15 Meters"],
-              ["Plot Coverage", property.zoning?.plotCoverage || "60%"],
-              ["Authority", property.zoning?.authority || "Municipal Corporation"],
-              ["Applicable Regulations", property.zoning?.regulations || "Master Plan 2031"],
-              ["Last Updated", property.zoning?.lastUpdated || "2026-01-15"],
-            ].map(([label, value]) => (
-              <div
-                key={label}
-                className="flex items-center justify-between border-b pb-3 gap-4"
-              >
-                <span className="text-gray-500">{label}</span>
-                <span className="font-semibold text-gray-800 text-right">
-                  {value}
-                </span>
-              </div>
-            ))}
+          {property.zoningList && property.zoningList.length > 0 ? (
+            <div className="space-y-4">
+              {property.zoningList.map((zoning, idx) => (
+                <div
+                  key={zoning.id || idx}
+                  className="p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-3"
+                >
+                  <div className="flex justify-between items-center border-b border-gray-200 pb-2">
+                    <span className="text-xs uppercase font-bold text-blue-600 tracking-wider">
+                      Zoning Code
+                    </span>
+                    <span className="font-bold text-gray-800 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                      {zoning.zoningCode || "N/A"}
+                    </span>
+                  </div>
 
-            <div className="flex items-center justify-between">
-              <span className="text-gray-500">Approval Status</span>
-              <span
-                className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${
-                  statusClass[property.zoning?.status] ||
-                  "bg-green-100 text-green-700"
-                }`}
-              >
-                <FaCheckCircle className="mr-2" />
-                {property.zoning?.status || "Approved"}
-              </span>
+                  <div className="flex justify-between border-b border-gray-200 pb-2 gap-4">
+                    <span className="text-gray-500 text-sm">Description</span>
+                    <span className="font-medium text-gray-800 text-right text-sm">
+                      {zoning.zoningDescription || "N/A"}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500 text-sm">Permitted Use</span>
+                    <span className="font-medium text-green-700 text-right text-sm">
+                      {zoning.permittedUse || "N/A"}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
+          ) : (
+            <div className="text-center py-6 text-gray-500">
+              <p className="text-sm">No zoning records found for this property.</p>
+            </div>
+          )}
         </div>
       </div>
 
