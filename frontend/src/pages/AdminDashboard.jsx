@@ -27,7 +27,7 @@ const AdminDashboard = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   // System Diagnostics State
-  const [systemMetrics, setSystemMetrics] = useState([
+  const [systemMetrics] = useState([
     { name: "Backend Service", status: "Operational", icon: <FaServer className="text-emerald-500" /> },
     { name: "PostgreSQL Database", status: "Connected", icon: <FaDatabase className="text-emerald-500" /> },
     { name: "Due Diligence Engine", status: "99.8% Uptime", icon: <FaShieldAlt className="text-blue-500" /> },
@@ -49,21 +49,53 @@ const AdminDashboard = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const localProps = JSON.parse(localStorage.getItem("custom_properties") || "[]");
 
-      let dbCount = 0;
+      // 1. Safe parsing for LocalStorage to avoid refresh crashes
+      let localProps = [];
       try {
-        const response = await axios.get("http://localhost:8080/api/v1/properties", {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        const dataList = Array.isArray(response.data) ? response.data : response.data?.content || [];
-        dbCount = dataList.length;
-      } catch (err) {
-        console.warn("Backend API offline; defaulting to local state count.", err);
+        const rawStorage = localStorage.getItem("custom_properties");
+        if (rawStorage) {
+          const parsed = JSON.parse(rawStorage);
+          localProps = Array.isArray(parsed) ? parsed : [];
+        }
+      } catch (e) {
+        console.warn("Could not parse custom_properties from localStorage", e);
+        localProps = [];
       }
 
-      // Calculate combined count (local + backend)
-      const totalProps = Math.max(localProps.length, dbCount) || 85;
+      // 2. Safely fetch properties from Backend API (Corrected endpoint)
+      let dbCount = 0;
+      let apiSuccess = false;
+
+      try {
+        const response = await axios.get("http://localhost:8080/api/properties", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+
+        // Ensure safe array extraction regardless of backend response shape
+        const dataList = Array.isArray(response.data) 
+          ? response.data 
+          : Array.isArray(response.data?.content) 
+            ? response.data.content 
+            : Array.isArray(response.data?.properties)
+              ? response.data.properties
+              : [];
+
+        dbCount = dataList.length;
+        apiSuccess = true;
+      } catch (err) {
+        console.warn("Backend API offline or unreachable; falling back to local storage.", err);
+      }
+
+      // 3. Accurate count calculation
+      let totalProps = 0;
+      if (apiSuccess) {
+        // If API succeeded, use max of backend vs local custom properties
+        totalProps = Math.max(localProps.length, dbCount);
+      } else {
+        // If API failed/offline, use local storage count or fallback demo count (85)
+        totalProps = localProps.length > 0 ? localProps.length : 85;
+      }
 
       setMetrics((prev) => ({
         ...prev,
