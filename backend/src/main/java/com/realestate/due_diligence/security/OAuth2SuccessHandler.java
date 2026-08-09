@@ -53,6 +53,17 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                 ? user.getRole().getRoleName()
                 : "BUYER";
 
+        System.out.println("===== OAuth2 SUCCESS HANDLER =====");
+
+        System.out.println("Email: " + email);
+        System.out.println("Redirect URL: " +
+                frontendUrl
+                + "/oauth2/success"
+                + "?token=" + jwt
+                + "&role=" + role
+                + "&email=" + user.getEmail()
+                + "&name=" + user.getName());
+
         response.sendRedirect(
                 frontendUrl
                         + "/oauth2/success"

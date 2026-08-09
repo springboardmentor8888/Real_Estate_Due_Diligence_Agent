@@ -1,31 +1,44 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 
 function OAuth2Success() {
-  const navigate = useNavigate();
-
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
 
     const token = params.get("token");
+    const role = params.get("role");
+    const email = params.get("email");
+    const name = params.get("name");
 
     if (token) {
+      localStorage.clear();
+
+      const cleanRole = String(role || "BUYER")
+        .replace(/^ROLE_/, "")
+        .trim()
+        .toUpperCase();
+
       localStorage.setItem("token", token);
-      window.history.replaceState({}, "", "/oauth2/success");
+      localStorage.setItem("role", cleanRole);
+      localStorage.setItem("userRole", cleanRole);
 
-      navigate("/dashboard", { replace: true });
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          name,
+          email,
+          role: cleanRole,
+        }),
+      );
+
+      window.location.replace("/dashboard");
       return;
     }
-    if (localStorage.getItem("token")) {
-      navigate("/dashboard", { replace: true });
-      return;
-    }
 
-    navigate("/login", { replace: true });
-  }, [navigate]);
+    window.location.replace("/login");
+  }, []);
 
   return (
-    <div className="flex items-center justify-center h-screen">
+    <div className="flex items-center justify-center h-screen text-white">
       Signing you in...
     </div>
   );
