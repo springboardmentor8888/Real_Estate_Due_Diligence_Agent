@@ -60,8 +60,14 @@ public class SecurityConfig {
                                 "/auth/**",
                                 "/api/auth/**",
                                 "/oauth2/**",
-                                "/login/oauth2/**"
+                                "/login/oauth2/**",
+                                "/api/reports/**"
                         ).permitAll()
+
+                        .requestMatchers(
+                                HttpMethod.PUT,
+                                "/api/properties/**"
+                        ).authenticated()
 
                         .requestMatchers("/api/properties/**").permitAll()
 

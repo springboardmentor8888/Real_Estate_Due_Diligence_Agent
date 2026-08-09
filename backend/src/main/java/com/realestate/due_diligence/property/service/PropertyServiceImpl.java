@@ -1,13 +1,17 @@
 package com.realestate.due_diligence.property.service;
 
+import com.realestate.due_diligence.notification.service.NotificationService;
 import com.realestate.due_diligence.property.Property;
 import com.realestate.due_diligence.property.dto.AddressValidationRequest;
 import com.realestate.due_diligence.property.dto.AddressValidationResponse;
 import com.realestate.due_diligence.property.dto.PropertyResponse;
 import com.realestate.due_diligence.property.dto.PropertySearchRequest;
 import com.realestate.due_diligence.repository.PropertyRepository;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,15 +23,25 @@ public class PropertyServiceImpl implements PropertyService {
 
     private final PropertyRepository propertyRepository;
 
+    private final NotificationService notificationService;
+
+    // =====================================================
+    // CREATE PROPERTY / DUE DILIGENCE
+    // =====================================================
+
     @Override
-    public PropertyResponse performDueDiligence(AddressValidationRequest request) {
+    public PropertyResponse performDueDiligence(
+            AddressValidationRequest request) {
+
         Property property = new Property();
-        
-        String fullAddress = String.format("%s, %s, %s %s", 
-                request.getAddress(), 
-                request.getCity(), 
-                request.getState(), 
-                request.getZipCode());
+
+        String fullAddress = String.format(
+                "%s, %s, %s %s",
+                request.getAddress(),
+                request.getCity(),
+                request.getState(),
+                request.getZipCode()
+        );
 
         property.setAddress(fullAddress);
         property.setCity(request.getCity());
@@ -36,44 +50,140 @@ public class PropertyServiceImpl implements PropertyService {
         property.setPropertyType("RESIDENTIAL");
         property.setCreatedAt(LocalDateTime.now());
 
-        Property savedProperty = propertyRepository.save(property);
+        Property savedProperty =
+                propertyRepository.save(property);
+
         return mapToResponse(savedProperty);
     }
 
+    // =====================================================
+    // GET ALL PROPERTIES
+    // =====================================================
+
     @Override
     public List<PropertyResponse> getAllProperties() {
-        return propertyRepository.findAll().stream()
+
+        return propertyRepository
+                .findAll()
+                .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
+    // =====================================================
+    // GET PROPERTY BY ID
+    // =====================================================
+
     @Override
     public PropertyResponse getPropertyById(Long id) {
-        Property property = propertyRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Property not found with id: " + id));
+
+        Property property =
+                propertyRepository
+                        .findById(id)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Property not found with id: " + id
+                                )
+                        );
+
         return mapToResponse(property);
     }
 
+    // =====================================================
+    // SEARCH PROPERTIES
+    // =====================================================
+
     @Override
-    public List<PropertyResponse> searchProperties(PropertySearchRequest request) {
+    public List<PropertyResponse> searchProperties(
+            PropertySearchRequest request) {
+
         return getAllProperties();
     }
 
+    // =====================================================
+    // VALIDATE ADDRESS
+    // =====================================================
+
     @Override
-    public AddressValidationResponse validateAddress(AddressValidationRequest request) {
-        AddressValidationResponse response = new AddressValidationResponse();
+    public AddressValidationResponse validateAddress(
+            AddressValidationRequest request) {
+
+        AddressValidationResponse response =
+                new AddressValidationResponse();
+
         response.setValid(true);
-        response.setNormalizedAddress(String.format("%s, %s, %s %s", 
-                request.getAddress(), 
-                request.getCity(), 
-                request.getState(), 
-                request.getZipCode()));
-        response.setMessage("Address validated successfully");
+
+        response.setNormalizedAddress(
+                String.format(
+                        "%s, %s, %s %s",
+                        request.getAddress(),
+                        request.getCity(),
+                        request.getState(),
+                        request.getZipCode()
+                )
+        );
+
+        response.setMessage(
+                "Address validated successfully"
+        );
+
         return response;
     }
 
-    private PropertyResponse mapToResponse(Property property) {
-        PropertyResponse response = new PropertyResponse();
+    // =====================================================
+    // UPDATE PROPERTY
+    // =====================================================
+
+    @Override
+    @Transactional
+    public PropertyResponse updateProperty(
+            Long id,
+            AddressValidationRequest request) {
+
+        Property property =
+                propertyRepository
+                        .findById(id)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Property not found with id: " + id
+                                )
+                        );
+
+        String fullAddress = String.format(
+                "%s, %s, %s %s",
+                request.getAddress(),
+                request.getCity(),
+                request.getState(),
+                request.getZipCode()
+        );
+
+        property.setAddress(fullAddress);
+        property.setCity(request.getCity());
+        property.setState(request.getState());
+        property.setZipCode(request.getZipCode());
+
+        Property updatedProperty =
+                propertyRepository.save(property);
+
+        // Create notification after successful update
+        notificationService.createPropertyUpdateNotification(
+                updatedProperty.getId(),
+                updatedProperty.getAddress()
+        );
+
+        return mapToResponse(updatedProperty);
+    }
+
+    // =====================================================
+    // ENTITY -> DTO
+    // =====================================================
+
+    private PropertyResponse mapToResponse(
+            Property property) {
+
+        PropertyResponse response =
+                new PropertyResponse();
+
         response.setId(property.getId());
         response.setAddress(property.getAddress());
         response.setCity(property.getCity());
@@ -81,6 +191,7 @@ public class PropertyServiceImpl implements PropertyService {
         response.setZipCode(property.getZipCode());
         response.setPropertyType(property.getPropertyType());
         response.setCreatedAt(property.getCreatedAt());
+
         return response;
     }
 }
