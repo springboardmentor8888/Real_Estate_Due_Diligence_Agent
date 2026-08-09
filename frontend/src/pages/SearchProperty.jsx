@@ -452,7 +452,9 @@ const SearchProperty = () => {
 
                     <button
                       onClick={() =>
-                        navigate(`/property-details/${property.id}`)
+                        navigate(`/property-details/${property.id}`, {
+                          state: { property },
+                        })
                       }
                       className="w-full mt-5 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition cursor-pointer font-semibold"
                     >
