@@ -1,18 +1,17 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   User,
   Mail,
   Phone,
-  Building,
   MapPin,
   Globe,
   Edit2,
   Save,
   X,
-  Check,
   Building2,
   Navigation,
+  Briefcase,
 } from "lucide-react";
 import Button from "../common/Button";
 import { showToast, showSuccessAlert } from "../../utils/swal";
@@ -22,13 +21,14 @@ function PersonalInfoCard({ profileData, setProfileData }) {
   const [formData, setFormData] = useState({
     firstName: profileData.name ? profileData.name.split(" ")[0] || "Rama" : "Rama",
     lastName: profileData.name ? profileData.name.split(" ").slice(1).join(" ") || "Charan" : "Charan",
-    email: profileData.email || "ramacharan@enterprise.com",
-    phone: profileData.phone || "+1 (555) 234-5678",
-    company: profileData.organization || "Global Real Estate Capital Inc",
-    address: profileData.address || "100 Enterprise Way, Suite 500",
-    city: profileData.city || "Austin",
-    state: profileData.state || "TX",
-    country: profileData.country || "United States",
+    email: profileData.email || "ramacharan@gmail.com",
+    role: profileData.role || "Buyer",
+    phone: profileData.phone || "+91 98490 12345",
+    company: profileData.organization || "Apex Due Diligence Advisors Pvt. Ltd.",
+    address: profileData.address || "Plot 45, Sy. No. 112/A, Financial District",
+    city: profileData.city || "Hyderabad",
+    state: profileData.state || "Telangana",
+    country: profileData.country || "India",
   });
 
   const handleChange = (e) => {
@@ -42,35 +42,46 @@ function PersonalInfoCard({ profileData, setProfileData }) {
   const handleSave = (e) => {
     e.preventDefault();
     const fullName = `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim();
-    
-    setProfileData((prev) => ({
-      ...prev,
+
+    const updated = {
+      ...profileData,
       name: fullName,
+      firstName: formData.firstName.trim(),
+      lastName: formData.lastName.trim(),
       email: formData.email,
+      role: formData.role,
       organization: formData.company,
       phone: formData.phone,
       address: formData.address,
       city: formData.city,
       state: formData.state,
       country: formData.country,
-    }));
+    };
+
+    setProfileData(updated);
+
+    // Save to localStorage and dispatch event for global sync across App
+    try {
+      localStorage.setItem("user", JSON.stringify(updated));
+      window.dispatchEvent(new Event("user_profile_updated"));
+    } catch (err) {}
 
     setIsEditing(false);
-    showSuccessAlert("Profile Updated", "Your personal details have been saved successfully.");
+    showSuccessAlert("Profile Updated", "Your personal profile details have been saved.");
   };
 
   const handleCancel = () => {
-    // Reset to current profile state
     setFormData({
       firstName: profileData.name ? profileData.name.split(" ")[0] || "Rama" : "Rama",
       lastName: profileData.name ? profileData.name.split(" ").slice(1).join(" ") || "Charan" : "Charan",
-      email: profileData.email || "ramacharan@enterprise.com",
-      phone: profileData.phone || "+1 (555) 234-5678",
-      company: profileData.organization || "Global Real Estate Capital Inc",
-      address: profileData.address || "100 Enterprise Way, Suite 500",
-      city: profileData.city || "Austin",
-      state: profileData.state || "TX",
-      country: profileData.country || "United States",
+      email: profileData.email || "ramacharan@gmail.com",
+      role: profileData.role || "Buyer",
+      phone: profileData.phone || "+91 98490 12345",
+      company: profileData.organization || "Apex Due Diligence Advisors Pvt. Ltd.",
+      address: profileData.address || "Plot 45, Sy. No. 112/A, Financial District",
+      city: profileData.city || "Hyderabad",
+      state: profileData.state || "Telangana",
+      country: profileData.country || "India",
     });
     setIsEditing(false);
     showToast("Edits cancelled", "info");
@@ -92,10 +103,10 @@ function PersonalInfoCard({ profileData, setProfileData }) {
           </div>
           <div>
             <h2 className="text-xl font-extrabold text-slate-900 dark:text-[#F8FAFC]">
-              Personal Information
+              Personal Information & Role Configuration
             </h2>
             <p className="text-xs font-medium text-slate-500 dark:text-[#94A3B8]">
-              Manage your personal and contact details across the platform.
+              Manage your profile details, contact information, and logged-in workspace role.
             </p>
           </div>
         </div>
@@ -171,6 +182,32 @@ function PersonalInfoCard({ profileData, setProfileData }) {
             ) : (
               <p className="p-3 rounded-xl bg-slate-50/70 dark:bg-[#0F172A]/70 border border-slate-200/50 dark:border-[#334155]/50 text-sm font-semibold text-slate-800 dark:text-slate-200">
                 {formData.lastName}
+              </p>
+            )}
+          </div>
+
+          {/* Workspace Role Selector */}
+          <div>
+            <label className="block text-xs font-mono font-bold text-slate-500 dark:text-[#94A3B8] uppercase mb-2 flex items-center gap-1.5">
+              <Briefcase size={13} className="text-cyan-500" />
+              Workspace Role
+            </label>
+            {isEditing ? (
+              <select
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
+              >
+                <option value="Buyer">Buyer</option>
+                <option value="Seller">Seller</option>
+                <option value="Legal Auditor">Legal Auditor</option>
+                <option value="Financial Analyst">Financial Analyst</option>
+                <option value="Architect">Architect / Engineer</option>
+              </select>
+            ) : (
+              <p className="p-3 rounded-xl bg-slate-50/70 dark:bg-[#0F172A]/70 border border-slate-200/50 dark:border-[#334155]/50 text-sm font-semibold text-blue-600 dark:text-cyan-400">
+                {formData.role}
               </p>
             )}
           </div>
@@ -298,27 +335,6 @@ function PersonalInfoCard({ profileData, setProfileData }) {
             ) : (
               <p className="p-3 rounded-xl bg-slate-50/70 dark:bg-[#0F172A]/70 border border-slate-200/50 dark:border-[#334155]/50 text-sm font-semibold text-slate-800 dark:text-slate-200">
                 {formData.state}
-              </p>
-            )}
-          </div>
-
-          {/* Country */}
-          <div>
-            <label className="block text-xs font-mono font-bold text-slate-500 dark:text-[#94A3B8] uppercase mb-2 flex items-center gap-1.5">
-              <Globe size={13} className="text-blue-500" />
-              Country
-            </label>
-            {isEditing ? (
-              <input
-                type="text"
-                name="country"
-                value={formData.country}
-                onChange={handleChange}
-                className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-              />
-            ) : (
-              <p className="p-3 rounded-xl bg-slate-50/70 dark:bg-[#0F172A]/70 border border-slate-200/50 dark:border-[#334155]/50 text-sm font-semibold text-slate-800 dark:text-slate-200">
-                {formData.country}
               </p>
             )}
           </div>

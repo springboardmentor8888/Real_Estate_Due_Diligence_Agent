@@ -8,7 +8,6 @@ import {
   ShieldAlert,
   User,
   Bell,
-  Sliders,
   X,
   ArrowRight,
   Sparkles,
@@ -26,7 +25,6 @@ function CommandPaletteModal({ isOpen, onClose }) {
         if (isOpen) {
           onClose();
         } else {
-          // Open
           setQuery("");
         }
       }
@@ -42,16 +40,16 @@ function CommandPaletteModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   const items = [
-    { id: "p1", title: "742 Evergreen Terrace, Austin TX", category: "Property", path: "/property-details", icon: Building2 },
-    { id: "p2", title: "1200 Market Street, San Francisco CA", category: "Property", path: "/property-details", icon: Building2 },
-    { id: "p3", title: "500 Ocean Drive, Miami FL", category: "Property", path: "/property-details", icon: Building2 },
+    { id: "p1", title: "Gachibowli Tech Park Phase 2, Financial District, Hyderabad", category: "Property", path: "/property-details?id=1001", icon: Building2 },
+    { id: "p2", title: "Whitefield Outer Ring Road Tech Hub, Bengaluru", category: "Property", path: "/property-details?id=1003", icon: Building2 },
+    { id: "p3", title: "Bandra Kurla Complex Corporate Tower, BKC Mumbai", category: "Property", path: "/property-details?id=1004", icon: Building2 },
     { id: "r1", title: "Risk Assessment Matrix & Scores", category: "Reports", path: "/risk-assessment", icon: ShieldAlert },
     { id: "r2", title: "Full Property Due Diligence Report", category: "Reports", path: "/due-diligence-report", icon: FileText },
     { id: "r3", title: "Comparable Property Valuation Analysis", category: "Reports", path: "/comparable-properties", icon: Sparkles },
     { id: "g1", title: "Property Search & Intelligence", category: "Navigation", path: "/property-search", icon: Search },
     { id: "g2", title: "Notifications & Alerts Center", category: "Navigation", path: "/notifications", icon: Bell },
     { id: "g3", title: "Auditor Profile & Account Security", category: "Navigation", path: "/profile", icon: User },
-    { id: "g4", title: "Report History & Document Dossiers", category: "Navigation", path: "/report-history", icon: FileText },
+    { id: "g4", title: "Report History & Documents", category: "Navigation", path: "/report-history", icon: FileText },
   ];
 
   const filteredItems = items.filter((item) =>

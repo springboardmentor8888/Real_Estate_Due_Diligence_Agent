@@ -3,6 +3,13 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* Complete Universal Native Scrollbar Suppression */
+html,
+body,
+#root {
+  overflow-x: hidden !important;
+  max-width: 100vw;
+}
+
 *,
 *::before,
 *::after,
@@ -18,7 +25,10 @@ table,
 tbody,
 tr,
 td,
-th {
+th,
+.no-scrollbar,
+.scrollbar-none,
+.scrollbar-thin {
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
 }
@@ -31,11 +41,30 @@ div::-webkit-scrollbar,
 nav::-webkit-scrollbar,
 aside::-webkit-scrollbar,
 main::-webkit-scrollbar,
-section::-webkit-scrollbar {
+section::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar,
+.scrollbar-thin::-webkit-scrollbar {
   display: none !important;
   width: 0px !important;
   height: 0px !important;
   background: transparent !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+*::-webkit-scrollbar-horizontal,
+::-webkit-scrollbar-horizontal,
+html::-webkit-scrollbar-horizontal,
+body::-webkit-scrollbar-horizontal,
+div::-webkit-scrollbar-horizontal,
+nav::-webkit-scrollbar-horizontal,
+main::-webkit-scrollbar-horizontal,
+section::-webkit-scrollbar-horizontal,
+aside::-webkit-scrollbar-horizontal {
+  display: none !important;
+  height: 0px !important;
+  width: 0px !important;
   opacity: 0 !important;
   visibility: hidden !important;
 }

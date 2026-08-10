@@ -135,7 +135,11 @@ function PropertyInspectionDrawer({ isOpen, onClose, property }) {
                 {imgSrc ? (
                   <img
                     src={imgSrc}
-                    alt={p.propertyName || p.address || "Property"}
+                    alt=""
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80";
+                    }}
                     className="w-full h-full object-cover"
                   />
                 ) : (

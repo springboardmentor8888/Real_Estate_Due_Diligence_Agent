@@ -7,10 +7,42 @@ import {
   TrendingUp,
   TrendingDown,
   Clock,
+  Building2,
+  FileText,
+  Search,
+  Users,
+  CheckCircle2,
+  UserX,
+  AlertOctagon,
+  Landmark,
+  FileCheck,
+  Activity,
+  PlusCircle,
+  FileSpreadsheet,
 } from "lucide-react";
 
-function StatCard() {
-  const stats = [
+const ICON_MAP = {
+  Building,
+  ShieldCheck,
+  AlertTriangle,
+  Award,
+  Clock,
+  Building2,
+  FileText,
+  Search,
+  Users,
+  CheckCircle2,
+  UserX,
+  AlertOctagon,
+  Landmark,
+  FileCheck,
+  Activity,
+  PlusCircle,
+  FileSpreadsheet,
+};
+
+function StatCard({ stats: customStats }) {
+  const defaultStats = [
     {
       title: "Total Properties Audited",
       value: "1,240",
@@ -53,22 +85,29 @@ function StatCard() {
     },
   ];
 
+  const stats = customStats || defaultStats;
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
       {stats.map((stat, index) => {
-        const Icon = stat.icon;
-        const TrendIcon = stat.isPositive ? TrendingUp : TrendingDown;
+        let Icon = stat.icon;
+        if (!Icon && stat.iconName && ICON_MAP[stat.iconName]) {
+          Icon = ICON_MAP[stat.iconName];
+        }
+        if (!Icon) Icon = Building;
+
+        const TrendIcon = stat.isPositive === false ? TrendingDown : TrendingUp;
 
         return (
           <div
             key={index}
-            className={`rounded-2xl p-6 border shadow-xs hover-lift group transition-all duration-200 ${stat.cardStyle}`}
+            className={`rounded-2xl p-6 border shadow-xs hover-lift group transition-all duration-200 ${stat.cardStyle || "bg-white dark:bg-[#1E293B] border-slate-200 dark:border-[#334155]"}`}
           >
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-[#CBD5E1]">
                 {stat.title}
               </span>
-              <div className={`p-2.5 rounded-xl border ${stat.iconBg}`}>
+              <div className={`p-2.5 rounded-xl border ${stat.iconBg || "bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-cyan-400"}`}>
                 <Icon size={18} />
               </div>
             </div>
@@ -79,21 +118,25 @@ function StatCard() {
               </h3>
             </div>
 
-            <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-200/60 dark:border-[#334155]">
-              <span
-                className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${
-                  stat.isPositive
-                    ? "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
-                    : "bg-red-100 dark:bg-rose-950/80 text-red-800 dark:text-rose-300 border border-red-200 dark:border-rose-800"
-                }`}
-              >
-                <TrendIcon size={13} />
-                {stat.change}
-              </span>
-              <span className="text-xs text-slate-500 dark:text-[#94A3B8] font-medium">
-                {stat.period}
-              </span>
-            </div>
+            {stat.change && (
+              <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-200/60 dark:border-[#334155]">
+                <span
+                  className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${
+                    stat.isPositive !== false
+                      ? "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                      : "bg-red-100 dark:bg-rose-950/80 text-red-800 dark:text-rose-300 border border-red-200 dark:border-rose-800"
+                  }`}
+                >
+                  <TrendIcon size={13} />
+                  {stat.change}
+                </span>
+                {stat.period && (
+                  <span className="text-xs text-slate-500 dark:text-[#94A3B8] font-medium">
+                    {stat.period}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         );
       })}

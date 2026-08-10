@@ -5,12 +5,9 @@ import {
   Download,
   FileSpreadsheet,
   FileText,
-  AlertTriangle,
   UserX,
   Trash2,
   ShieldAlert,
-  CheckCircle2,
-  Sparkles,
 } from "lucide-react";
 import { showConfirmDialog, showToast, showSuccessAlert } from "../../utils/swal";
 import { clearAuthData } from "../../services/authService";
@@ -31,7 +28,7 @@ function DownloadsAndDangerZone({ profileData }) {
       downloadAnchor.remove();
 
       setDownloading(null);
-      showToast("Profile dossier downloaded successfully!", "success");
+      showToast("Profile report downloaded successfully!", "success");
     }, 600);
   };
 
@@ -46,9 +43,10 @@ Generated Date: ${new Date().toISOString()}
 =========================================
 AUDITED ASSETS SUMMARY
 =========================================
-1. 742 Evergreen Terrace, Austin TX - Risk Score: 18/100 (Clear)
-2. 1200 Market Street, San Francisco CA - Risk Score: 42/100 (Moderate)
-3. 500 Ocean Drive, Miami FL - Risk Score: 25/100 (Clear)
+1. Gachibowli Tech Park Phase 2, Hyderabad TS - Risk Score: 14/100 (Clear)
+2. Jubilee Hills Luxury Enclave, Hyderabad TS - Risk Score: 18/100 (Clear)
+3. Whitefield Outer Ring Road Tech Hub, Bengaluru KA - Risk Score: 22/100 (Clear)
+4. Bandra Kurla Complex Corporate Tower, Mumbai MH - Risk Score: 12/100 (Clear)
 `;
       const blob = new Blob([reportSummary], { type: "text/plain;charset=utf-8" });
       const url = URL.createObjectURL(blob);
@@ -68,9 +66,9 @@ AUDITED ASSETS SUMMARY
     setDownloading("activity");
     setTimeout(() => {
       const csvContent = `Timestamp,Activity,Details
-2026-08-01 02:15,Login,Successful authentication from Austin TX
-2026-08-01 00:10,Generated Report,742 Evergreen Terrace
-2026-07-31 21:15,Property View,1200 Market Street
+2026-08-01 02:15,Login,Successful authentication from Hyderabad TS
+2026-08-01 00:10,Generated Report,Gachibowli Tech Park Phase 2
+2026-07-31 21:15,Property View,Whitefield Outer Ring Road Tech Hub
 2026-07-31 16:30,Security Update,Password & 2FA keys updated
 `;
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8" });
@@ -131,7 +129,7 @@ AUDITED ASSETS SUMMARY
       className="space-y-8"
       id="downloads-danger-section"
     >
-      {/* 11. Downloads Section */}
+      {/* Downloads Section */}
       <div className="glass-card rounded-3xl p-6 sm:p-8 border border-slate-200/80 dark:border-[#334155] shadow-lg space-y-6">
         <div className="flex items-center gap-3 pb-6 border-b border-slate-200/80 dark:border-[#334155]">
           <div className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-cyan-400 border border-blue-200 dark:border-blue-800/40">
@@ -141,8 +139,8 @@ AUDITED ASSETS SUMMARY
             <h2 className="text-xl font-extrabold text-slate-900 dark:text-[#F8FAFC]">
               Downloads & Export Center
             </h2>
-            <p className="text-xs font-medium text-slate-500 dark:text-[#94A3B8]">
-              Export your profile dossier, compiled audit reports, and complete activity history.
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              Export your profile details, compiled audit reports, and complete activity history.
             </p>
           </div>
         </div>
@@ -157,8 +155,8 @@ AUDITED ASSETS SUMMARY
               <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
                 Download Profile
               </h3>
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8]">
-                Export your full user profile dossier and organization credentials in JSON format.
+              <p className="text-xs text-slate-600 dark:text-slate-300">
+                Export your full user profile details and organization credentials in JSON format.
               </p>
             </div>
             <button
@@ -219,7 +217,7 @@ AUDITED ASSETS SUMMARY
         </div>
       </div>
 
-      {/* 12. Danger Zone Section */}
+      {/* Danger Zone Section */}
       <div className="p-6 sm:p-8 rounded-3xl bg-rose-500/5 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/60 shadow-lg space-y-6 relative overflow-hidden">
         <div className="flex items-center justify-between pb-6 border-b border-rose-200/80 dark:border-rose-900/60">
           <div className="flex items-center gap-3">

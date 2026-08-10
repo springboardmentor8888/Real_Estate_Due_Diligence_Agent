@@ -1,9 +1,8 @@
-import React, { useState } from "react";
+import React from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
   Sparkles,
-  ShieldCheck,
   Calendar,
   Clock,
   FileText,
@@ -15,7 +14,6 @@ import {
 
 function DashboardHeroHeader({ userName, userRole }) {
   const navigate = useNavigate();
-  const [selectedRole, setSelectedRole] = useState(userRole || "Real Estate Agent");
 
   // Dynamic greeting based on current time
   const getGreeting = () => {
@@ -32,14 +30,6 @@ function DashboardHeroHeader({ userName, userRole }) {
     day: "numeric",
   });
 
-  const availableRoles = [
-    "Buyer",
-    "Real Estate Agent",
-    "Legal Reviewer",
-    "Financial Institution",
-    "Administrator",
-  ];
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
@@ -52,7 +42,7 @@ function DashboardHeroHeader({ userName, userRole }) {
 
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
         {/* Left Side: Personalized Greeting & Meta */}
-        <div className="space-y-3 max-w-2xl">
+        <div className="space-y-4 max-w-2xl">
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-cyan-300 border border-blue-200 dark:border-blue-800 text-xs font-extrabold">
               <Sparkles size={14} className="text-blue-600 dark:text-cyan-400" />
@@ -67,34 +57,20 @@ function DashboardHeroHeader({ userName, userRole }) {
             {getGreeting()}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-cyan-400 dark:to-blue-400">{userName}</span>
           </h1>
 
-          <p className="text-sm font-semibold text-slate-600 dark:text-[#CBD5E1] leading-relaxed">
-            Monitor property evaluations, risk analysis, and generated reports.
-          </p>
-
           <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-slate-500 dark:text-[#94A3B8] pt-1">
-            {/* Role dropdown/pill switcher */}
-            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#0F172A] px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-[#334155]">
+            {/* Non-editable static Role Badge */}
+            <div className="role-badge flex items-center gap-1.5 bg-slate-100 dark:bg-[#0F172A] px-3.5 py-1.5 rounded-xl border border-slate-200/80 dark:border-[#334155] select-none">
               <UserCheck size={14} className="text-blue-600 dark:text-cyan-400 shrink-0" />
               <span className="text-slate-500 dark:text-slate-400">Role:</span>
-              <select
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value)}
-                className="bg-transparent font-bold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
-              >
-                {availableRoles.map((r) => (
-                  <option key={r} value={r} className="bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white">
-                    {r}
-                  </option>
-                ))}
-              </select>
+              <span className="font-bold text-slate-800 dark:text-slate-200">{userRole || "Buyer"}</span>
             </div>
 
-            <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#0F172A] px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-[#334155]">
+            <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#0F172A] px-3.5 py-1.5 rounded-xl border border-slate-200/80 dark:border-[#334155]">
               <Calendar size={14} className="text-indigo-500" />
               {currentDate}
             </span>
 
-            <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#0F172A] px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-[#334155]">
+            <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#0F172A] px-3.5 py-1.5 rounded-xl border border-slate-200/80 dark:border-[#334155]">
               <Clock size={14} className="text-emerald-500" />
               Session Active
             </span>
@@ -181,4 +157,3 @@ function DashboardHeroHeader({ userName, userRole }) {
 }
 
 export default DashboardHeroHeader;
-

@@ -1,11 +1,19 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { MapPin, ShieldCheck, ShieldAlert, AlertTriangle, ArrowUpRight, Building2, ImageOff } from "lucide-react";
+import { MapPin, ShieldCheck, ShieldAlert, AlertTriangle, ArrowUpRight, Building2, ImageOff, FileText } from "lucide-react";
 import Badge from "../common/Badge";
+
+import { setLiveActiveProperty } from "../../services/liveStore";
 
 function LinearPropertyCard({ property, onInspect }) {
   const item = property || {};
   const imgSrc = item.imageUrl || item.image || null;
+
+  const handleCardClick = () => {
+    const pid = item.numericId || item.propertyId || item.id;
+    if (pid) setLiveActiveProperty(pid);
+    if (onInspect) onInspect(item);
+  };
 
   const getRiskBadge = () => {
     const variant = item.variant || (item.riskScore > 60 ? "danger" : item.riskScore > 30 ? "warning" : "success");
@@ -33,8 +41,8 @@ function LinearPropertyCard({ property, onInspect }) {
   return (
     <motion.div
       whileHover={{ y: -4 }}
+      onClick={handleCardClick}
       transition={{ duration: 0.2 }}
-      onClick={() => onInspect(item)}
       className="white-card rounded-2xl bg-white dark:bg-[#1E293B] border border-slate-200/80 dark:border-[#334155] shadow-xs hover:shadow-xl dark:hover:shadow-blue-500/10 cursor-pointer overflow-hidden flex flex-col justify-between group transition-all"
     >
       {/* Property Image Banner or Clean "No Image Available" Placeholder */}
@@ -42,7 +50,11 @@ function LinearPropertyCard({ property, onInspect }) {
         {imgSrc ? (
           <img
             src={imgSrc}
-            alt={item.propertyName || item.address || "Property"}
+            alt=""
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80";
+            }}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
             loading="lazy"
           />
@@ -88,9 +100,22 @@ function LinearPropertyCard({ property, onInspect }) {
         {/* Footer Row */}
         <div className="pt-2 border-t border-slate-100 dark:border-[#334155] flex items-center justify-between">
           <div>{getRiskBadge()}</div>
-          <span className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-cyan-400 group-hover:underline">
-            Inspect <ArrowUpRight size={14} />
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                window.location.href = `/due-diligence-report?id=${item.propertyId || item.id || "PR-1001"}`;
+              }}
+              className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-cyan-400 bg-slate-100 dark:bg-[#0F172A] hover:bg-slate-200 dark:hover:bg-[#334155] px-2.5 py-1 rounded-lg border border-slate-200 dark:border-[#334155] transition-colors cursor-pointer"
+              title="View Due Diligence Report"
+            >
+              <FileText size={12} className="text-blue-600 dark:text-cyan-400" />
+              <span>Report</span>
+            </button>
+            <span className="inline-flex items-center gap-0.5 text-xs font-bold text-blue-600 dark:text-cyan-400 group-hover:underline">
+              Inspect <ArrowUpRight size={13} />
+            </span>
+          </div>
         </div>
       </div>
     </motion.div>

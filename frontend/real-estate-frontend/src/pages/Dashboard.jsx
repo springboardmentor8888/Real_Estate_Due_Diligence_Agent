@@ -14,8 +14,7 @@ import RecentActivityFeed from "../components/dashboard/RecentActivityFeed";
 import DashboardNotificationCenter from "../components/dashboard/DashboardNotificationCenter";
 import ProfileSummaryCard from "../components/dashboard/ProfileSummaryCard";
 import RecentDocumentsPanel from "../components/dashboard/RecentDocumentsPanel";
-import SystemStatusCard from "../components/dashboard/SystemStatusCard";
-import { Home, Sparkles, Command } from "lucide-react";
+import { Home, Command } from "lucide-react";
 
 function Dashboard() {
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
@@ -90,9 +89,6 @@ function Dashboard() {
 
             {/* 13. RECENT DOCUMENTS */}
             <RecentDocumentsPanel />
-
-            {/* 14. SYSTEM STATUS MONITORING */}
-            <SystemStatusCard />
           </div>
         </div>
       </div>

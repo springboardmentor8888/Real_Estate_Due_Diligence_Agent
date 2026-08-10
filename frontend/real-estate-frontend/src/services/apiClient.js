@@ -12,30 +12,29 @@ const apiClient = axios.create({
 // Request Interceptor: Attach JWT Bearer token if available in localStorage
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
+    let token = localStorage.getItem("token");
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      if (token.startsWith("Bearer ")) {
+        token = token.substring(7);
+      }
+      if (config.headers && typeof config.headers.set === "function") {
+        config.headers.set("Authorization", `Bearer ${token}`);
+      } else {
+        config.headers = config.headers || {};
+        config.headers["Authorization"] = `Bearer ${token}`;
+      }
     }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor: Handle global 401 errors & redirect to login
+// Response Interceptor: Handle global 401 errors
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      console.warn("Unauthorized access - clearing session credentials");
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      localStorage.removeItem("isLoggedIn");
-      localStorage.removeItem("loggedIn");
-      localStorage.removeItem("demoUser");
-      localStorage.removeItem("mockUser");
-      if (!window.location.pathname.includes("/login") && !window.location.pathname.includes("/register")) {
-        window.location.href = "/login";
-      }
+      console.warn("API 401 Unauthorized response for:", error.config?.url);
     }
     return Promise.reject(error);
   }

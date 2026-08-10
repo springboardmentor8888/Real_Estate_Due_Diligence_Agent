@@ -2,14 +2,16 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight, ImageOff } from "lucide-react";
 import Badge from "../common/Badge";
+import { setLiveActiveProperty } from "../../services/liveStore";
 
 function PropertyTable({ properties = [] }) {
   const navigate = useNavigate();
 
   const handleOpenDetails = (item, e) => {
     if (e) e.stopPropagation();
-    const pid = item.propertyId || item.id;
+    const pid = item.numericId || item.propertyId || item.id;
     if (pid) {
+      setLiveActiveProperty(pid);
       navigate(`/property-details?id=${pid}`, { state: { property: item } });
     }
   };
@@ -58,48 +60,48 @@ function PropertyTable({ properties = [] }) {
                         className="w-12 h-10 rounded-lg object-cover border border-slate-200 dark:border-[#334155] shrink-0"
                       />
                     ) : (
-                      <div className="w-12 h-10 rounded-lg bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] shrink-0 flex items-center justify-center text-slate-400">
+                      <div className="w-12 h-10 rounded-lg bg-slate-200 dark:bg-[#0F172A] flex items-center justify-center text-slate-400 shrink-0 border border-slate-300 dark:border-[#334155]">
                         <ImageOff size={16} />
                       </div>
                     )}
-                    <div>
-                      <p className="font-bold text-slate-900 dark:text-[#F8FAFC] group-hover:text-blue-600 dark:group-hover:text-cyan-400 transition-colors line-clamp-1">
-                        {item.propertyName || item.title || item.address || "Property Parcel"}
-                      </p>
-                      <p className="text-xs text-slate-400 dark:text-slate-400 font-mono mt-0.5">
-                        {item.address || "Address Not Available"} • APN: {item.id || item.propertyId || "Not Available"}
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-slate-900 dark:text-[#F8FAFC] text-sm group-hover:text-blue-600 dark:group-hover:text-cyan-400 transition-colors truncate">
+                        {item.propertyName || item.title || "Property Parcel"}
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-[#CBD5E1] truncate font-medium">
+                        {typeof item.address === "string" ? item.address : `${item.propertyName || "Parcel"}, ${item.city || "Hyderabad"}`}
                       </p>
                     </div>
                   </div>
                 </td>
-                <td className="p-3.5 font-medium text-slate-700 dark:text-[#CBD5E1]">{item.owner || "Not Available"}</td>
-                <td className="p-3.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-[#273449] px-2 py-0.5 rounded border border-transparent dark:border-[#334155]">
-                      {item.type || item.propertyType || "Not Available"}
-                    </span>
-                    <span className="text-xs font-mono font-bold text-blue-700 dark:text-cyan-300 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800">
-                      {item.zoning || "Not Available"}
-                    </span>
-                  </div>
+                <td className="p-3.5 font-medium text-slate-700 dark:text-slate-200">
+                  {item.ownerName || item.owner || "Enterprise Portfolio"}
                 </td>
-                <td className="p-3.5 text-xs font-medium text-slate-600 dark:text-[#CBD5E1]">{item.taxStatus || "Not Available"}</td>
-                <td className="p-3.5 text-xs font-medium text-slate-600 dark:text-[#CBD5E1]">{item.floodRisk || "Not Available"}</td>
-                <td className="p-3.5">
-                  <span className="font-mono font-bold text-xs bg-slate-900 dark:bg-[#273449] text-white dark:text-cyan-300 px-2.5 py-1 rounded-md border border-transparent dark:border-[#334155]">
-                    {item.score || "Not Available"}
-                  </span>
+                <td className="p-3.5 text-xs text-slate-600 dark:text-slate-300">
+                  <div className="font-bold">{item.landType || item.type || "Commercial"}</div>
+                  <div className="text-[11px] text-slate-500 font-mono">{item.zoning || "C-4 Commercial"}</div>
+                </td>
+                <td className="p-3.5 font-medium text-slate-700 dark:text-slate-200">
+                  {item.taxStatus || "Fully Paid"}
+                </td>
+                <td className="p-3.5 font-medium text-slate-700 dark:text-slate-200">
+                  {item.floodRisk || "Low"}
+                </td>
+                <td className="p-3.5 font-mono font-bold text-slate-900 dark:text-white">
+                  {item.score || 100 - (item.riskScore || 10)} / 100
                 </td>
                 <td className="p-3.5">
-                  <Badge variant={item.variant || "success"}>{item.status || "Verified"}</Badge>
+                  <Badge variant={item.variant || (item.status?.includes("Verified") ? "success" : "info")}>
+                    {item.status || "Verified"}
+                  </Badge>
                 </td>
                 <td className="p-3.5 text-right">
                   <button
                     onClick={(e) => handleOpenDetails(item, e)}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-cyan-400 hover:text-blue-700 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 px-3 py-1.5 rounded-lg border border-transparent dark:border-blue-800/60 transition-colors cursor-pointer"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-cyan-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 transition-colors cursor-pointer"
+                    title="View Property Details"
                   >
-                    <span>Open Audit</span>
-                    <ChevronRight size={14} />
+                    <ChevronRight size={18} />
                   </button>
                 </td>
               </tr>

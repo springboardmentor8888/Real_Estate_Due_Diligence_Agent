@@ -88,7 +88,7 @@ function ProfileHeader({ profileData, onEditClick, avatarUrl, setAvatarUrl }) {
             </h1>
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50">
               <ShieldCheck size={13} className="text-blue-600 dark:text-cyan-400" />
-              Verified Architect
+              {profileData.role || "Buyer"}
             </span>
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50">
               <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />

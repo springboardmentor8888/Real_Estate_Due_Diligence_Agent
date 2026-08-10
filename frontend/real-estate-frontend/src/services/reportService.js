@@ -1,0 +1,40 @@
+import apiClient from "./apiClient";
+
+// Generate a due diligence report
+export const generateReport = async (reportData) => {
+  return apiClient.post("/api/reports", reportData);
+};
+
+// Get Report by ID
+export const getReportById = async (id) => {
+  return apiClient.get(`/api/reports/${id}`);
+};
+
+// Get Reports for a specific property ID
+export const getReportsByProperty = async (propertyId) => {
+  return apiClient.get(`/api/reports/property/${propertyId}`);
+};
+
+// Export Report as PDF (Returns Blob binary stream)
+export const exportReportPdf = async (reportId) => {
+  return apiClient.get(`/api/reports/${reportId}/pdf`, {
+    responseType: "blob",
+  });
+};
+
+// Export Report as Excel (Returns Blob binary stream)
+export const exportReportExcel = async (reportId) => {
+  return apiClient.get(`/api/reports/${reportId}/excel`, {
+    responseType: "blob",
+  });
+};
+
+// Update Report details
+export const updateReport = async (id, reportData) => {
+  return apiClient.put(`/api/reports/${id}`, reportData);
+};
+
+// Delete Report
+export const deleteReport = async (id) => {
+  return apiClient.delete(`/api/reports/${id}`);
+};

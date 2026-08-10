@@ -18,7 +18,7 @@ import {
 import { useTheme } from "../../context/ThemeContext";
 import { showToast } from "../../utils/swal";
 
-function SettingsAndPreferences() {
+function SettingsAndPreferences({ filterSection = null }) {
   const { theme, setTheme, isDark } = useTheme();
 
   // Notification Toggles State
@@ -75,90 +75,94 @@ function SettingsAndPreferences() {
       id="settings-preferences-section"
     >
       {/* 8. Notification Settings */}
-      <div className="glass-card rounded-3xl p-6 sm:p-8 border border-slate-200/80 dark:border-[#334155] shadow-lg space-y-6">
-        <div className="flex items-center gap-3 pb-6 border-b border-slate-200/80 dark:border-[#334155]">
-          <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40">
-            <Bell size={22} />
+      {(!filterSection || filterSection === "notifications") && (
+        <div className="glass-card rounded-3xl p-6 sm:p-8 border border-slate-200/80 dark:border-[#334155] shadow-lg space-y-6">
+          <div className="flex items-center gap-3 pb-6 border-b border-slate-200/80 dark:border-[#334155]">
+            <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40">
+              <Bell size={22} />
+            </div>
+            <div>
+              <h2 className="text-xl font-extrabold text-slate-900 dark:text-[#F8FAFC]">
+                Notification Settings
+              </h2>
+              <p className="text-xs font-medium text-slate-500 dark:text-[#94A3B8]">
+                Choose how and when you receive automated alerts, email summaries, and security notifications.
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-xl font-extrabold text-slate-900 dark:text-[#F8FAFC]">
-              Notification Settings
-            </h2>
-            <p className="text-xs font-medium text-slate-500 dark:text-[#94A3B8]">
-              Choose how and when you receive automated alerts, email summaries, and security notifications.
-            </p>
-          </div>
-        </div>
 
-        <div className="space-y-4">
-          {[
-            {
-              key: "emailNotifications",
-              label: "Email Notifications",
-              desc: "Receive critical updates and account notifications via email.",
-              icon: Mail,
-            },
-            {
-              key: "propertyAlerts",
-              label: "Property Alerts",
-              desc: "Instant notifications when bookmarked property risk scores or tax statuses change.",
-              icon: Bell,
-            },
-            {
-              key: "reportReadyNotifications",
-              label: "Report Ready Notifications",
-              desc: "Alerts when asynchronous due diligence and environmental reports finish generating.",
-              icon: FileText,
-            },
-            {
-              key: "securityAlerts",
-              label: "Security Alerts",
-              desc: "Immediate notifications for unrecognized logins or credential modifications.",
-              icon: ShieldAlert,
-            },
-            {
-              key: "weeklySummary",
-              label: "Weekly Summary",
-              desc: "Weekly digest of your search activity, saved properties, and risk assessments.",
-              icon: Calendar,
-            },
-          ].map((item) => {
-            const IconComp = item.icon;
-            return (
-              <div
-                key={item.key}
-                className="p-4 rounded-2xl bg-slate-50/70 dark:bg-[#0F172A]/70 border border-slate-200/60 dark:border-[#334155] flex items-center justify-between gap-4"
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className="p-2.5 rounded-xl bg-white dark:bg-[#1E293B] text-blue-600 dark:text-cyan-400 border border-slate-200/60 dark:border-[#334155]">
-                    <IconComp size={18} />
+          <div className="space-y-4">
+            {[
+              {
+                key: "emailNotifications",
+                label: "Email Notifications",
+                desc: "Receive critical updates and account notifications via email.",
+                icon: Mail,
+              },
+              {
+                key: "propertyAlerts",
+                label: "Property Alerts",
+                desc: "Instant notifications when bookmarked property risk scores or tax statuses change.",
+                icon: Bell,
+              },
+              {
+                key: "reportReadyNotifications",
+                label: "Report Ready Notifications",
+                desc: "Alerts when asynchronous due diligence and environmental reports finish generating.",
+                icon: FileText,
+              },
+              {
+                key: "securityAlerts",
+                label: "Security Alerts",
+                desc: "Immediate notifications for unrecognized logins or credential modifications.",
+                icon: ShieldAlert,
+              },
+              {
+                key: "weeklySummary",
+                label: "Weekly Summary",
+                desc: "Weekly digest of your search activity, saved properties, and risk assessments.",
+                icon: Calendar,
+              },
+            ].map((item) => {
+              const IconComp = item.icon;
+              return (
+                <div
+                  key={item.key}
+                  className="p-4 rounded-2xl bg-slate-50/70 dark:bg-[#0F172A]/70 border border-slate-200/60 dark:border-[#334155] flex items-center justify-between gap-4"
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div className="p-2.5 rounded-xl bg-white dark:bg-[#1E293B] text-blue-600 dark:text-cyan-400 border border-slate-200/60 dark:border-[#334155]">
+                      <IconComp size={18} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                        {item.label}
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-[#94A3B8]">
+                        {item.desc}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                      {item.label}
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-[#94A3B8]">
-                      {item.desc}
-                    </p>
-                  </div>
+
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={notifications[item.key]}
+                      onChange={() => handleToggleNotification(item.key, item.label)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:peer-focus:ring-blue-800 peer-checked:bg-blue-600"></div>
+                  </label>
                 </div>
-
-                <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                  <input
-                    type="checkbox"
-                    checked={notifications[item.key]}
-                    onChange={() => handleToggleNotification(item.key, item.label)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:peer-focus:ring-blue-800 peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 9. Appearance Settings */}
+      {(!filterSection || filterSection === "preferences") && (
+        <>
       <div className="glass-card rounded-3xl p-6 sm:p-8 border border-slate-200/80 dark:border-[#334155] shadow-lg space-y-6">
         <div className="flex items-center gap-3 pb-6 border-b border-slate-200/80 dark:border-[#334155]">
           <div className="p-3 rounded-2xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800/40">
@@ -345,6 +349,8 @@ function SettingsAndPreferences() {
           </div>
         </div>
       </div>
+      </>
+      )}
     </motion.div>
   );
 }
