@@ -1,6 +1,15 @@
 import { FaCalendarAlt, FaFileAlt, FaShieldAlt } from "react-icons/fa";
 
-import { getRiskClasses } from "../../data/riskData";
+function getRiskClasses(level = "LOW") {
+  const normalized = String(level || "LOW").toUpperCase();
+  if (normalized === "HIGH") {
+    return { badge: "bg-red-100 text-red-700", text: "text-red-700" };
+  }
+  if (normalized === "MEDIUM") {
+    return { badge: "bg-amber-100 text-amber-700", text: "text-amber-700" };
+  }
+  return { badge: "bg-green-100 text-green-700", text: "text-green-700" };
+}
 
 const ReportHeader = ({ reportData }) => {
   const classes = getRiskClasses(reportData.risk.riskLevel);
