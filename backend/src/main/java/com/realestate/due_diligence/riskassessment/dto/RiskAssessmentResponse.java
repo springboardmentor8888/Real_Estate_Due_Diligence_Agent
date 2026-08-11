@@ -10,6 +10,14 @@ public class RiskAssessmentResponse {
     private List<String> riskFactors;
     private String recommendation;
 
+    // ✅ ADDED DYNAMIC SUB-RISK SCORES
+    private Integer legalScore;
+    private Integer taxScore;
+    private Integer floodScore;
+    private Integer permitScore;
+    private Integer zoningScore;
+    private Integer ownershipScore;
+
     public RiskAssessmentResponse() {
     }
 
@@ -51,5 +59,55 @@ public class RiskAssessmentResponse {
 
     public void setRecommendation(String recommendation) {
         this.recommendation = recommendation;
+    }
+
+    // ✅ GETTERS & SETTERS FOR SUB-SCORES
+
+    public Integer getLegalScore() {
+        return legalScore;
+    }
+
+    public void setLegalScore(Integer legalScore) {
+        this.legalScore = legalScore;
+    }
+
+    public Integer getTaxScore() {
+        return taxScore;
+    }
+
+    public void setTaxScore(Integer taxScore) {
+        this.taxScore = taxScore;
+    }
+
+    public Integer getFloodScore() {
+        return floodScore;
+    }
+
+    public void setFloodScore(Integer floodScore) {
+        this.floodScore = floodScore;
+    }
+
+    public Integer getPermitScore() {
+        return permitScore;
+    }
+
+    public void setPermitScore(Integer permitScore) {
+        this.permitScore = permitScore;
+    }
+
+    public Integer getZoningScore() {
+        return zoningScore;
+    }
+
+    public void setZoningScore(Integer zoningScore) {
+        this.zoningScore = zoningScore;
+    }
+
+    public Integer getOwnershipScore() {
+        return ownershipScore;
+    }
+
+    public void setOwnershipScore(Integer ownershipScore) {
+        this.ownershipScore = ownershipScore;
     }
 }

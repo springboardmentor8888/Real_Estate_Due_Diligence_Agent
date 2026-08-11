@@ -243,6 +243,15 @@ public class PropertyServiceImpl implements PropertyService {
         response.setPrice(property.getPrice());
         response.setImageUrl(property.getImageUrl());
 
+        // ✅ MAP NEW DUE DILIGENCE & STRUCTURAL FIELDS TO DTO
+        response.setSurveyNo(property.getSurveyNo());
+        response.setRegistrationNo(property.getRegistrationNo());
+        response.setArea(property.getArea());
+        response.setBedrooms(property.getBedrooms());
+        response.setBathrooms(property.getBathrooms());
+        response.setParking(property.getParking());
+        response.setFurnishing(property.getFurnishing());
+
         return response;
     }
 }
