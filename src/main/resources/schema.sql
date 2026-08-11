@@ -94,3 +94,64 @@ CREATE TABLE tax_histories (
 
 -- Index to fetch tax history records for a specific property quickly
 CREATE INDEX idx_tax_property_id ON tax_histories(property_id);
+
+-- -----------------------------------------------------
+-- Table: due_diligence_reports
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS due_diligence_reports (
+    id BIGSERIAL PRIMARY KEY,
+    property_id BIGINT NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    report_url VARCHAR(500),
+    requested_by BIGINT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP,
+    duration_ms BIGINT,
+    error_message VARCHAR(1000)
+);
+
+-- -----------------------------------------------------
+-- Table: notifications
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS notifications (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message VARCHAR(1000) NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    report_id BIGINT,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- -----------------------------------------------------
+-- Table: audit_logs
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id BIGSERIAL PRIMARY KEY,
+    actor_email VARCHAR(150),
+    actor_role VARCHAR(50),
+    action VARCHAR(100) NOT NULL,
+    entity_type VARCHAR(100),
+    entity_id VARCHAR(100),
+    description VARCHAR(1000),
+    ip_address VARCHAR(50),
+    outcome VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- -----------------------------------------------------
+-- Table: report_histories
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS report_histories (
+    id BIGSERIAL PRIMARY KEY,
+    report_id BIGINT,
+    property_id BIGINT NOT NULL,
+    user_id BIGINT,
+    export_format VARCHAR(20),
+    status VARCHAR(50) NOT NULL,
+    generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    file_url VARCHAR(500),
+    summary VARCHAR(1000)
+);
+

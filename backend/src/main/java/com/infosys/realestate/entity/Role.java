@@ -29,7 +29,11 @@ public class Role {
         return roleName;
     }
 
+    public String getName() {
+        return roleName;
+    }
+
     public void setRoleName(String roleName) {
         this.roleName = roleName;
     }
-}
+}

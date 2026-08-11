@@ -4,11 +4,13 @@ import com.infosys.realestate.dto.PublicRecordsReportResponse;
 import com.infosys.realestate.dto.ReportHistoryDTO;
 import com.infosys.realestate.entity.DueDiligenceReport;
 import com.infosys.realestate.entity.Property;
+import com.infosys.realestate.entity.ReportHistory;
 import com.infosys.realestate.entity.RiskAssessment;
 import com.infosys.realestate.entity.User;
 import com.infosys.realestate.exception.ResourceNotFoundException;
 import com.infosys.realestate.repository.DueDiligenceReportRepository;
 import com.infosys.realestate.repository.PropertyRepository;
+import com.infosys.realestate.repository.ReportHistoryRepository;
 import com.infosys.realestate.repository.UserRepository;
 import com.infosys.realestate.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
@@ -30,10 +33,13 @@ public class PropertyDueDiligenceServiceImpl implements PropertyDueDiligenceServ
     @Autowired private ReportGenerationService reportGenerationService;
     @Autowired private NotificationService notificationService;
     @Autowired private DueDiligenceReportRepository reportRepository;
+    @Autowired private ReportHistoryRepository reportHistoryRepository;
+    @Autowired private AuditLogService auditLogService;
     @Autowired private PublicRecordsService publicRecordsService;
     @Autowired private UserRepository userRepository;
 
     @Override
+    @Transactional
     public DueDiligenceReport processDueDiligence(Long propertyId) {
         long startMs = System.currentTimeMillis();
 
@@ -71,8 +77,17 @@ public class PropertyDueDiligenceServiceImpl implements PropertyDueDiligenceServ
             report.setDurationMs(System.currentTimeMillis() - startMs);
             report = reportRepository.save(report);
 
+            // Save report history entry
+            saveReportHistory(report, property, requestedBy, "ONLINE", "COMPLETED", reportUrl, "Due diligence report completed successfully");
+
             // 6. Notify
             notificationService.sendReportNotification(report);
+
+            // Audit log
+            String actorEmail = requestedBy != null ? requestedBy.getEmail() : "system";
+            String actorRole = requestedBy != null && requestedBy.getRole() != null ? requestedBy.getRole().getName() : "USER";
+            auditLogService.log(actorEmail, actorRole, "PROCESS_DUE_DILIGENCE", "DueDiligenceReport",
+                    String.valueOf(report.getId()), "Processed due diligence for property ID " + propertyId, null, "SUCCESS");
 
         } catch (Exception e) {
             report.setStatus("FAILED");
@@ -80,7 +95,16 @@ public class PropertyDueDiligenceServiceImpl implements PropertyDueDiligenceServ
             report.setDurationMs(System.currentTimeMillis() - startMs);
             report.setErrorMessage(e.getMessage());
             report = reportRepository.save(report);
+
+            saveReportHistory(report, property, requestedBy, "ONLINE", "FAILED", null, e.getMessage());
+
             notificationService.sendReportNotification(report);
+
+            String actorEmail = requestedBy != null ? requestedBy.getEmail() : "system";
+            String actorRole = requestedBy != null && requestedBy.getRole() != null ? requestedBy.getRole().getName() : "USER";
+            auditLogService.log(actorEmail, actorRole, "PROCESS_DUE_DILIGENCE", "DueDiligenceReport",
+                    String.valueOf(report.getId()), "Failed processing due diligence for property ID " + propertyId + ": " + e.getMessage(), null, "FAILURE");
+
             throw new RuntimeException("Due diligence process failed: " + e.getMessage());
         }
 
@@ -88,15 +112,43 @@ public class PropertyDueDiligenceServiceImpl implements PropertyDueDiligenceServ
     }
 
     @Override
+    @Transactional
     public byte[] exportReportPdf(Long propertyId) {
+        Property property = propertyRepository.findById(propertyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Property not found"));
+        User requestedBy = resolveCurrentUser();
         PublicRecordsReportResponse data = publicRecordsService.getCombinedPublicRecordsReport(propertyId);
-        return reportGenerationService.generatePdfReport(data);
+        byte[] pdfBytes = reportGenerationService.generatePdfReport(data);
+
+        String fileUrl = "/api/due-diligence/" + propertyId + "/export/pdf";
+        saveReportHistory(null, property, requestedBy, "PDF", "COMPLETED", fileUrl, "Exported PDF report for property ID " + propertyId);
+
+        String actorEmail = requestedBy != null ? requestedBy.getEmail() : "system";
+        String actorRole = requestedBy != null && requestedBy.getRole() != null ? requestedBy.getRole().getName() : "USER";
+        auditLogService.log(actorEmail, actorRole, "EXPORT_PDF", "Property",
+                String.valueOf(propertyId), "Exported PDF report for property ID " + propertyId, null, "SUCCESS");
+
+        return pdfBytes;
     }
 
     @Override
+    @Transactional
     public byte[] exportReportExcel(Long propertyId) {
+        Property property = propertyRepository.findById(propertyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Property not found"));
+        User requestedBy = resolveCurrentUser();
         PublicRecordsReportResponse data = publicRecordsService.getCombinedPublicRecordsReport(propertyId);
-        return reportGenerationService.generateExcelReport(data);
+        byte[] excelBytes = reportGenerationService.generateExcelReport(data);
+
+        String fileUrl = "/api/due-diligence/" + propertyId + "/export/excel";
+        saveReportHistory(null, property, requestedBy, "EXCEL", "COMPLETED", fileUrl, "Exported Excel report for property ID " + propertyId);
+
+        String actorEmail = requestedBy != null ? requestedBy.getEmail() : "system";
+        String actorRole = requestedBy != null && requestedBy.getRole() != null ? requestedBy.getRole().getName() : "USER";
+        auditLogService.log(actorEmail, actorRole, "EXPORT_EXCEL", "Property",
+                String.valueOf(propertyId), "Exported Excel report for property ID " + propertyId, null, "SUCCESS");
+
+        return excelBytes;
     }
 
     @Override
@@ -122,6 +174,25 @@ public class PropertyDueDiligenceServiceImpl implements PropertyDueDiligenceServ
     }
 
     // ---- helpers --------------------------------------------------------
+
+    private void saveReportHistory(DueDiligenceReport report, Property property, User user,
+                                   String exportFormat, String status, String fileUrl, String summary) {
+        try {
+            ReportHistory history = new ReportHistory();
+            history.setReport(report);
+            history.setProperty(property);
+            history.setUser(user);
+            history.setExportFormat(exportFormat);
+            history.setStatus(status);
+            history.setFileUrl(fileUrl);
+            history.setSummary(summary);
+            history.setGeneratedAt(LocalDateTime.now());
+            reportHistoryRepository.save(history);
+        } catch (Exception e) {
+            // Log warning but don't break main report workflow
+            System.err.println("Failed to save report history: " + e.getMessage());
+        }
+    }
 
     private User resolveCurrentUser() {
         try {
@@ -157,3 +228,4 @@ public class PropertyDueDiligenceServiceImpl implements PropertyDueDiligenceServ
         return dto;
     }
 }
+
