@@ -18,7 +18,6 @@ import Layout from "../components/common/Layout";
 import SavedProperties from "../pages/SavedProperties";
 import PropertyComparison from "../pages/PropertyComparison";
 import RiskAssessment from "../pages/RiskAssessment";
-import ComparableAnalysis from "../pages/ComparableAnalysis";
 import DueDiligenceReport from "../pages/DueDiligenceReport";
 import AuditLogs from "../pages/AuditLogs";
 import Analytics from "../pages/Analytics";
@@ -139,7 +138,7 @@ function AppRouter() {
           >
             <Route
               path="/property-comparison"
-              element={<PropertyComparison />}
+              element={<Navigate to="/search-property" replace />}
             />
 
             <Route
@@ -152,15 +151,6 @@ function AppRouter() {
               element={<PropertyComparison />}
             />
 
-            <Route
-              path="/comparable-analysis"
-              element={<ComparableAnalysis />}
-            />
-
-            <Route
-              path="/comparable-analysis/:propertyId"
-              element={<ComparableAnalysis />}
-            />
           </Route>
 
           <Route
@@ -170,7 +160,7 @@ function AppRouter() {
 
           <Route
             path="/property-details"
-            element={<PropertyDetails />}
+            element={<Navigate to="/search-property" replace />}
           />
 
           <Route
@@ -180,7 +170,7 @@ function AppRouter() {
 
           <Route
             path="/property-history"
-            element={<PropertyHistory />}
+            element={<Navigate to="/search-property" replace />}
           />
 
           <Route
@@ -192,7 +182,7 @@ function AppRouter() {
             path="/reports"
             element={
               <Navigate
-                to="/reports/1"
+                to="/search-property"
                 replace
               />
             }
@@ -200,6 +190,11 @@ function AppRouter() {
 
           <Route
             path="/reports/:propertyId"
+            element={<DueDiligenceReport />}
+          />
+
+          <Route
+            path="/report/:propertyId"
             element={<DueDiligenceReport />}
           />
 
@@ -256,3 +251,4 @@ function Help() {
     <div>Help & Support</div>
   );
 }
+

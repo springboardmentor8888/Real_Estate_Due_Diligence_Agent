@@ -5,14 +5,23 @@ import {
   FaSearch,
   FaTimes,
   FaUser,
-  FaPlus,
   FaTrash,
   FaExclamationTriangle,
 } from "react-icons/fa";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import axios from "axios";
 
-import { formatCurrency } from "../data/comparableData";
+import { getProperties } from "../services/dueDiligenceService";
+
+function formatCurrency(value) {
+  const numberValue = Number(value ?? 0);
+  if (Number.isNaN(numberValue)) return "₹0";
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(numberValue);
+}
 
 // Fixed: Changed default fallback image from car photo to a real estate property photo
 const DEFAULT_PROPERTY_IMAGE =
@@ -40,18 +49,7 @@ const SearchProperty = () => {
   const [properties, setProperties] = useState([]);
   const [fetchingProps, setFetchingProps] = useState(true);
 
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [formData, setFormData] = useState({
-    address: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    price: "",
-    imageUrl: "",
-  });
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
 
   useEffect(() => {
     localStorage.removeItem("custom_properties");
@@ -61,39 +59,13 @@ const SearchProperty = () => {
   const fetchPropertiesFromBackend = async () => {
     try {
       setFetchingProps(true);
-      const token = localStorage.getItem("token") || localStorage.getItem("authToken");
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-
-      const [mainRes, ddRes] = await Promise.allSettled([
-        axios.get("http://localhost:8080/api/properties", { headers }),
-        axios.get("http://localhost:8080/api/properties/due-diligence", { headers }),
-      ]);
-
-      let combinedProperties = [];
-
-      if (mainRes.status === "fulfilled" && mainRes.value.data) {
-        const mainData = Array.isArray(mainRes.value.data)
-          ? mainRes.value.data
-          : mainRes.value.data?.content || [];
-        combinedProperties = [...mainData];
-      }
-
-      if (ddRes.status === "fulfilled" && ddRes.value.data) {
-        const ddData = Array.isArray(ddRes.value.data)
-          ? ddRes.value.data
-          : ddRes.value.data?.content || [];
-
-        ddData.forEach((item) => {
-          if (!combinedProperties.some((p) => p.id === item.id)) {
-            combinedProperties.push(item);
-          }
-        });
-      }
-
-      setProperties(combinedProperties);
+      setError("");
+      const data = await getProperties();
+      setProperties(data);
     } catch (err) {
       console.error("Backend GET failed:", err);
       setProperties([]);
+      setError("Unable to load properties from the backend.");
     } finally {
       setFetchingProps(false);
     }
@@ -110,50 +82,6 @@ const SearchProperty = () => {
       });
     } catch (err) {
       console.warn("Backend delete endpoint failed.", err);
-    }
-  };
-
-  const handleFormChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleDueDiligenceSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    setSuccessMsg("");
-
-    const token = localStorage.getItem("token") || localStorage.getItem("authToken");
-
-    try {
-      await axios.post(
-        "http://localhost:8080/api/properties/due-diligence",
-        {
-          ...formData,
-          price: formData.price ? parseFloat(formData.price) : null,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      setSuccessMsg("Property added successfully!");
-      
-      setTimeout(() => {
-        fetchPropertiesFromBackend();
-        setShowAddModal(false);
-        setSuccessMsg("");
-        setFormData({ address: "", city: "", state: "", zipCode: "", price: "", imageUrl: "" });
-      }, 1000);
-
-    } catch (err) {
-      console.error("Failed to trigger due diligence:", err);
-      setError("Failed to process request. Please try again.");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -198,12 +126,6 @@ const SearchProperty = () => {
           Search, filter, and select a property to begin due diligence.
         </p>
 
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="mt-4 inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-xl shadow transition cursor-pointer"
-        >
-          <FaPlus /> Run New Due Diligence Check
-        </button>
       </div>
 
       <div className="bg-white rounded-2xl shadow p-6">
@@ -419,7 +341,7 @@ const SearchProperty = () => {
                       {/* PRICE DISPLAY */}
                       {priceVal ? (
                         <p className="text-blue-600 font-bold text-lg mt-2">
-                          {formatCurrency ? formatCurrency(priceVal) : `₹${priceVal.toLocaleString('en-IN')}`}
+                          {formatCurrency(priceVal)}
                         </p>
                       ) : (
                         <p className="text-gray-400 text-sm mt-2 italic">Price on Request</p>
@@ -444,135 +366,6 @@ const SearchProperty = () => {
         )}
       </div>
 
-      {/* MODAL */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl relative">
-            <button
-              onClick={() => setShowAddModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 cursor-pointer"
-            >
-              <FaTimes />
-            </button>
-
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">
-              Trigger Property Due Diligence
-            </h2>
-            <p className="text-sm text-gray-500 mb-6">
-              Enter property details to submit to backend API.
-            </p>
-
-            <form onSubmit={handleDueDiligenceSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Street Address
-                </label>
-                <input
-                  type="text"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleFormChange}
-                  required
-                  placeholder="e.g. 102 Hill Road"
-                  className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    City
-                  </label>
-                  <input
-                    type="text"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleFormChange}
-                    required
-                    placeholder="Mumbai"
-                    className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    State
-                  </label>
-                  <input
-                    type="text"
-                    name="state"
-                    value={formData.state}
-                    onChange={handleFormChange}
-                    required
-                    placeholder="Maharashtra"
-                    className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    ZIP Code
-                  </label>
-                  <input
-                    type="text"
-                    name="zipCode"
-                    value={formData.zipCode}
-                    onChange={handleFormChange}
-                    required
-                    placeholder="400050"
-                    className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              {/* ADDED INPUT FOR PRICE */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Price (in ₹ INR)
-                </label>
-                <input
-                  type="number"
-                  name="price"
-                  value={formData.price}
-                  onChange={handleFormChange}
-                  placeholder="e.g. 35000000 for 3.5 Cr"
-                  className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              {/* ADDED INPUT FOR IMAGE URL */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Property Image URL
-                </label>
-                <input
-                  type="url"
-                  name="imageUrl"
-                  value={formData.imageUrl}
-                  onChange={handleFormChange}
-                  placeholder="https://images.unsplash.com/photo-..."
-                  className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 text-xs"
-                />
-              </div>
-
-              {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-              {successMsg && (
-                <p className="text-green-600 font-medium text-sm mt-2">
-                  {successMsg}
-                </p>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold transition disabled:opacity-50 mt-4 cursor-pointer"
-              >
-                {loading ? "Submitting..." : "Submit Due Diligence"}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
