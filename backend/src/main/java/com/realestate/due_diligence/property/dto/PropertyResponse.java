@@ -14,10 +14,16 @@ public class PropertyResponse {
     private String zipCode;
     private String propertyType;
 
-    // ✅ ADDED PRICE & IMAGE URL
     private Double price;
     private String imageUrl;
-
-    // ✅ ADD THIS FIELD TO FIX THE setCreatedAt ERROR IN MAPPER
     private LocalDateTime createdAt;
+
+    // ✅ ADDED NEW DILIGENCE & STRUCTURAL FIELDS
+    private String surveyNo;
+    private String registrationNo;
+    private String area;
+    private Integer bedrooms;
+    private Integer bathrooms;
+    private String parking;
+    private String furnishing;
 }

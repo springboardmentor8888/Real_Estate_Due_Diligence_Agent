@@ -19,11 +19,18 @@ public class PropertyMapper {
         response.setZipCode(property.getZipCode());
         response.setPropertyType(property.getPropertyType());
         
-        // ✅ MAP PRICE & IMAGE URL TO RESPONSE DTO FOR REACT
         response.setPrice(property.getPrice());
         response.setImageUrl(property.getImageUrl());
-        
         response.setCreatedAt(property.getCreatedAt());
+
+        // ✅ MAP NEW FIELDS TO RESPONSE DTO
+        response.setSurveyNo(property.getSurveyNo());
+        response.setRegistrationNo(property.getRegistrationNo());
+        response.setArea(property.getArea());
+        response.setBedrooms(property.getBedrooms());
+        response.setBathrooms(property.getBathrooms());
+        response.setParking(property.getParking());
+        response.setFurnishing(property.getFurnishing());
 
         return response;
     }
@@ -38,7 +45,6 @@ public class PropertyMapper {
         property.setZipCode(request.getZipCode());
         property.setPropertyType(request.getPropertyType());
         
-        // ✅ MAP PRICE & IMAGE URL TO ENTITY FOR POSTGRESQL
         property.setPrice(request.getPrice());
         property.setImageUrl(request.getImageUrl());
 

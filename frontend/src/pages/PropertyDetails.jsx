@@ -19,6 +19,7 @@ import {
   FaSubway,
   FaUser,
   FaExclamationTriangle,
+  FaShieldAlt,
 } from "react-icons/fa";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import axios from "axios";
@@ -34,14 +35,14 @@ const PropertyDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // 1. Try reading property passed via navigate state first
+  // 1. Initialize state
   const [property, setProperty] = useState(location.state?.property || null);
   const [loading, setLoading] = useState(!location.state?.property);
   const [error, setError] = useState("");
   const [selectedImages, setSelectedImages] = useState({});
 
   useEffect(() => {
-    // 2. Fetch from backend if property is missing or needs zoning list
+    // 2. Always fetch fresh nested details from backend
     if (targetId) {
       fetchPropertyFromBackend(targetId);
     }
@@ -54,19 +55,67 @@ const PropertyDetails = () => {
         localStorage.getItem("token") || localStorage.getItem("authToken");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      // Concurrent request for both property details and zoning info list
-      const [propRes, zoningRes] = await Promise.allSettled([
-        axios.get(`http://localhost:8080/api/properties/${propId}`, { headers }),
-        axios.get(`http://localhost:8080/api/zoning/property/${propId}`, { headers }),
-      ]);
+      // 🚀 Concurrent requests across all 6 backend modules
+      const [propRes, zoningRes, ownershipRes, historyRes, taxRes, riskRes] =
+        await Promise.allSettled([
+          axios.get(`http://localhost:8080/api/properties/${propId}`, {
+            headers,
+          }),
+          axios.get(`http://localhost:8080/api/zoning/property/${propId}`, {
+            headers,
+          }),
+          axios.get(`http://localhost:8080/api/ownership/property/${propId}`, {
+            headers,
+          }),
+          axios.get(`http://localhost:8080/api/property-history/${propId}`, {
+            headers,
+          }),
+          axios.get(`http://localhost:8080/api/property-tax/property/${propId}`, {
+            headers,
+          }),
+          axios.get(`http://localhost:8080/api/properties/${propId}/risk-assessment`, {
+            headers,
+          }),
+        ]);
 
-      let propertyData = propRes.status === "fulfilled" ? propRes.value.data : {};
+      // Extract fresh API data to override location.state cache
+      let propertyData =
+        propRes.status === "fulfilled" && propRes.value.data
+          ? propRes.value.data
+          : location.state?.property || {};
 
-      // Attach zoning list directly to property state
       if (zoningRes.status === "fulfilled" && zoningRes.value.data) {
         propertyData = {
           ...propertyData,
           zoningList: zoningRes.value.data,
+        };
+      }
+
+      if (ownershipRes.status === "fulfilled" && ownershipRes.value.data) {
+        propertyData = {
+          ...propertyData,
+          ownershipList: ownershipRes.value.data,
+        };
+      }
+
+      if (historyRes.status === "fulfilled" && historyRes.value.data) {
+        propertyData = {
+          ...propertyData,
+          historyList: historyRes.value.data,
+        };
+      }
+
+      if (taxRes.status === "fulfilled" && taxRes.value.data) {
+        propertyData = {
+          ...propertyData,
+          taxList: taxRes.value.data,
+        };
+      }
+
+      if (riskRes.status === "fulfilled" && riskRes.value.data) {
+        propertyData = {
+          ...propertyData,
+          riskAssessment: riskRes.value.data,
         };
       }
 
@@ -108,7 +157,6 @@ const PropertyDetails = () => {
     );
   }
 
-  // ✅ Fixed Images Array handling to check property.imageUrl from backend
   const propertyImages =
     property.imageUrls && property.imageUrls.length > 0
       ? property.imageUrls
@@ -123,7 +171,6 @@ const PropertyDetails = () => {
   const selectedImage =
     selectedImages[property.id] || propertyImages[0] || DEFAULT_PROPERTY_IMAGE;
 
-  // ✅ Fixed displayPrice formatting
   const displayPrice =
     property.marketValue ||
     (property.price
@@ -131,6 +178,8 @@ const PropertyDetails = () => {
         ? formatCurrency(property.price)
         : property.price
       : "N/A");
+
+  const risk = property.riskAssessment;
 
   return (
     <div className="px-8 pt-5 pb-8">
@@ -193,7 +242,7 @@ const PropertyDetails = () => {
           <div>
             <p className="text-gray-500 text-sm">Property Type</p>
             <h3 className="font-bold">
-              {property.propertyType || property.type || "Residential"}
+              {property.propertyType || property.property_type || property.type || "Residential"}
             </h3>
           </div>
         </div>
@@ -212,23 +261,30 @@ const PropertyDetails = () => {
             <p className="text-gray-500 text-sm">Area</p>
             <h3 className="font-bold">
               {property.area ||
-                (property.sqft ? `${property.sqft} sqft` : "N/A")}
+                (property.sqft ? `${property.sqft} sqft` : null) ||
+                (property.squareFeet ? `${property.squareFeet} sqft` : "N/A")}
             </h3>
           </div>
         </div>
 
         <div className="bg-white rounded-xl shadow p-5 flex items-center gap-4">
-          <FaCheckCircle className="text-3xl text-green-600" />
+          <FaShieldAlt className={`text-3xl ${
+            risk?.overallRisk === "LOW" ? "text-green-600" :
+            risk?.overallRisk === "HIGH" ? "text-red-600" : "text-yellow-600"
+          }`} />
           <div>
-            <p className="text-gray-500 text-sm">Verification</p>
-            <h3 className="font-bold text-green-600">
-              {property.verificationStatus || property.status || "Pending"}
+            <p className="text-gray-500 text-sm">Risk Assessment</p>
+            <h3 className="font-bold">
+              {risk?.overallRisk
+                ? `${risk.overallRisk} (${risk.riskScore ?? 0}/100)`
+                : "PENDING"}
             </h3>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+        {/* Real Property Information with Key Fallbacks */}
         <div className="bg-white rounded-2xl shadow p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">
             Property Information
@@ -236,12 +292,37 @@ const PropertyDetails = () => {
 
           <div className="space-y-5">
             {[
-              ["Property Type", property.propertyType || property.type || "Residential"],
-              ["Survey Number", property.surveyNo || "PENDING-001"],
-              ["Registration No.", property.registrationNo || "REG-2026-X"],
-              ["Registration Date", property.registrationDate || "N/A"],
-              ["Area", property.area || (property.sqft ? `${property.sqft} sqft` : "N/A")],
-              ["Pincode", property.pincode || property.zipCode || "N/A"],
+              ["Property ID", property.id ? `#${property.id}` : "N/A"],
+              [
+                "Property Type",
+                property.propertyType || property.property_type || property.type || "Residential",
+              ],
+              [
+                "Survey Number",
+                property.surveyNo || property.survey_no || property.surveyNumber || "N/A",
+              ],
+              [
+                "Registration No.",
+                property.registrationNo || property.registration_no || property.registrationNumber || "N/A",
+              ],
+              [
+                "Registration Date",
+                property.registrationDate ||
+                  property.registration_date ||
+                  (property.createdAt
+                    ? new Date(property.createdAt).toLocaleDateString()
+                    : "N/A"),
+              ],
+              [
+                "Area",
+                property.area ||
+                  (property.sqft ? `${property.sqft} sqft` : null) ||
+                  (property.squareFeet ? `${property.squareFeet} sqft` : "N/A"),
+              ],
+              [
+                "Pincode",
+                property.pincode || property.zipCode || property.zip_code || "N/A",
+              ],
             ].map(([label, value]) => (
               <div
                 key={label}
@@ -259,91 +340,128 @@ const PropertyDetails = () => {
           </div>
         </div>
 
+        {/* Dynamic Owner Details mapped to OwnershipRecordResponse */}
         <div className="bg-white rounded-2xl shadow p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Owner Details</h2>
-
-          <div className="space-y-5">
-            {[
-              [
-                <FaUser className="text-blue-600 text-xl" />,
-                "Owner Name",
-                property.owner || "Pending Verification",
-                "bg-blue-100",
-              ],
-              [
-                <FaPhone className="text-green-600 text-xl" />,
-                "Contact Number",
-                property.phone || "Not Provided",
-                "bg-green-100",
-              ],
-              [
-                <FaEnvelope className="text-red-600 text-xl" />,
-                "Email Address",
-                property.email || "Not Provided",
-                "bg-red-100",
-              ],
-              [
-                <FaMapMarkerAlt className="text-purple-600 text-xl" />,
-                "Property Address",
-                property.address || "N/A",
-                "bg-purple-100",
-              ],
-            ].map(([icon, label, value, bg]) => (
-              <div key={label} className="flex items-center gap-4">
-                <div className={`${bg} p-3 rounded-full`}>{icon}</div>
-                <div>
-                  <p className="text-gray-500 text-sm">{label}</p>
-                  <h3 className="font-semibold">{value}</h3>
-                </div>
-              </div>
-            ))}
+          <div className="flex items-center gap-3 mb-6">
+            <FaUser className="text-2xl text-blue-600" />
+            <h2 className="text-2xl font-bold text-gray-800">
+              Ownership History
+            </h2>
           </div>
+
+          {property.ownershipList && property.ownershipList.length > 0 ? (
+            <div className="space-y-4">
+              {property.ownershipList.map((record, idx) => (
+                <div
+                  key={record.id || idx}
+                  className="p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-3"
+                >
+                  <div className="flex justify-between items-center border-b border-gray-200 pb-2">
+                    <span className="text-xs uppercase font-bold text-blue-600 tracking-wider">
+                      Owner Name
+                    </span>
+                    <span className="font-bold text-gray-800 text-sm">
+                      {record.ownerName || "N/A"}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between border-b border-gray-200 pb-2 gap-4">
+                    <span className="text-gray-500 text-sm">Purchase Date</span>
+                    <span className="font-medium text-gray-800 text-right text-sm">
+                      {record.purchaseDate
+                        ? new Date(record.purchaseDate).toLocaleDateString()
+                        : "N/A"}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500 text-sm">Purchase Price</span>
+                    <span className="font-bold text-green-700 text-right text-sm">
+                      {record.purchasePrice
+                        ? formatCurrency(record.purchasePrice)
+                        : "N/A"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-6 text-gray-500">
+              <p className="text-sm">No ownership history records found for this property.</p>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+        {/* Real Due Diligence & Risk Assessment Card */}
         <div className="bg-white rounded-2xl shadow p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">
-            Due Diligence Status
-          </h2>
+          <div className="flex items-center gap-3 mb-6">
+            <FaShieldAlt className="text-2xl text-blue-600" />
+            <h2 className="text-2xl font-bold text-gray-800">
+              Due Diligence Status
+            </h2>
+          </div>
 
           <div className="space-y-4">
-            {[
-              ["Registration Verified", property.status === "Verified" ? "Verified" : "Pending"],
-              ["Owner Verification", property.verificationStatus || property.status || "Pending"],
-              ["Tax Status", property.taxStatus || "Paid"],
-              ["Mortgage", property.mortgage || "No"],
-              ["Litigation", property.litigation || "No"],
-            ].map(([label, value]) => (
-              <div
-                key={label}
-                className="flex items-center justify-between gap-4"
-              >
-                <span>{label}</span>
-                <span
-                  className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    value === "Verified" || value === "Paid" || value === "No"
-                      ? "bg-green-100 text-green-700"
-                      : value === "Pending" || value === "Review Pending"
-                      ? "bg-yellow-100 text-yellow-700"
-                      : "bg-red-100 text-red-700"
-                  }`}
-                >
-                  {value}
-                </span>
+            <div className="flex items-center justify-between border-b pb-3">
+              <span className="text-gray-600 font-medium">Risk Score</span>
+              <span className={`font-bold px-3 py-1 rounded-full text-xs uppercase ${
+                risk?.overallRisk === "LOW" ? "bg-green-100 text-green-800" :
+                risk?.overallRisk === "HIGH" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"
+              }`}>
+                {risk?.riskScore != null ? `${risk.riskScore} / 100 (${risk.overallRisk})` : "Audit Pending"}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between border-b pb-3">
+              <span className="text-gray-600 font-medium">Title & Ownership</span>
+              <span className={`font-bold px-3 py-1 rounded-full text-xs uppercase ${
+                property.ownershipList && property.ownershipList.length > 0 ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+              }`}>
+                {property.ownershipList && property.ownershipList.length > 0 ? "Verified" : "Pending Verification"}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between border-b pb-3">
+              <span className="text-gray-600 font-medium">Zoning Compliance</span>
+              <span className={`font-bold px-3 py-1 rounded-full text-xs uppercase ${
+                property.zoningList && property.zoningList.length > 0 ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+              }`}>
+                {property.zoningList && property.zoningList.length > 0 ? "Compliant" : "Pending Audit"}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between border-b pb-3">
+              <span className="text-gray-600 font-medium">Tax Clearance</span>
+              <span className={`font-bold px-3 py-1 rounded-full text-xs uppercase ${
+                property.taxList && property.taxList.length > 0 && property.taxList[0].paymentStatus === "PAID"
+                  ? "bg-green-100 text-green-800"
+                  : "bg-yellow-100 text-yellow-800"
+              }`}>
+                {property.taxList && property.taxList.length > 0 ? property.taxList[0].paymentStatus : "Unverified"}
+              </span>
+            </div>
+
+            {risk?.recommendation && (
+              <div className="mt-4 p-3.5 bg-blue-50 border border-blue-100 rounded-xl">
+                <p className="text-xs font-bold text-blue-800 uppercase tracking-wider mb-1">
+                  Recommendation
+                </p>
+                <p className="text-sm text-blue-950 font-medium leading-relaxed">{risk.recommendation}</p>
               </div>
-            ))}
+            )}
 
             <button
-              onClick={() => navigate(`/risk-assessment/${property.id}`)}
-              className="mt-2 w-full rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 cursor-pointer"
+              onClick={() => navigate(`/risk-assessment/${property.id}`, { state: { riskAssessment: property.riskAssessment } })}
+              className="mt-2 w-full rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 cursor-pointer shadow"
             >
               Open Detailed Risk Assessment
             </button>
           </div>
         </div>
 
-        {/* ✅ Dynamic Zoning Information mapped to backend List<ZoningInfoResponse> */}
+        {/* Dynamic Zoning Information mapped to backend List<ZoningInfoResponse> */}
         <div className="bg-white rounded-2xl shadow p-6 transition-all duration-300 hover:shadow-lg">
           <div className="flex items-center gap-3 mb-6">
             <FaMapMarkedAlt className="text-2xl text-blue-600" />
@@ -364,21 +482,21 @@ const PropertyDetails = () => {
                       Zoning Code
                     </span>
                     <span className="font-bold text-gray-800 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
-                      {zoning.zoningCode || "N/A"}
+                      {zoning.zoningCode || zoning.zoning_code || "N/A"}
                     </span>
                   </div>
 
                   <div className="flex justify-between border-b border-gray-200 pb-2 gap-4">
                     <span className="text-gray-500 text-sm">Description</span>
                     <span className="font-medium text-gray-800 text-right text-sm">
-                      {zoning.zoningDescription || "N/A"}
+                      {zoning.zoningDescription || zoning.zoning_description || "N/A"}
                     </span>
                   </div>
 
                   <div className="flex justify-between gap-4">
                     <span className="text-gray-500 text-sm">Permitted Use</span>
                     <span className="font-medium text-green-700 text-right text-sm">
-                      {zoning.permittedUse || "N/A"}
+                      {zoning.permittedUse || zoning.permitted_use || "N/A"}
                     </span>
                   </div>
                 </div>
@@ -390,6 +508,62 @@ const PropertyDetails = () => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Real Property Tax Assessment Card */}
+      <div className="bg-white rounded-2xl shadow p-6 mt-8">
+        <div className="flex items-center gap-3 mb-6">
+          <FaMoneyBillWave className="text-2xl text-green-600" />
+          <h2 className="text-2xl font-bold text-gray-800">
+            Property Tax Assessment
+          </h2>
+        </div>
+
+        {property.taxList && property.taxList.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {property.taxList.map((tax, idx) => (
+              <div
+                key={tax.id || idx}
+                className="p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-3"
+              >
+                <div className="flex justify-between items-center border-b border-gray-200 pb-2">
+                  <span className="text-xs uppercase font-bold text-gray-500 tracking-wider">
+                    Tax Year
+                  </span>
+                  <span className="font-bold text-gray-800 text-sm">
+                    {tax.taxYear || tax.tax_year || "N/A"}
+                  </span>
+                </div>
+
+                <div className="flex justify-between border-b border-gray-200 pb-2 gap-4">
+                  <span className="text-gray-500 text-sm">Assessed Amount</span>
+                  <span className="font-bold text-gray-800 text-right text-sm">
+                    {tax.taxAmount || tax.tax_amount
+                      ? formatCurrency(tax.taxAmount || tax.tax_amount)
+                      : "N/A"}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center gap-4">
+                  <span className="text-gray-500 text-sm">Payment Status</span>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                      tax.paymentStatus === "PAID" || tax.payment_status === "PAID" || tax.paymentStatus === "Paid"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-700"
+                    }`}
+                  >
+                    {tax.paymentStatus || tax.payment_status || "UNPAID"}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-6 text-gray-500">
+            <p className="text-sm">No tax history records found for this property.</p>
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-2xl shadow p-6 mt-8">
@@ -441,25 +615,25 @@ const PropertyDetails = () => {
             {[
               [
                 "Bedrooms",
-                property.bedrooms || "3",
+                property.bedrooms || "N/A",
                 "bg-blue-50",
                 "text-blue-700",
               ],
               [
                 "Bathrooms",
-                property.bathrooms || "3",
+                property.bathrooms || "N/A",
                 "bg-green-50",
                 "text-green-700",
               ],
               [
                 "Parking",
-                property.parking || "2 Vehicles",
+                property.parking || "N/A",
                 "bg-yellow-50",
                 "text-yellow-700",
               ],
               [
                 "Furnishing",
-                property.furnishing || "Semi-Furnished",
+                property.furnishing || "N/A",
                 "bg-purple-50",
                 "text-purple-700",
               ],
@@ -499,7 +673,11 @@ const PropertyDetails = () => {
 
       <div className="flex justify-end gap-4 mt-10 flex-wrap">
         <button
-          onClick={() => navigate(`/property-history/${property.id}`)}
+          onClick={() =>
+            navigate(`/property-history/${property.id}`, {
+              state: { historyList: property.historyList, address: property.address },
+            })
+          }
           className="flex items-center gap-2 rounded-xl border border-blue-600 px-6 py-3 font-semibold text-blue-600 hover:bg-blue-50 transition cursor-pointer"
         >
           <FaHistory />
