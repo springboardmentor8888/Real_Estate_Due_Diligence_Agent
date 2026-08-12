@@ -7,6 +7,8 @@ import {
   FaUser,
   FaTrash,
   FaExclamationTriangle,
+  FaBookmark,
+  FaRegBookmark,
 } from "react-icons/fa";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import axios from "axios";
@@ -23,7 +25,6 @@ function formatCurrency(value) {
   }).format(numberValue);
 }
 
-// Fixed: Changed default fallback image from car photo to a real estate property photo
 const DEFAULT_PROPERTY_IMAGE =
   "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80";
 
@@ -48,13 +49,31 @@ const SearchProperty = () => {
 
   const [properties, setProperties] = useState([]);
   const [fetchingProps, setFetchingProps] = useState(true);
-
+  const [savedIds, setSavedIds] = useState([]);
   const [error, setError] = useState("");
+
+  // Helper to scope storage key to the active user
+  const getSavedKey = () => {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const userId = user.id || user.email || "guest";
+    return `savedProperties_${userId}`;
+  };
 
   useEffect(() => {
     localStorage.removeItem("custom_properties");
     fetchPropertiesFromBackend();
+    loadSavedProperties();
   }, []);
+
+  const loadSavedProperties = () => {
+    try {
+      const key = getSavedKey();
+      const saved = JSON.parse(localStorage.getItem(key) || "[]");
+      setSavedIds(saved.map((p) => p.id));
+    } catch {
+      setSavedIds([]);
+    }
+  };
 
   const fetchPropertiesFromBackend = async () => {
     try {
@@ -68,6 +87,30 @@ const SearchProperty = () => {
       setError("Unable to load properties from the backend.");
     } finally {
       setFetchingProps(false);
+    }
+  };
+
+  const handleToggleSaveProperty = (property, e) => {
+    e.stopPropagation();
+    try {
+      const key = getSavedKey();
+      const existing = JSON.parse(localStorage.getItem(key) || "[]");
+      const exists = existing.some((p) => p.id === property.id);
+
+      let updated;
+      if (exists) {
+        updated = existing.filter((p) => p.id !== property.id);
+      } else {
+        updated = [...existing, property];
+      }
+
+      localStorage.setItem(key, JSON.stringify(updated));
+      setSavedIds(updated.map((p) => p.id));
+
+      // Trigger instant event for Sidebar update
+      window.dispatchEvent(new Event("savedPropertiesUpdated"));
+    } catch (err) {
+      console.error("Failed to update saved properties:", err);
     }
   };
 
@@ -125,7 +168,6 @@ const SearchProperty = () => {
         <p className="mt-3 text-gray-500 text-lg">
           Search, filter, and select a property to begin due diligence.
         </p>
-
       </div>
 
       <div className="bg-white rounded-2xl shadow p-6">
@@ -150,7 +192,7 @@ const SearchProperty = () => {
             <div className="fixed top-0 right-0 h-full w-80 bg-white shadow-2xl z-50 p-6 overflow-y-auto">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold">Filters</h2>
-                <button onClick={() => setShowFilters(false)}>
+                <button onClick={() => setShowFilters(false)} className="cursor-pointer">
                   <FaTimes />
                 </button>
               </div>
@@ -211,7 +253,7 @@ const SearchProperty = () => {
               </select>
 
               <button
-                className="w-full bg-blue-600 text-white rounded-lg py-3 cursor-pointer"
+                className="w-full bg-blue-600 text-white rounded-lg py-3 cursor-pointer hover:bg-blue-700 transition"
                 onClick={() => setFilters({ type: "All", status: "All", city: "All", price: "All" })}
               >
                 Reset Filters
@@ -238,7 +280,6 @@ const SearchProperty = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {filteredProperties.map((property) => {
-              // FIXED IMAGE EXTRACTION: Checks imageUrl, image, images array, and imageUrls array
               const displayImage =
                 property.imageUrl ||
                 property.image ||
@@ -248,6 +289,7 @@ const SearchProperty = () => {
 
               const priceVal = property.price || property.priceValue || property.marketValueValue;
               const riskText = property.riskLevel || (property.riskScore > 70 ? "High Risk" : property.riskScore > 30 ? "Medium Risk" : "Low Risk");
+              const isSaved = savedIds.includes(property.id);
 
               return (
                 <div
@@ -264,14 +306,30 @@ const SearchProperty = () => {
                       }}
                     />
 
-                    <button
-                      type="button"
-                      onClick={(e) => handleRemoveProperty(property.id, e)}
-                      title="Remove Property"
-                      className="absolute top-3 right-3 bg-red-500/80 hover:bg-red-600 text-white p-2 rounded-full shadow transition backdrop-blur-xs cursor-pointer z-10"
-                    >
-                      <FaTrash className="text-sm" />
-                    </button>
+                    {/* TOP RIGHT BUTTON GROUP (SAVE + DELETE) */}
+                    <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
+                      <button
+                        type="button"
+                        onClick={(e) => handleToggleSaveProperty(property, e)}
+                        title={isSaved ? "Remove from Saved" : "Save Property"}
+                        className={`p-2 rounded-full shadow transition backdrop-blur-xs cursor-pointer ${
+                          isSaved
+                            ? "bg-blue-600 text-white hover:bg-blue-700"
+                            : "bg-white/90 text-gray-700 hover:text-blue-600 hover:bg-white"
+                        }`}
+                      >
+                        {isSaved ? <FaBookmark className="text-xs" /> : <FaRegBookmark className="text-xs" />}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => handleRemoveProperty(property.id, e)}
+                        title="Remove Property"
+                        className="bg-red-500/80 hover:bg-red-600 text-white p-2 rounded-full shadow transition backdrop-blur-xs cursor-pointer"
+                      >
+                        <FaTrash className="text-xs" />
+                      </button>
+                    </div>
                   </div>
 
                   <div className="p-5 flex-1 flex flex-col justify-between">
@@ -334,7 +392,9 @@ const SearchProperty = () => {
                         <div className="flex items-center gap-3 text-xs font-semibold text-gray-500 my-2 pt-2 border-t border-gray-100">
                           {property.bedrooms > 0 && <span>🛏️ {property.bedrooms} Beds</span>}
                           {property.bathrooms > 0 && <span>🚿 {property.bathrooms} Baths</span>}
-                          {(property.sqft || property.squareFeet) > 0 && <span>📐 {property.sqft || property.squareFeet} sqft</span>}
+                          {(property.sqft || property.squareFeet) > 0 && (
+                            <span>📐 {property.sqft || property.squareFeet} sqft</span>
+                          )}
                         </div>
                       )}
 
@@ -365,7 +425,6 @@ const SearchProperty = () => {
           </div>
         )}
       </div>
-
     </div>
   );
 };

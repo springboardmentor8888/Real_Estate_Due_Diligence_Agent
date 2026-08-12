@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import {
+  HiChevronRight,
   HiMagnifyingGlass,
   HiOutlineArrowLeftOnRectangle,
   HiOutlineBell,
@@ -93,6 +95,36 @@ const secondaryMenuItems = [
 
 function Sidebar() {
   const navigate = useNavigate();
+  const [savedProperties, setSavedProperties] = useState([]);
+
+  // Load user-scoped saved properties & listen for real-time changes
+  useEffect(() => {
+    loadSavedProperties();
+
+    const handleUpdate = () => loadSavedProperties();
+    window.addEventListener("savedPropertiesUpdated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+
+    return () => {
+      window.removeEventListener("savedPropertiesUpdated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, []);
+
+  const loadSavedProperties = () => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      const userId = user.id || user.email || "guest";
+      const key = `savedProperties_${userId}`;
+
+      const stored = JSON.parse(localStorage.getItem(key) || "[]");
+      setSavedProperties(stored);
+    } catch (err) {
+      console.error("Failed to parse saved properties from localStorage:", err);
+      setSavedProperties([]);
+    }
+  };
+
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
   const rawRole =
     localStorage.getItem("role") ||
@@ -118,22 +150,62 @@ function Sidebar() {
     navigate("/login");
   };
 
-  const renderLink = (item) => (
-    <NavLink
-      key={item.label}
-      to={item.path}
-      className={({ isActive }) =>
-        `flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 w-full ${
-          isActive
-            ? "bg-blue-600 text-white shadow-lg"
-            : "text-slate-300 hover:bg-slate-800 hover:text-white"
-        }`
-      }
-    >
-      <span className="text-xl">{item.icon}</span>
-      <span className="font-medium text-[14px]">{item.label}</span>
-    </NavLink>
-  );
+  const renderLink = (item) => {
+    const isSavedLink = item.path === "/saved-properties";
+
+    return (
+      <div key={item.label} className="flex flex-col">
+        <NavLink
+          to={item.path}
+          className={({ isActive }) =>
+            `flex items-center justify-between px-4 py-2.5 rounded-xl transition-all duration-300 w-full ${
+              isActive
+                ? "bg-blue-600 text-white shadow-lg"
+                : "text-slate-300 hover:bg-slate-800 hover:text-white"
+            }`
+          }
+        >
+          <div className="flex items-center gap-4">
+            <span className="text-xl">{item.icon}</span>
+            <span className="font-medium text-[14px]">{item.label}</span>
+          </div>
+
+          {/* Badge counter on Saved Properties menu item */}
+          {isSavedLink && savedProperties.length > 0 && (
+            <span className="bg-blue-500/30 text-blue-200 text-xs font-bold px-2 py-0.5 rounded-full border border-blue-400/30">
+              {savedProperties.length}
+            </span>
+          )}
+        </NavLink>
+
+        {/* Quick-list preview of saved properties under the menu item */}
+        {isSavedLink && savedProperties.length > 0 && (
+          <div className="ml-8 mt-1.5 mb-1 flex flex-col gap-1 border-l-2 border-slate-800 pl-3">
+            {savedProperties.slice(0, 4).map((prop) => (
+              <button
+                key={prop.id}
+                onClick={() => navigate(`/property-details/${prop.id}`)}
+                className="flex items-center justify-between text-left py-1 px-2 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-slate-800/60 transition group cursor-pointer"
+              >
+                <span className="truncate max-w-[140px]">
+                  {prop.address || `Property #${prop.id}`}
+                </span>
+                <HiChevronRight className="text-[10px] text-slate-600 group-hover:text-blue-400 transition" />
+              </button>
+            ))}
+            {savedProperties.length > 4 && (
+              <button
+                onClick={() => navigate("/saved-properties")}
+                className="text-left py-1 px-2 text-[11px] font-semibold text-blue-400 hover:underline cursor-pointer"
+              >
+                +{savedProperties.length - 4} more saved...
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <aside className="w-72 min-h-screen bg-slate-900 text-white shadow-2xl flex flex-col px-6 py-8">
@@ -187,7 +259,7 @@ function Sidebar() {
 
         <button
           onClick={handleLogout}
-          className="flex items-center gap-4 w-full px-4 py-2.5 rounded-xl text-slate-300 hover:bg-red-600 hover:text-white transition-all duration-300"
+          className="flex items-center gap-4 w-full px-4 py-2.5 rounded-xl text-slate-300 hover:bg-red-600 hover:text-white transition-all duration-300 cursor-pointer"
         >
           <HiOutlineArrowLeftOnRectangle className="text-xl" />
           <span className="font-medium text-[14px]">Logout</span>
