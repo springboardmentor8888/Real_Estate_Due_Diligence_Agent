@@ -4,6 +4,8 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
 public class PropertyRequest {
@@ -23,8 +25,21 @@ public class PropertyRequest {
     @NotBlank
     private String propertyType;
 
-    // ✅ ADD THESE TWO FIELDS
     private Double price;
 
     private String imageUrl;
+
+    private List<String> imageUrls;
+
+    // Physical Specifications
+    private Integer bedrooms;
+
+    private Integer bathrooms;
+
+    private Integer sqft;
+
+    // Legal Identifiers
+    private String surveyNo;
+
+    private String registrationNo;
 }

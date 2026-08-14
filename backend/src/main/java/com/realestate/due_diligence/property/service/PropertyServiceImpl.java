@@ -4,6 +4,7 @@ import com.realestate.due_diligence.notification.service.NotificationService;
 import com.realestate.due_diligence.property.Property;
 import com.realestate.due_diligence.property.dto.AddressValidationRequest;
 import com.realestate.due_diligence.property.dto.AddressValidationResponse;
+import com.realestate.due_diligence.property.dto.PropertyRequest;
 import com.realestate.due_diligence.property.dto.PropertyResponse;
 import com.realestate.due_diligence.property.dto.PropertySearchRequest;
 import com.realestate.due_diligence.repository.PropertyRepository;
@@ -33,11 +34,11 @@ public class PropertyServiceImpl implements PropertyService {
 
     @Override
     @Transactional
-    public PropertyResponse performDueDiligence(
-            AddressValidationRequest request) {
+    public PropertyResponse performDueDiligence(AddressValidationRequest request) {
 
         Property property = new Property();
 
+        // 1. Basic Address Mapping
         String fullAddress = String.format(
                 "%s, %s, %s %s",
                 request.getAddress(),
@@ -50,17 +51,34 @@ public class PropertyServiceImpl implements PropertyService {
         property.setCity(request.getCity());
         property.setState(request.getState());
         property.setZipCode(request.getZipCode());
-        property.setPropertyType("RESIDENTIAL");
+        property.setPropertyType(request.getPropertyType() != null ? request.getPropertyType() : "RESIDENTIAL");
         property.setCreatedAt(LocalDateTime.now());
 
-        // Set Price & Image URL on Entity
+        // 2. Set Pricing & Image URL
         property.setPrice(request.getPrice());
-        property.setImageUrl(request.getImageUrl());
+        
+        // Handle single image or first image from list
+        if (request.getImageUrl() != null && !request.getImageUrl().isBlank()) {
+            property.setImageUrl(request.getImageUrl());
+        } else if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
+            property.setImageUrl(request.getImageUrls().get(0));
+        }
 
-        // 1. Save property to PostgreSQL to generate Primary Key
+        // 3. ✅ MAP NEW STRUCTURAL & LEGAL IDENTIFIER FIELDS
+        property.setBedrooms(request.getBedrooms());
+        property.setBathrooms(request.getBathrooms());
+        property.setSurveyNo(request.getSurveyNo());
+        property.setRegistrationNo(request.getRegistrationNo());
+
+        // Convert SqFt to Area string if provided
+        if (request.getSqft() != null) {
+            property.setArea(request.getSqft() + " sqft");
+        }
+
+        // 4. Save property to PostgreSQL to generate Primary Key
         Property savedProperty = propertyRepository.save(property);
 
-        // 2. Automatically resolve and save realistic municipal zoning info
+        // 5. Automatically resolve and save realistic municipal zoning info
         ZoningInfo zoning = resolveMunicipalZoning(savedProperty);
         zoningInfoRepository.save(zoning);
 
@@ -210,6 +228,13 @@ public class PropertyServiceImpl implements PropertyService {
             property.setImageUrl(request.getImageUrl());
         }
 
+        // Update Structural & Legal Fields
+        if (request.getBedrooms() != null) property.setBedrooms(request.getBedrooms());
+        if (request.getBathrooms() != null) property.setBathrooms(request.getBathrooms());
+        if (request.getSurveyNo() != null) property.setSurveyNo(request.getSurveyNo());
+        if (request.getRegistrationNo() != null) property.setRegistrationNo(request.getRegistrationNo());
+        if (request.getSqft() != null) property.setArea(request.getSqft() + " sqft");
+
         Property updatedProperty =
                 propertyRepository.save(property);
 
@@ -243,7 +268,7 @@ public class PropertyServiceImpl implements PropertyService {
         response.setPrice(property.getPrice());
         response.setImageUrl(property.getImageUrl());
 
-        // ✅ MAP NEW DUE DILIGENCE & STRUCTURAL FIELDS TO DTO
+        // ✅ MAP DUE DILIGENCE & STRUCTURAL FIELDS TO RESPONSE DTO
         response.setSurveyNo(property.getSurveyNo());
         response.setRegistrationNo(property.getRegistrationNo());
         response.setArea(property.getArea());

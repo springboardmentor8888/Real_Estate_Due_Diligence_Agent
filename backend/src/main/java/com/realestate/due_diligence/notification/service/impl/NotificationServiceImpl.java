@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -24,32 +25,29 @@ public class NotificationServiceImpl implements NotificationService {
     private final UserRepository userRepository;
 
     // =====================================================
-    // GET CURRENT USER
+    // GET CURRENT USER (SAFE / OPTIONAL)
     // =====================================================
 
-    private User getCurrentUser() {
+    private Optional<User> getOptionalCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        Authentication authentication =
-                SecurityContextHolder
-                        .getContext()
-                        .getAuthentication();
-
-        if (authentication == null ||
-                !authentication.isAuthenticated()) {
-
-            throw new RuntimeException(
-                    "User is not authenticated"
-            );
+        if (authentication == null || 
+                !authentication.isAuthenticated() || 
+                "anonymousUser".equalsIgnoreCase(authentication.getName())) {
+            return Optional.empty();
         }
 
         String email = authentication.getName();
+        return userRepository.findByEmail(email);
+    }
 
-        return userRepository
-                .findByEmail(email)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Authenticated user not found"
-                        ));
+    // =====================================================
+    // GET CURRENT USER (STRICT FOR ACTIONS REQUIRING AUTH)
+    // =====================================================
+
+    private User getCurrentUser() {
+        return getOptionalCurrentUser()
+                .orElseThrow(() -> new RuntimeException("User is not authenticated"));
     }
 
     // =====================================================
@@ -60,7 +58,13 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional(readOnly = true)
     public List<NotificationResponse> getMyNotifications() {
 
-        User user = getCurrentUser();
+        // Safely returns empty list if user is not authenticated
+        Optional<User> optionalUser = getOptionalCurrentUser();
+        if (optionalUser.isEmpty()) {
+            return List.of();
+        }
+
+        User user = optionalUser.get();
 
         return notificationRepository
                 .findByUserOrderByCreatedAtDesc(user)
@@ -114,7 +118,12 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     public void markAllAsRead() {
 
-        User user = getCurrentUser();
+        Optional<User> optionalUser = getOptionalCurrentUser();
+        if (optionalUser.isEmpty()) {
+            return;
+        }
+
+        User user = optionalUser.get();
 
         List<Notification> notifications =
                 notificationRepository
@@ -167,7 +176,12 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     public void clearReadNotifications() {
 
-        User user = getCurrentUser();
+        Optional<User> optionalUser = getOptionalCurrentUser();
+        if (optionalUser.isEmpty()) {
+            return;
+        }
+
+        User user = optionalUser.get();
 
         List<Notification> notifications =
                 notificationRepository
@@ -193,7 +207,14 @@ public class NotificationServiceImpl implements NotificationService {
             Long propertyId,
             String propertyAddress) {
 
-        User user = getCurrentUser();
+        Optional<User> optionalUser = getOptionalCurrentUser();
+
+        // Skip notification if no user is currently logged in
+        if (optionalUser.isEmpty()) {
+            return;
+        }
+
+        User user = optionalUser.get();
 
         String message =
                 "Comprehensive Due Diligence Report for "
@@ -242,7 +263,6 @@ public class NotificationServiceImpl implements NotificationService {
         notification.setUser(user);
 
         notificationRepository.save(notification);
-
     }
 
     // =====================================================
@@ -255,7 +275,13 @@ public class NotificationServiceImpl implements NotificationService {
             Long propertyId,
             String propertyAddress) {
 
-        User user = getCurrentUser();
+        Optional<User> optionalUser = getOptionalCurrentUser();
+
+        if (optionalUser.isEmpty()) {
+            return;
+        }
+
+        User user = optionalUser.get();
 
         String message =
                 "Property information for "

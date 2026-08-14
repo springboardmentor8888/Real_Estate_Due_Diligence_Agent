@@ -8,13 +8,12 @@ import { FaSearch, FaFileAlt, FaBookmark, FaBell } from "react-icons/fa";
 import axios from "axios";
 
 const Dashboard = () => {
-  // State for logged-in user info & live stats
   const [userName, setUserName] = useState("User");
   const [stats, setStats] = useState({
     totalSearches: 0,
     reportsGenerated: 0,
     savedProperties: 0,
-    alertsCount: 3,
+    alertsCount: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -40,17 +39,34 @@ const Dashboard = () => {
       const token = localStorage.getItem("token");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      // Fetch live properties count from PostgreSQL DB
-      const propsRes = await axios.get("http://localhost:8080/api/v1/properties", { headers });
-      const propsList = Array.isArray(propsRes.data)
-        ? propsRes.data
-        : propsRes.data?.content || [];
+      // ✅ 1. Fetch live properties (using /api/properties, not /api/v1/properties)
+      let propertiesCount = 0;
+      try {
+        const propsRes = await axios.get("http://localhost:8080/api/properties", { headers });
+        const propsList = Array.isArray(propsRes.data)
+          ? propsRes.data
+          : propsRes.data?.content || [];
+        propertiesCount = propsList.length;
+      } catch (err) {
+        console.warn("Could not fetch properties list:", err);
+      }
 
-      setStats((prev) => ({
-        ...prev,
-        totalSearches: propsList.length,
-        savedProperties: propsList.length,
-      }));
+      // ✅ 2. Fetch live notifications / alerts count
+      let unreadAlerts = 0;
+      try {
+        const notifRes = await axios.get("http://localhost:8080/api/notifications", { headers });
+        const notifList = Array.isArray(notifRes.data) ? notifRes.data : [];
+        unreadAlerts = notifList.filter((n) => !n.read).length;
+      } catch (err) {
+        console.warn("Could not fetch notifications count:", err);
+      }
+
+      setStats({
+        totalSearches: propertiesCount,
+        reportsGenerated: propertiesCount > 0 ? 1 : 0, // Or link to a report history API if present
+        savedProperties: propertiesCount,
+        alertsCount: unreadAlerts,
+      });
     } catch (err) {
       console.error("Error loading dashboard stats from backend:", err);
     } finally {
@@ -76,7 +92,7 @@ const Dashboard = () => {
           icon={<FaSearch />}
           title="Total Searches"
           value={loading ? "..." : String(stats.totalSearches)}
-          change="+12% this month"
+          change="Live from DB"
           changeColor="text-green-600"
           iconBg="bg-blue-100"
           iconColor="text-blue-600"
@@ -86,7 +102,7 @@ const Dashboard = () => {
           icon={<FaFileAlt />}
           title="Reports Generated"
           value={loading ? "..." : String(stats.reportsGenerated)}
-          change="+8% this month"
+          change="Live status"
           changeColor="text-green-600"
           iconBg="bg-green-100"
           iconColor="text-green-600"
@@ -96,7 +112,7 @@ const Dashboard = () => {
           icon={<FaBookmark />}
           title="Saved Properties"
           value={loading ? "..." : String(stats.savedProperties)}
-          change="+5% this month"
+          change="Synced"
           changeColor="text-green-600"
           iconBg="bg-yellow-100"
           iconColor="text-yellow-600"
@@ -105,8 +121,8 @@ const Dashboard = () => {
         <StatCard
           icon={<FaBell />}
           title="Alerts"
-          value={String(stats.alertsCount)}
-          change="View all"
+          value={loading ? "..." : String(stats.alertsCount)}
+          change="Unread"
           changeColor="text-blue-600"
           iconBg="bg-red-100"
           iconColor="text-red-600"

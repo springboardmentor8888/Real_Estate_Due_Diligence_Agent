@@ -15,7 +15,8 @@ const AddProperty = () => {
     bedrooms: '',
     bathrooms: '',
     sqft: '',
-    description: '',
+    surveyNo: '',
+    registrationNo: '',
     imageUrl: '',
   });
 
@@ -30,7 +31,7 @@ const AddProperty = () => {
     setLoading(true);
 
     // Retrieve JWT token stored during login
-    const token = localStorage.getItem('token'); 
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken'); 
 
     const payload = {
       ...formData,
@@ -134,6 +135,30 @@ const AddProperty = () => {
           </div>
         </div>
 
+        {/* 📜 LEGAL IDENTIFIERS SECTION */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-semibold mb-2 text-slate-700">Survey Number / Plot ID</label>
+            <input
+              type="text"
+              name="surveyNo"
+              placeholder="e.g. SY-4002/1A"
+              className="w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={handleChange}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-2 text-slate-700">Registration Number</label>
+            <input
+              type="text"
+              name="registrationNo"
+              placeholder="e.g. REG-MH-2026-8842"
+              className="w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={handleChange}
+            />
+          </div>
+        </div>
+
         {/* 📸 PICTURE SECTION WITH LIVE PREVIEW */}
         <div className="border-2 border-dashed border-slate-300 p-4 rounded-lg bg-slate-50">
           <label className="block text-sm font-semibold mb-1 text-slate-700">Property Image URL</label>
@@ -157,15 +182,10 @@ const AddProperty = () => {
           )}
         </div>
 
-        <div>
-          <label className="block text-sm font-semibold mb-2 text-slate-700">Description</label>
-          <textarea name="description" rows="3" className="w-full border rounded-lg p-3" placeholder="Provide property highlights..." onChange={handleChange}></textarea>
-        </div>
-
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold text-lg transition"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold text-lg transition cursor-pointer disabled:bg-blue-300"
         >
           {loading ? 'Publishing...' : 'Publish Property Listing'}
         </button>

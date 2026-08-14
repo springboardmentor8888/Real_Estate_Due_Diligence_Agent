@@ -26,6 +26,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -55,23 +56,15 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
 
                 .authorizeHttpRequests(auth -> auth
+                        // 1. Public Authentication & OAuth endpoints
                         .requestMatchers(
                                 "/auth/**",
                                 "/api/auth/**",
                                 "/oauth2/**",
-                                "/login/oauth2/**",
-                                "/api/reports/**",
-                                "/api/users/**",   // ✅ Added public/authenticated user route access
-                                "/api/audit/**"    // ✅ Added audit route access
+                                "/login/oauth2/**"
                         ).permitAll()
 
-                        .requestMatchers(
-                                HttpMethod.PUT,
-                                "/api/properties/**"
-                        ).authenticated()
-
-                        .requestMatchers("/api/properties/**").permitAll()
-
+                        // 2. Swagger / OpenAPI Documentation
                         .requestMatchers(
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
@@ -79,9 +72,36 @@ public class SecurityConfig {
                                 "/swagger-ui/index.html"
                         ).permitAll()
 
-                        .requestMatchers(HttpMethod.DELETE, "/**")
-                        .hasRole("ADMINISTRATOR")
+                        // 3. Public User, Report & Audit View Routes
+                        .requestMatchers(
+                                "/api/reports/**",
+                                "/api/users/**",
+                                "/api/audit/**"
+                        ).permitAll()
 
+                        // 4. ✅ Public Due Diligence & Property Endpoints
+                        .requestMatchers(
+                                "/api/properties/**",
+                                "/api/property-history/**",  // ✅ Added
+                                "/api/property-tax/**",   // ✅ Matches PropertyTaxHistoryController
+                                "/api/flood-zones/**",   // ✅ Matches FloodZoneInfoController
+                                "/api/tax/**",
+                                "/api/flood/**",
+                                "/api/zoning/**",
+                                "/api/permits/**",
+                                "/api/environmental/**",
+                                "/api/ownership/**",
+                                "/api/due-diligence/**",
+                                "/api/reports/**",            // ✅ Added for Report Generation
+                                "/api/notifications/**"       // ✅ Added for Notifications
+
+                        ).permitAll()
+
+                        // 5. Protected Modification Endpoints
+                        .requestMatchers(HttpMethod.PUT, "/api/properties/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/**").hasRole("ADMINISTRATOR")
+
+                        // 6. Everything else requires authentication
                         .anyRequest().authenticated()
                 )
 
@@ -98,8 +118,8 @@ public class SecurityConfig {
                 )
 
                 .authenticationProvider(authenticationProvider())
-
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 
@@ -126,7 +146,8 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(allowedMethods);
-        configuration.setAllowedHeaders(allowedHeaders);
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept", "X-Requested-With", "Origin"));
+        configuration.setExposedHeaders(List.of("Authorization"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

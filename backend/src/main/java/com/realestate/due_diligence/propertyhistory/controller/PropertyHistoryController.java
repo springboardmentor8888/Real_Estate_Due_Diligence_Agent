@@ -14,7 +14,8 @@ public class PropertyHistoryController {
 
     private final PropertyHistoryService propertyHistoryService;
 
-    @GetMapping("/{propertyId}")
+    // ✅ Supports both /api/property-history/35 and /api/property-history/property/35
+    @GetMapping({"/property/{propertyId}", "/{propertyId}"})
     public List<PropertyHistoryResponse> getPropertyHistory(
             @PathVariable Long propertyId) {
 

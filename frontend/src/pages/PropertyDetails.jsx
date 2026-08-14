@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import {
   FaArrowLeft,
   FaBalanceScale,
+  FaBed,
+  FaBath,
   FaClipboardCheck,
   FaExclamationTriangle,
   FaFileAlt,
@@ -12,7 +14,6 @@ import {
   FaMoneyBillWave,
   FaRulerCombined,
   FaShieldAlt,
-  FaUser,
 } from "react-icons/fa";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import axios from "axios";
@@ -269,7 +270,8 @@ function PropertyDetails() {
         )}
       </header>
 
-      <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      {/* SUMMARY DATA TILES */}
+      <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <DataTile
           title="Property ID"
           value={unavailable(property.id ? `#${property.id}` : null)}
@@ -286,6 +288,16 @@ function PropertyDetails() {
           icon={<FaMoneyBillWave />}
         />
         <DataTile
+          title="Bedrooms"
+          value={unavailable(property.bedrooms != null ? `${property.bedrooms} Beds` : null)}
+          icon={<FaBed />}
+        />
+        <DataTile
+          title="Bathrooms"
+          value={unavailable(property.bathrooms != null ? `${property.bathrooms} Baths` : null)}
+          icon={<FaBath />}
+        />
+        <DataTile
           title="Area / Square Feet"
           value={unavailable(
             property.area ||
@@ -296,6 +308,7 @@ function PropertyDetails() {
         />
       </section>
 
+      {/* DETAILED OVERVIEW TABLE */}
       <section className="mt-8 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <h2 className="text-xl font-bold text-gray-900">Property Overview</h2>
         <div className="mt-5 grid gap-4 md:grid-cols-2">
@@ -305,6 +318,8 @@ function PropertyDetails() {
             ["State", property.state],
             ["ZIP Code", property.zipCode || property.pincode],
             ["Property Type", property.propertyType || property.property_type],
+            ["Bedrooms", property.bedrooms != null ? `${property.bedrooms} Bedrooms` : null],
+            ["Bathrooms", property.bathrooms != null ? `${property.bathrooms} Bathrooms` : null],
             ["Survey Number", property.surveyNo || property.survey_no],
             ["Registration No.", property.registrationNo || property.registration_no],
             ["Price / Market Value", formatMoney(property.price || property.marketValue)],
@@ -323,6 +338,7 @@ function PropertyDetails() {
         </div>
       </section>
 
+      {/* DUE DILIGENCE OVERVIEW */}
       <section className="mt-8 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>

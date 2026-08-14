@@ -1,44 +1,57 @@
+import { useState, useEffect } from "react";
 import { FaEye } from "react-icons/fa";
 import { Link } from "react-router-dom";
-
-const recentSearches = [
-  {
-    address: "123 Main Street",
-    location: "Austin, TX 78701",
-    date: "Dec 12, 2025",
-    status: "Completed",
-  },
-  {
-    address: "456 Oak Avenue",
-    location: "Dallas, TX 75201",
-    date: "Jan 10, 2026",
-    status: "Completed",
-  },
-  {
-    address: "789 Pine Road",
-    location: "Houston, TX 77001",
-    date: "Feb 8, 2026",
-    status: "Completed",
-  },
-  {
-    address: "321 Elm Street",
-    location: "San Antonio, TX 78201",
-    date: "Mar 19, 2026",
-    status: "In Progress",
-  },
-  {
-    address: "654 Maple Drive",
-    location: "Plano, TX 75023",
-    date: "April 3, 2026",
-    status: "Completed",
-  },
-];
+import axios from "axios";
 
 const RecentSearches = () => {
+  const [searches, setSearches] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchRecentSearches();
+  }, []);
+
+  const fetchRecentSearches = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+      const response = await axios.get("http://localhost:8080/api/properties", { headers });
+      const propertyList = Array.isArray(response.data)
+        ? response.data
+        : response.data?.content || [];
+
+      // Map backend property records into recent searches format (take latest 5)
+      const mappedList = propertyList.slice(0, 5).map((prop) => ({
+        id: prop.id,
+        address: prop.address || prop.title || `Property #${prop.id}`,
+        location: [prop.city, prop.state, prop.zipCode || prop.pincode]
+          .filter(Boolean)
+          .join(", ") || "Location details on file",
+        date: prop.createdAt
+          ? new Date(prop.createdAt).toLocaleDateString(undefined, {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })
+          : "Recently Added",
+        status: prop.status || "Completed",
+      }));
+
+      setSearches(mappedList);
+    } catch (err) {
+      console.error("Error fetching live recent searches:", err);
+      setSearches([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold">Recent Searches</h2>
+        <h2 className="text-xl font-semibold text-gray-800">Recent Searches</h2>
 
         <Link
           to="/search-property"
@@ -48,50 +61,77 @@ const RecentSearches = () => {
         </Link>
       </div>
 
-      <table className="w-full">
-        <thead>
-          <tr className="text-left text-gray-500 border-b">
-            <th className="pb-3">Property Address</th>
-            <th className="pb-3">Location</th>
-            <th className="pb-3">Search Date</th>
-            <th className="pb-3">Status</th>
-            <th className="pb-3 text-center">Action</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {recentSearches.map((property, index) => (
-            <tr
-              key={index}
-              className="border-b last:border-none hover:bg-gray-50"
-            >
-              <td className="py-4 font-medium">{property.address}</td>
-
-              <td>{property.location}</td>
-
-              <td>{property.date}</td>
-
-              <td>
-                <span
-                  className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    property.status === "Completed"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-blue-100 text-blue-700"
-                  }`}
-                >
-                  {property.status}
-                </span>
-              </td>
-
-              <td className="text-center">
-                <button className="text-gray-600 hover:text-blue-600">
-                  <FaEye />
-                </button>
-              </td>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="text-left text-gray-500 border-b text-sm">
+              <th className="pb-3 font-medium">Property Address</th>
+              <th className="pb-3 font-medium">Location</th>
+              <th className="pb-3 font-medium">Search Date</th>
+              <th className="pb-3 font-medium">Status</th>
+              <th className="pb-3 font-medium text-center">Action</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan="5" className="text-center py-6 text-sm text-gray-400">
+                  Loading recent searches...
+                </td>
+              </tr>
+            ) : searches.length === 0 ? (
+              <tr>
+                <td colSpan="5" className="text-center py-6 text-sm text-gray-500">
+                  No recent property searches found.
+                </td>
+              </tr>
+            ) : (
+              searches.map((property) => (
+                <tr
+                  key={property.id}
+                  className="border-b last:border-none hover:bg-gray-50 transition"
+                >
+                  <td className="py-4 font-medium text-gray-800">
+                    {property.address}
+                  </td>
+
+                  <td className="text-gray-600 text-sm">
+                    {property.location}
+                  </td>
+
+                  <td className="text-gray-600 text-sm">
+                    {property.date}
+                  </td>
+
+                  <td>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        property.status.toLowerCase() === "completed" ||
+                        property.status.toLowerCase() === "active"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-blue-100 text-blue-700"
+                      }`}
+                    >
+                      {property.status}
+                    </span>
+                  </td>
+
+                  <td className="text-center">
+                    <Link
+                      to={`/property-details/${property.id}`}
+                      className="inline-flex items-center justify-center p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition"
+                      title="View Property Details"
+                    >
+                      <FaEye />
+                    </Link>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
