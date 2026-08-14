@@ -148,10 +148,34 @@ export function DashboardCardItem({ card }) {
 }
 
 // Grid Wrapper rendering all 8 KPI Cards
-export function DashboardCard({ cards = MASTER_KPI_CARDS_DATA }) {
+export function DashboardCard({ cards = MASTER_KPI_CARDS_DATA, analytics }) {
+  const dynamicCards = cards.map((card) => {
+    if (!analytics) return card;
+
+    const titleLower = (card.title || "").toLowerCase();
+
+    if (analytics.totalUsers !== undefined && (card.id === "kpi-1" || titleLower.includes("user"))) {
+      return { ...card, count: typeof analytics.totalUsers === "number" ? analytics.totalUsers.toLocaleString() : analytics.totalUsers };
+    }
+    if (analytics.totalProperties !== undefined && (card.id === "kpi-3" || titleLower.includes("property") || titleLower.includes("properties"))) {
+      return { ...card, count: typeof analytics.totalProperties === "number" ? analytics.totalProperties.toLocaleString() : analytics.totalProperties };
+    }
+    if (analytics.totalReports !== undefined && (card.id === "kpi-4" || titleLower.includes("report"))) {
+      return { ...card, count: typeof analytics.totalReports === "number" ? analytics.totalReports.toLocaleString() : analytics.totalReports };
+    }
+    if (analytics.totalRiskAssessments !== undefined && (card.id === "kpi-5" || titleLower.includes("risk") || titleLower.includes("review"))) {
+      return { ...card, count: typeof analytics.totalRiskAssessments === "number" ? analytics.totalRiskAssessments.toLocaleString() : analytics.totalRiskAssessments };
+    }
+    if (analytics.totalAuditLogs !== undefined && (card.id === "kpi-8" || titleLower.includes("audit") || titleLower.includes("api"))) {
+      return { ...card, count: typeof analytics.totalAuditLogs === "number" ? analytics.totalAuditLogs.toLocaleString() : analytics.totalAuditLogs };
+    }
+
+    return card;
+  });
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-      {cards.map((card) => (
+      {dynamicCards.map((card) => (
         <DashboardCardItem key={card.id || card.title} card={card} />
       ))}
     </div>

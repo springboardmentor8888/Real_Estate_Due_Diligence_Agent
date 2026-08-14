@@ -241,7 +241,7 @@ function AdminDashboard() {
               <BarChart3 size={15} className="text-blue-500" /> SECTION 2: Key Performance Metrics
             </h2>
           </div>
-          <DashboardCard />
+          <DashboardCard analytics={analytics} />
         </section>
 
         {/* 3. QUICK ACTIONS (REUSABLE QUICK ACTIONS COMPONENT) */}
