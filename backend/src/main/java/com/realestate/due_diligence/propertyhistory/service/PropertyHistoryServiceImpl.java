@@ -17,9 +17,9 @@ public class PropertyHistoryServiceImpl implements PropertyHistoryService {
     @Override
     public List<PropertyHistoryResponse> getPropertyHistory(Long propertyId) {
 
-        return propertyHistoryRepository.findAll()
+        return propertyHistoryRepository
+                .findByPropertyIdOrderByEventDateDesc(propertyId)
                 .stream()
-                .filter(history -> history.getProperty().getId().equals(propertyId))
                 .map(this::convertToResponse)
                 .toList();
     }

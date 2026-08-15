@@ -53,7 +53,6 @@ public class RiskAssessmentServiceImpl implements RiskAssessmentService {
         PropertyResponse property =
                 propertyService.getPropertyById(propertyId);
 
-        // Fetch dependent records safely to prevent NullPointerExceptions
         List<OwnershipRecordResponse> ownershipHistory =
                 ownershipRecordService.getOwnershipHistory(propertyId);
         if (ownershipHistory == null) ownershipHistory = new ArrayList<>();
@@ -77,7 +76,6 @@ public class RiskAssessmentServiceImpl implements RiskAssessmentService {
         int riskScore = 0;
         Set<String> riskFactors = new LinkedHashSet<>();
 
-        // Initialize base sub-scores out of 100 (100 = best/safest)
         int ownershipScore = 95;
         int legalScore = 90;
         int taxScore = 95;
@@ -85,100 +83,217 @@ public class RiskAssessmentServiceImpl implements RiskAssessmentService {
         int permitScore = 90;
         int zoningScore = (property != null && property.getCity() != null && !property.getCity().isEmpty()) ? 95 : 70;
 
-        // 1. Ownership & Legal Risk Evaluation
-        if (ownershipHistory.size() > 5) {
+        if (ownershipHistory.isEmpty()) {
+
+            riskScore += 20;
+            ownershipScore = 50;
+            legalScore = 60;
+
+            riskFactors.add(
+                    "Ownership history records pending verification"
+            );
+
+        } else if (ownershipHistory.size() > 5) {
+
             riskScore += 20;
             ownershipScore -= 30;
             legalScore -= 25;
-            riskFactors.add("Very frequent ownership changes");
+
+            riskFactors.add(
+                    "Very frequent ownership changes"
+            );
+
         } else if (ownershipHistory.size() > 3) {
+
             riskScore += 10;
             ownershipScore -= 15;
             legalScore -= 10;
-            riskFactors.add("Frequent ownership changes");
-        } else if (ownershipHistory.isEmpty()) {
-            ownershipScore = 50;
-            legalScore = 60;
-            riskFactors.add("Ownership history records pending verification");
+
+            riskFactors.add(
+                    "Frequent ownership changes"
+            );
         }
 
-        // 2. Property Tax Risk Evaluation
         if (taxHistory.isEmpty()) {
             riskScore += 15;
             taxScore = 50;
             riskFactors.add("No property tax history available");
         } else {
+
             boolean hasUnpaid = taxHistory.stream()
-                    .anyMatch(t -> "UNPAID".equalsIgnoreCase(t.getPaymentStatus()));
+                    .anyMatch(t ->
+                            "UNPAID".equalsIgnoreCase(t.getPaymentStatus()));
+
+            boolean hasPending = taxHistory.stream()
+                    .anyMatch(t ->
+                            "PENDING".equalsIgnoreCase(t.getPaymentStatus()));
+
             if (hasUnpaid) {
+
                 riskScore += 25;
                 taxScore = 40;
-                riskFactors.add("Unpaid property tax dues detected");
-            }
-        }
 
-        // 3. Flood Risk Evaluation
-        for (FloodZoneInfoResponse flood : floodZoneInfo) {
-            if ("HIGH".equalsIgnoreCase(flood.getFloodRiskLevel())) {
-                riskScore += 30;
-                floodScore -= 40;
-                riskFactors.add("Property is located in a high flood risk area");
-            } else if ("MEDIUM".equalsIgnoreCase(flood.getFloodRiskLevel())) {
-                riskScore += 15;
-                floodScore -= 20;
-                riskFactors.add("Property is located in a moderate flood risk area");
-            }
+                riskFactors.add(
+                        "Unpaid property tax dues detected"
+                );
 
-            if (Boolean.TRUE.equals(flood.getFloodInsuranceRequired())) {
+            } else if (hasPending) {
+
                 riskScore += 10;
-                floodScore -= 10;
-                riskFactors.add("Flood insurance is required");
+                taxScore = 70;
+
+                riskFactors.add(
+                        "Property tax payment is pending"
+                );
             }
         }
 
-        // 4. Environmental Risk Evaluation
-        for (EnvironmentalRecordResponse environmental : environmentalRecords) {
-            if ("HIGH".equalsIgnoreCase(environmental.getEnvironmentalRisk())) {
-                riskScore += 30;
-                riskFactors.add("High environmental risk");
-            } else if ("MEDIUM".equalsIgnoreCase(environmental.getEnvironmentalRisk())) {
-                riskScore += 15;
-                riskFactors.add("Moderate environmental risk");
-            }
+        if (floodZoneInfo.isEmpty()) {
 
-            if ("HIGH".equalsIgnoreCase(environmental.getContaminationLevel())) {
-                riskScore += 25;
-                riskFactors.add("High contamination level");
-            } else if ("MEDIUM".equalsIgnoreCase(environmental.getContaminationLevel())) {
-                riskScore += 10;
-                riskFactors.add("Moderate contamination level");
+            floodScore = 60;
+
+            riskFactors.add(
+                    "Flood zone information pending verification"
+            );
+
+        } else {
+
+            for (FloodZoneInfoResponse flood : floodZoneInfo) {
+
+                if ("HIGH".equalsIgnoreCase(flood.getFloodRiskLevel())) {
+
+                    riskScore += 30;
+                    floodScore -= 40;
+
+                    riskFactors.add(
+                            "Property is located in a high flood risk area"
+                    );
+
+                } else if ("MEDIUM".equalsIgnoreCase(
+                        flood.getFloodRiskLevel())) {
+
+                    riskScore += 15;
+                    floodScore -= 20;
+
+                    riskFactors.add(
+                            "Property is located in a moderate flood risk area"
+                    );
+                }
+
+                if (Boolean.TRUE.equals(
+                        flood.getFloodInsuranceRequired())) {
+
+                    riskScore += 10;
+                    floodScore -= 10;
+
+                    riskFactors.add(
+                            "Flood insurance is required"
+                    );
+                }
             }
         }
 
-        // 5. Building Permit Risk Evaluation
-        for (BuildingPermitResponse permit : permitHistory) {
-            if ("REJECTED".equalsIgnoreCase(permit.getStatus())) {
-                riskScore += 20;
-                permitScore -= 35;
-                riskFactors.add("Building permit was rejected");
-            } else if ("EXPIRED".equalsIgnoreCase(permit.getStatus())) {
-                riskScore += 10;
-                permitScore -= 15;
-                riskFactors.add("Building permit has expired");
-            } else if ("PENDING".equalsIgnoreCase(permit.getStatus())) {
-                riskScore += 5;
-                permitScore -= 10;
-                riskFactors.add("Building permit is pending approval");
+        if (environmentalRecords.isEmpty()) {
+
+            riskFactors.add(
+                    "Environmental records pending verification"
+            );
+
+        } else {
+
+            for (EnvironmentalRecordResponse environmental
+                    : environmentalRecords) {
+
+                if ("HIGH".equalsIgnoreCase(
+                        environmental.getEnvironmentalRisk())) {
+
+                    riskScore += 30;
+
+                    riskFactors.add(
+                            "High environmental risk"
+                    );
+
+                } else if ("MEDIUM".equalsIgnoreCase(
+                        environmental.getEnvironmentalRisk())) {
+
+                    riskScore += 15;
+
+                    riskFactors.add(
+                            "Moderate environmental risk"
+                    );
+                }
+
+                if ("HIGH".equalsIgnoreCase(
+                        environmental.getContaminationLevel())) {
+
+                    riskScore += 25;
+
+                    riskFactors.add(
+                            "High contamination level"
+                    );
+
+                } else if ("MEDIUM".equalsIgnoreCase(
+                        environmental.getContaminationLevel())) {
+
+                    riskScore += 10;
+
+                    riskFactors.add(
+                            "Moderate contamination level"
+                    );
+                }
             }
         }
 
-        // Clamp sub-scores between 0 and 100
+        if (permitHistory.isEmpty()) {
+
+            permitScore = 60;
+
+            riskFactors.add(
+                    "Building permit records pending verification"
+            );
+
+        } else {
+
+            for (BuildingPermitResponse permit : permitHistory) {
+
+                if ("REJECTED".equalsIgnoreCase(permit.getStatus())) {
+
+                    riskScore += 20;
+                    permitScore -= 35;
+
+                    riskFactors.add(
+                            "Building permit was rejected"
+                    );
+
+                } else if ("EXPIRED".equalsIgnoreCase(
+                        permit.getStatus())) {
+
+                    riskScore += 10;
+                    permitScore -= 15;
+
+                    riskFactors.add(
+                            "Building permit has expired"
+                    );
+
+                } else if ("PENDING".equalsIgnoreCase(
+                        permit.getStatus())) {
+
+                    riskScore += 5;
+                    permitScore -= 10;
+
+                    riskFactors.add(
+                            "Building permit is pending approval"
+                    );
+                }
+            }
+        }
         ownershipScore = Math.max(0, Math.min(100, ownershipScore));
         legalScore = Math.max(0, Math.min(100, legalScore));
         taxScore = Math.max(0, Math.min(100, taxScore));
         floodScore = Math.max(0, Math.min(100, floodScore));
         permitScore = Math.max(0, Math.min(100, permitScore));
         zoningScore = Math.max(0, Math.min(100, zoningScore));
+        riskScore = Math.max(0, Math.min(100, riskScore));
 
         String overallRisk;
         if (riskScore >= 60) {
@@ -189,13 +304,28 @@ public class RiskAssessmentServiceImpl implements RiskAssessmentService {
             overallRisk = "LOW";
         }
 
+
         String recommendation;
+
         if ("HIGH".equals(overallRisk)) {
-            recommendation = "Conduct a detailed legal and environmental review before purchasing the property.";
+
+            recommendation =
+                    "Conduct a detailed legal and environmental review before purchasing the property.";
+
         } else if ("MEDIUM".equals(overallRisk)) {
-            recommendation = "Review the identified risk factors before proceeding.";
+
+            recommendation =
+                    "Review the identified risk factors before proceeding.";
+
+        } else if (!riskFactors.isEmpty()) {
+
+            recommendation =
+                    "Risk is currently low, but some records require verification before acquisition.";
+
         } else {
-            recommendation = "Title records, tax clearances, and municipal zoning are fully verified. Safe for acquisition.";
+
+            recommendation =
+                    "Title records, tax clearances, permits, environmental records, and zoning are verified. Property is suitable for acquisition.";
         }
 
         RiskAssessmentResponse response = new RiskAssessmentResponse();
@@ -206,7 +336,6 @@ public class RiskAssessmentServiceImpl implements RiskAssessmentService {
         response.setRiskFactors(new ArrayList<>(riskFactors));
         response.setRecommendation(recommendation);
 
-        // Map sub-scores to the DTO
         response.setLegalScore(legalScore);
         response.setTaxScore(taxScore);
         response.setFloodScore(floodScore);

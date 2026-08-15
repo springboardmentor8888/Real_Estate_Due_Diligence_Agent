@@ -52,7 +52,7 @@ const mainMenuItems = [
     icon: <HiOutlineBanknotes />,
     label: "Financial Assessment",
     path: "/financial-assessment",
-    roles: ["FINANCIAL_INSTITUTION", "ADMINISTRATOR"],
+    roles: ["FINANCIAL_INSTITUTION"],
   },
 
   {

@@ -9,4 +9,5 @@ public interface PropertyTaxHistoryRepository
         extends JpaRepository<PropertyTaxHistory, Long> {
 
     List<PropertyTaxHistory> findByPropertyId(Long propertyId);
+    List<PropertyTaxHistory> findByPropertyIdOrderByTaxYearDesc(Long propertyId);
 }

@@ -17,7 +17,8 @@ public class PropertyTaxHistoryServiceImpl implements PropertyTaxHistoryService 
     @Override
     public List<PropertyTaxHistoryResponse> getTaxHistory(Long propertyId) {
 
-        return propertyTaxHistoryRepository.findByPropertyId(propertyId)
+        return propertyTaxHistoryRepository
+                .findByPropertyIdOrderByTaxYearDesc(propertyId)
                 .stream()
                 .map(this::mapToResponse)
                 .toList();

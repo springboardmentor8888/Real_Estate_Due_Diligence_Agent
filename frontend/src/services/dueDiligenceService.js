@@ -1,9 +1,11 @@
 import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
 function authHeaders() {
-  const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+  const token =
+    localStorage.getItem("token") || localStorage.getItem("authToken");
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
@@ -26,7 +28,9 @@ export function normalizeArray(data) {
 }
 
 export function unavailable(value) {
-  return value === null || value === undefined || value === "" ? "Not available" : value;
+  return value === null || value === undefined || value === ""
+    ? "Not available"
+    : value;
 }
 
 export function formatDate(value) {
@@ -41,7 +45,8 @@ export function formatDate(value) {
 }
 
 export function formatMoney(value) {
-  if (value === null || value === undefined || value === "") return "Not available";
+  if (value === null || value === undefined || value === "")
+    return "Not available";
   const numberValue = Number(value);
   if (Number.isNaN(numberValue)) return value;
   return new Intl.NumberFormat("en-IN", {
@@ -89,7 +94,8 @@ async function collect(key, request) {
     return {
       key,
       data: null,
-      error: error.response?.data?.message || "Unable to retrieve this data source.",
+      error:
+        error.response?.data?.message || "Unable to retrieve this data source.",
     };
   }
 }
@@ -137,7 +143,9 @@ export async function getEnvironmentalRecords(propertyId) {
 }
 
 export async function getRiskAssessment(propertyId) {
-  const response = await api.get(`/api/properties/${propertyId}/risk-assessment`);
+  const response = await api.get(
+    `/api/properties/${propertyId}/risk-assessment`,
+  );
   return response.data;
 }
 
@@ -163,20 +171,39 @@ export async function getDueDiligenceBundle(propertyId) {
   try {
     property = await getProperty(propertyId);
   } catch (error) {
-    propertyError = error.response?.data?.message || "Unable to retrieve property details.";
+    propertyError =
+      error.response?.data?.message || "Unable to retrieve property details.";
   }
 
   const requests = await Promise.all([
-    collectArray("ownership", () => api.get(`/api/ownership/property/${propertyId}`)),
-    collectArray("tax", () => api.get(`/api/property-tax/property/${propertyId}`)),
-    collectArray("flood", () => api.get(`/api/flood-zones/property/${propertyId}`)),
-    collectArray("permits", () => api.get(`/api/permits/property/${propertyId}`)),
+    collectArray("ownership", () =>
+      api.get(`/api/ownership/property/${propertyId}`),
+    ),
+    collectArray("tax", () =>
+      api.get(`/api/property-tax/property/${propertyId}`),
+    ),
+    collectArray("flood", () =>
+      api.get(`/api/flood-zones/property/${propertyId}`),
+    ),
+    collectArray("permits", () =>
+      api.get(`/api/permits/property/${propertyId}`),
+    ),
     collectArray("zoning", () => api.get(`/api/zoning/property/${propertyId}`)),
-    collectArray("environmental", () => api.get(`/api/environmental/${propertyId}`)),
-    collectArray("history", () => api.get(`/api/property-history/${propertyId}`)),
-    collect("riskAssessment", () => api.get(`/api/properties/${propertyId}/risk-assessment`)),
-    collect("valuation", () => api.get(`/api/properties/${propertyId}/valuation`)),
-    collectArray("comparables", () => api.get(`/api/properties/${propertyId}/comparables`)),
+    collectArray("environmental", () =>
+      api.get(`/api/environmental/${propertyId}`),
+    ),
+    collectArray("history", () =>
+      api.get(`/api/property-history/${propertyId}`),
+    ),
+    collect("riskAssessment", () =>
+      api.get(`/api/properties/${propertyId}/risk-assessment`),
+    ),
+    collect("valuation", () =>
+      api.get(`/api/properties/${propertyId}/valuation`),
+    ),
+    collectArray("comparables", () =>
+      api.get(`/api/properties/${propertyId}/comparables`),
+    ),
   ]);
 
   const bundle = {
