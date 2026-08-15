@@ -18,12 +18,10 @@ public class PropertyMapper {
         response.setState(property.getState());
         response.setZipCode(property.getZipCode());
         response.setPropertyType(property.getPropertyType());
-        
         response.setPrice(property.getPrice());
         response.setImageUrl(property.getImageUrl());
+        response.setImageUrls(property.getImageUrls());
         response.setCreatedAt(property.getCreatedAt());
-
-        // ✅ MAP NEW FIELDS TO RESPONSE DTO
         response.setSurveyNo(property.getSurveyNo());
         response.setRegistrationNo(property.getRegistrationNo());
         response.setArea(property.getArea());

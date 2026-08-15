@@ -30,112 +30,55 @@ function AppRouter() {
     "REAL_ESTATE_AGENT",
     "LEGAL_REVIEWER",
     "FINANCIAL_INSTITUTION",
-    "ADMIN",
+    "ADMINISTRATOR",
     "ROLE_REAL_ESTATE_AGENT",
     "ROLE_LEGAL_REVIEWER",
     "ROLE_FINANCIAL_INSTITUTION",
-    "ROLE_ADMIN",
+    "ROLE_ADMINISTRATOR",
   ];
 
   const AGENT_ROLES = [
     "REAL_ESTATE_AGENT",
-    "ADMIN",
+    "ADMINISTRATOR",
     "ROLE_REAL_ESTATE_AGENT",
-    "ROLE_ADMIN",
+    "ROLE_ADMINISTRATOR",
   ];
 
-  const ADMIN_ROLES = [
-    "ADMIN",
-    "ROLE_ADMIN",
-  ];
+  const ADMIN_ROLES = ["ADMINISTRATOR", "ROLE_ADMINISTRATOR"];
 
   return (
     <Routes>
-      <Route
-        path="/"
-        element={<Navigate to="/dashboard" replace />}
-      />
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-      <Route
-        path="/login"
-        element={<Login />}
-      />
+      <Route path="/login" element={<Login />} />
 
-      <Route
-        path="/register"
-        element={<Register />}
-      />
+      <Route path="/register" element={<Register />} />
 
-      <Route
-        path="/forgot-password"
-        element={<ForgotPassword />}
-      />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
 
-      <Route
-        path="/verify-otp"
-        element={<VerifyOtp />}
-      />
+      <Route path="/verify-otp" element={<VerifyOtp />} />
 
-      <Route
-        path="/reset-password"
-        element={<ResetPassword />}
-      />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
-      <Route
-        path="/oauth2/success"
-        element={<OAuth2Success />}
-      />
+      <Route path="/oauth2/success" element={<OAuth2Success />} />
 
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
-          <Route
-            path="/dashboard"
-            element={<Dashboard />}
-          />
+          <Route path="/dashboard" element={<Dashboard />} />
 
-          <Route
-            element={
-              <ProtectedRoute
-                allowedRoles={ADMIN_ROLES}
-              />
-            }
-          >
-            <Route
-              path="/admin"
-              element={<AdminDashboard />}
-            />
+          <Route element={<ProtectedRoute allowedRoles={ADMIN_ROLES} />}>
+            <Route path="/admin" element={<AdminDashboard />} />
 
-            <Route
-              path="/analytics"
-              element={<Analytics />}
-            />
+            <Route path="/analytics" element={<Analytics />} />
 
-            <Route
-              path="/audit-logs"
-              element={<AuditLogs />}
-            />
+            <Route path="/audit-logs" element={<AuditLogs />} />
           </Route>
 
-          <Route
-            element={
-              <ProtectedRoute
-                allowedRoles={AGENT_ROLES}
-              />
-            }
-          >
-            <Route
-              path="/add-property"
-              element={<AddProperty />}
-            />
+          <Route element={<ProtectedRoute allowedRoles={AGENT_ROLES} />}>
+            <Route path="/add-property" element={<AddProperty />} />
           </Route>
 
-          <Route
-            element={
-              <ProtectedRoute
-                allowedRoles={PRO_ROLES}
-              />
-            }
-          >
+          <Route element={<ProtectedRoute allowedRoles={PRO_ROLES} />}>
             <Route
               path="/property-comparison"
               element={<Navigate to="/search-property" replace />}
@@ -150,13 +93,9 @@ function AppRouter() {
               path="/property-comparison/:propertyId/:compareId"
               element={<PropertyComparison />}
             />
-
           </Route>
 
-          <Route
-            path="/search-property"
-            element={<SearchProperty />}
-          />
+          <Route path="/search-property" element={<SearchProperty />} />
 
           <Route
             path="/property-details"
@@ -180,60 +119,31 @@ function AppRouter() {
 
           <Route
             path="/reports"
-            element={
-              <Navigate
-                to="/search-property"
-                replace
-              />
-            }
+            element={<Navigate to="/search-property" replace />}
           />
 
-          <Route
-            path="/reports/:propertyId"
-            element={<DueDiligenceReport />}
-          />
+          <Route path="/reports/:propertyId" element={<DueDiligenceReport />} />
 
-          <Route
-            path="/report/:propertyId"
-            element={<DueDiligenceReport />}
-          />
+          <Route path="/report/:propertyId" element={<DueDiligenceReport />} />
 
-          <Route
-            path="/saved-properties"
-            element={<SavedProperties />}
-          />
+          <Route path="/saved-properties" element={<SavedProperties />} />
 
           <Route
             path="/risk-assessment/:propertyId"
             element={<RiskAssessment />}
           />
 
-          <Route
-            path="/alerts"
-            element={<Alerts />}
-          />
+          <Route path="/alerts" element={<Alerts />} />
 
-          <Route
-            path="/profile"
-            element={<Profile />}
-          />
+          <Route path="/profile" element={<Profile />} />
 
-          <Route
-            path="/settings"
-            element={<Settings />}
-          />
+          <Route path="/settings" element={<Settings />} />
 
-          <Route
-            path="/help"
-            element={<Help />}
-          />
+          <Route path="/help" element={<Help />} />
         </Route>
       </Route>
 
-      <Route
-        path="*"
-        element={<Navigate to="/dashboard" replace />}
-      />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 }
@@ -241,14 +151,9 @@ function AppRouter() {
 export default AppRouter;
 
 function Settings() {
-  return (
-    <div>Settings</div>
-  );
+  return <div>Settings</div>;
 }
 
 function Help() {
-  return (
-    <div>Help & Support</div>
-  );
+  return <div>Help & Support</div>;
 }
-

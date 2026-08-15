@@ -54,11 +54,15 @@ function SourceStatus({ label, records, error }) {
             error
               ? "bg-red-100 text-red-700"
               : available
-              ? "bg-green-100 text-green-700"
-              : "bg-gray-200 text-gray-600"
+                ? "bg-green-100 text-green-700"
+                : "bg-gray-200 text-gray-600"
           }`}
         >
-          {error ? "Unable to retrieve" : available ? "Available" : "Not available"}
+          {error
+            ? "Unable to retrieve"
+            : available
+              ? "Available"
+              : "Not available"}
         </span>
       </div>
       <p className="mt-2 text-sm text-gray-500">
@@ -84,6 +88,7 @@ function PropertyDetails() {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfMessage, setPdfMessage] = useState("");
   const [error, setError] = useState("");
+  const [selectedImage, setSelectedImage] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -102,18 +107,41 @@ function PropertyDetails() {
           localStorage.getItem("token") || localStorage.getItem("authToken");
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-        // Concurrent fetching for main property & risk assessment
         const [propRes, bundleData] = await Promise.allSettled([
-          axios.get(`http://localhost:8080/api/properties/${targetId}`, { headers }),
+          axios.get(`http://localhost:8080/api/properties/${targetId}`, {
+            headers,
+          }),
           getDueDiligenceBundle(targetId),
         ]);
 
         if (propRes.status === "fulfilled" && propRes.value.data) {
-          if (active) setProperty(propRes.value.data);
+          const propertyData = propRes.value.data;
+
+          if (active) {
+            setProperty(propertyData);
+
+            const images = propertyData.imageUrls || [];
+
+            if (images.length > 0) {
+              setSelectedImage(images[0]);
+            } else if (propertyData.imageUrl) {
+              setSelectedImage(propertyData.imageUrl);
+            }
+          }
         } else {
-          // Fallback to service loader if direct endpoint throws
           const fallbackData = await getProperty(targetId);
-          if (active) setProperty(fallbackData);
+
+          if (active) {
+            setProperty(fallbackData);
+
+            const images = fallbackData.imageUrls || [];
+
+            if (images.length > 0) {
+              setSelectedImage(images[0]);
+            } else if (fallbackData.imageUrl) {
+              setSelectedImage(fallbackData.imageUrl);
+            }
+          }
         }
 
         if (bundleData.status === "fulfilled" && bundleData.value) {
@@ -157,7 +185,10 @@ function PropertyDetails() {
         <div className="h-40 animate-pulse rounded-xl bg-gray-100" />
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           {[1, 2, 3].map((item) => (
-            <div key={item} className="h-28 animate-pulse rounded-xl bg-gray-100" />
+            <div
+              key={item}
+              className="h-28 animate-pulse rounded-xl bg-gray-100"
+            />
           ))}
         </div>
       </div>
@@ -169,7 +200,9 @@ function PropertyDetails() {
       <div className="px-8 py-10">
         <div className="mx-auto max-w-2xl rounded-xl border border-red-200 bg-red-50 p-8 text-center text-red-700">
           <FaExclamationTriangle className="mx-auto text-3xl" />
-          <h1 className="mt-4 text-2xl font-bold">Property Details Unavailable</h1>
+          <h1 className="mt-4 text-2xl font-bold">
+            Property Details Unavailable
+          </h1>
           <p className="mt-2">{error || "No property data returned."}</p>
           <button
             onClick={() => navigate("/search-property")}
@@ -188,7 +221,11 @@ function PropertyDetails() {
     ["Flood", bundle?.flood || [], bundle?.errors?.flood],
     ["Permits", bundle?.permits || [], bundle?.errors?.permits],
     ["Zoning", bundle?.zoning || [], bundle?.errors?.zoning],
-    ["Environmental", bundle?.environmental || [], bundle?.errors?.environmental],
+    [
+      "Environmental",
+      bundle?.environmental || [],
+      bundle?.errors?.environmental,
+    ],
   ];
 
   const risk = bundle?.riskAssessment || property.riskAssessment;
@@ -270,6 +307,66 @@ function PropertyDetails() {
         )}
       </header>
 
+      {/* PROPERTY IMAGE GALLERY */}
+      <section className="mt-8 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <h2 className="text-xl font-bold text-gray-900 mb-5">
+          Property Images
+        </h2>
+
+        {(() => {
+          const images =
+            property.imageUrls?.length > 0
+              ? property.imageUrls
+              : property.imageUrl
+                ? [property.imageUrl]
+                : [];
+
+          if (images.length === 0) {
+            return (
+              <div className="h-80 flex items-center justify-center rounded-xl bg-gray-100 text-gray-500">
+                No property images available
+              </div>
+            );
+          }
+
+          return (
+            <>
+              {/* MAIN IMAGE */}
+              <div className="w-full flex justify-center">
+                <img
+                  src={selectedImage || images[0]}
+                  alt="Main Property"
+                  className="w-full max-w-4xl h-[450px] object-cover rounded-xl border shadow-sm"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4 mt-5 max-w-4xl mx-auto">
+                {images
+                  .filter((image) => image !== selectedImage)
+                  .slice(0, 3)
+                  .map((image, index) => (
+                    <button
+                      key={image}
+                      type="button"
+                      onClick={() => setSelectedImage(image)}
+                      className="rounded-lg overflow-hidden border-2 border-gray-200 hover:border-blue-400 transition"
+                    >
+                      <img
+                        src={image}
+                        alt={`Property thumbnail ${index + 1}`}
+                        className="w-full h-32 object-cover"
+                      />
+                    </button>
+                  ))}
+              </div>
+            </>
+          );
+        })()}
+      </section>
+
+      {/* SUMMARY DATA TILES */}
+      <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"></section>
+
       {/* SUMMARY DATA TILES */}
       <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <DataTile
@@ -289,12 +386,16 @@ function PropertyDetails() {
         />
         <DataTile
           title="Bedrooms"
-          value={unavailable(property.bedrooms != null ? `${property.bedrooms} Beds` : null)}
+          value={unavailable(
+            property.bedrooms != null ? `${property.bedrooms} Beds` : null,
+          )}
           icon={<FaBed />}
         />
         <DataTile
           title="Bathrooms"
-          value={unavailable(property.bathrooms != null ? `${property.bathrooms} Baths` : null)}
+          value={unavailable(
+            property.bathrooms != null ? `${property.bathrooms} Baths` : null,
+          )}
           icon={<FaBath />}
         />
         <DataTile
@@ -302,7 +403,7 @@ function PropertyDetails() {
           value={unavailable(
             property.area ||
               (property.sqft ? `${property.sqft} sqft` : null) ||
-              (property.squareFeet ? `${property.squareFeet} sqft` : null)
+              (property.squareFeet ? `${property.squareFeet} sqft` : null),
           )}
           icon={<FaRulerCombined />}
         />
@@ -318,11 +419,27 @@ function PropertyDetails() {
             ["State", property.state],
             ["ZIP Code", property.zipCode || property.pincode],
             ["Property Type", property.propertyType || property.property_type],
-            ["Bedrooms", property.bedrooms != null ? `${property.bedrooms} Bedrooms` : null],
-            ["Bathrooms", property.bathrooms != null ? `${property.bathrooms} Bathrooms` : null],
+            [
+              "Bedrooms",
+              property.bedrooms != null
+                ? `${property.bedrooms} Bedrooms`
+                : null,
+            ],
+            [
+              "Bathrooms",
+              property.bathrooms != null
+                ? `${property.bathrooms} Bathrooms`
+                : null,
+            ],
             ["Survey Number", property.surveyNo || property.survey_no],
-            ["Registration No.", property.registrationNo || property.registration_no],
-            ["Price / Market Value", formatMoney(property.price || property.marketValue)],
+            [
+              "Registration No.",
+              property.registrationNo || property.registration_no,
+            ],
+            [
+              "Price / Market Value",
+              formatMoney(property.price || property.marketValue),
+            ],
             ["Created At", formatDate(property.createdAt)],
           ].map(([label, value]) => (
             <div
@@ -346,7 +463,8 @@ function PropertyDetails() {
               Due Diligence Overview
             </h2>
             <p className="mt-1 text-sm text-gray-500">
-              Source availability for this property. Click action buttons above for detailed workflows.
+              Source availability for this property. Click action buttons above
+              for detailed workflows.
             </p>
           </div>
           {diligenceLoading && (

@@ -25,9 +25,10 @@ public interface PropertyService {
             AddressValidationRequest request
     );
 
-    // Update existing property
     PropertyResponse updateProperty(
             Long id,
             AddressValidationRequest request
     );
+
+    void deleteProperty(Long id);
 }

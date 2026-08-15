@@ -1,15 +1,23 @@
-import { FaBell, FaSearch, FaChevronDown, FaFilter, FaPlus } from "react-icons/fa";
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import {
+  FaBell,
+  FaSearch,
+  FaChevronDown,
+  FaFilter,
+  FaPlus,
+} from "react-icons/fa";
+import { Link, useNavigate } from "react-router-dom";
 
 const Navbar = ({ showFilter = false, showSearch = true, onToggleFilter }) => {
-  // Read user role and name from localStorage
-  const userRole = localStorage.getItem("userRole") || localStorage.getItem("role") || "";
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState("");
+  const userRole =
+    localStorage.getItem("userRole") || localStorage.getItem("role") || "";
   const userName = localStorage.getItem("userName") || "User";
 
   // Check if current user has permission to post properties
   const canPostProperty =
-    userRole.includes("REAL_ESTATE_AGENT") ||
-    userRole.includes("ADMIN");
+    userRole.includes("REAL_ESTATE_AGENT") || userRole.includes("ADMIN");
 
   return (
     <header className="flex items-center justify-between bg-white px-8 py-4 shadow-sm border-b">
@@ -18,11 +26,31 @@ const Navbar = ({ showFilter = false, showSearch = true, onToggleFilter }) => {
           <div className="relative w-[500px]">
             <input
               type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && searchQuery.trim()) {
+                  navigate(
+                    `/search-property?query=${encodeURIComponent(searchQuery.trim())}`,
+                  );
+                }
+              }}
               placeholder="Search by address, city, pincode..."
               className="w-full rounded-xl border border-gray-300 py-3 pl-5 pr-12 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
-
-            <FaSearch className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500" />
+            <button
+              type="button"
+              onClick={() => {
+                if (searchQuery.trim()) {
+                  navigate(
+                    `/search-property?query=${encodeURIComponent(searchQuery.trim())}`,
+                  );
+                }
+              }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-blue-600 cursor-pointer"
+            >
+              <FaSearch />
+            </button>
           </div>
         )}
 
@@ -65,7 +93,8 @@ const Navbar = ({ showFilter = false, showSearch = true, onToggleFilter }) => {
             <h2 className="font-semibold text-gray-800">{userName}</h2>
 
             <p className="text-sm text-gray-500 capitalize">
-              {userRole.replace("ROLE_", "").replace("_", " ").toLowerCase() || "Buyer"}
+              {userRole.replace("ROLE_", "").replace("_", " ").toLowerCase() ||
+                "Buyer"}
             </p>
           </div>
 

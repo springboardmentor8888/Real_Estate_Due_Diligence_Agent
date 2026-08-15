@@ -3,6 +3,7 @@ package com.realestate.due_diligence.property.dto;
 import lombok.Getter;
 import lombok.Setter;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -16,9 +17,9 @@ public class PropertyResponse {
 
     private Double price;
     private String imageUrl;
+    private List<String> imageUrls;
     private LocalDateTime createdAt;
 
-    // ✅ ADDED NEW DILIGENCE & STRUCTURAL FIELDS
     private String surveyNo;
     private String registrationNo;
     private String area;

@@ -4,15 +4,12 @@ import com.realestate.due_diligence.notification.service.NotificationService;
 import com.realestate.due_diligence.property.Property;
 import com.realestate.due_diligence.property.dto.AddressValidationRequest;
 import com.realestate.due_diligence.property.dto.AddressValidationResponse;
-import com.realestate.due_diligence.property.dto.PropertyRequest;
 import com.realestate.due_diligence.property.dto.PropertyResponse;
 import com.realestate.due_diligence.property.dto.PropertySearchRequest;
 import com.realestate.due_diligence.repository.PropertyRepository;
 import com.realestate.due_diligence.zoning.ZoningInfo;
 import com.realestate.due_diligence.repository.ZoningInfoRepository;
-
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,17 +25,14 @@ public class PropertyServiceImpl implements PropertyService {
     private final NotificationService notificationService;
     private final ZoningInfoRepository zoningInfoRepository;
 
-    // =====================================================
-    // CREATE PROPERTY / DUE DILIGENCE
-    // =====================================================
 
     @Override
     @Transactional
-    public PropertyResponse performDueDiligence(AddressValidationRequest request) {
+    public PropertyResponse performDueDiligence(
+            AddressValidationRequest request
+    ) {
 
         Property property = new Property();
-
-        // 1. Basic Address Mapping
         String fullAddress = String.format(
                 "%s, %s, %s %s",
                 request.getAddress(),
@@ -53,45 +47,30 @@ public class PropertyServiceImpl implements PropertyService {
         property.setZipCode(request.getZipCode());
         property.setPropertyType(request.getPropertyType() != null ? request.getPropertyType() : "RESIDENTIAL");
         property.setCreatedAt(LocalDateTime.now());
-
-        // 2. Set Pricing & Image URL
         property.setPrice(request.getPrice());
-        
-        // Handle single image or first image from list
-        if (request.getImageUrl() != null && !request.getImageUrl().isBlank()) {
-            property.setImageUrl(request.getImageUrl());
-        } else if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
-            property.setImageUrl(request.getImageUrls().get(0));
-        }
 
-        // 3. ✅ MAP NEW STRUCTURAL & LEGAL IDENTIFIER FIELDS
+        if (request.getImageUrls() == null || request.getImageUrls().size() != 4) {
+            throw new IllegalArgumentException(
+                    "Exactly 4 property image URLs are required."
+            );
+        }
+        property.setImageUrls(request.getImageUrls());
+        property.setImageUrl(request.getImageUrls().get(0));
+
         property.setBedrooms(request.getBedrooms());
         property.setBathrooms(request.getBathrooms());
         property.setSurveyNo(request.getSurveyNo());
         property.setRegistrationNo(request.getRegistrationNo());
-
-        // Convert SqFt to Area string if provided
         if (request.getSqft() != null) {
             property.setArea(request.getSqft() + " sqft");
         }
-
-        // 4. Save property to PostgreSQL to generate Primary Key
         Property savedProperty = propertyRepository.save(property);
-
-        // 5. Automatically resolve and save realistic municipal zoning info
         ZoningInfo zoning = resolveMunicipalZoning(savedProperty);
         zoningInfoRepository.save(zoning);
 
         return mapToResponse(savedProperty);
     }
 
-    // =====================================================
-    // MUNICIPAL ZONING RESOLVER
-    // =====================================================
-
-    /**
-     * Resolves official municipal master-plan zoning rules based on property location.
-     */
     private ZoningInfo resolveMunicipalZoning(Property property) {
         ZoningInfo zoning = new ZoningInfo();
         zoning.setProperty(property);
@@ -115,10 +94,6 @@ public class PropertyServiceImpl implements PropertyService {
         return zoning;
     }
 
-    // =====================================================
-    // GET ALL PROPERTIES
-    // =====================================================
-
     @Override
     public List<PropertyResponse> getAllProperties() {
 
@@ -129,9 +104,6 @@ public class PropertyServiceImpl implements PropertyService {
                 .collect(Collectors.toList());
     }
 
-    // =====================================================
-    // GET PROPERTY BY ID
-    // =====================================================
 
     @Override
     public PropertyResponse getPropertyById(Long id) {
@@ -148,9 +120,6 @@ public class PropertyServiceImpl implements PropertyService {
         return mapToResponse(property);
     }
 
-    // =====================================================
-    // SEARCH PROPERTIES
-    // =====================================================
 
     @Override
     public List<PropertyResponse> searchProperties(
@@ -159,9 +128,6 @@ public class PropertyServiceImpl implements PropertyService {
         return getAllProperties();
     }
 
-    // =====================================================
-    // VALIDATE ADDRESS
-    // =====================================================
 
     @Override
     public AddressValidationResponse validateAddress(
@@ -189,9 +155,6 @@ public class PropertyServiceImpl implements PropertyService {
         return response;
     }
 
-    // =====================================================
-    // UPDATE PROPERTY
-    // =====================================================
 
     @Override
     @Transactional
@@ -224,11 +187,6 @@ public class PropertyServiceImpl implements PropertyService {
         if (request.getPrice() != null) {
             property.setPrice(request.getPrice());
         }
-        if (request.getImageUrl() != null) {
-            property.setImageUrl(request.getImageUrl());
-        }
-
-        // Update Structural & Legal Fields
         if (request.getBedrooms() != null) property.setBedrooms(request.getBedrooms());
         if (request.getBathrooms() != null) property.setBathrooms(request.getBathrooms());
         if (request.getSurveyNo() != null) property.setSurveyNo(request.getSurveyNo());
@@ -238,7 +196,6 @@ public class PropertyServiceImpl implements PropertyService {
         Property updatedProperty =
                 propertyRepository.save(property);
 
-        // Create notification after successful update
         notificationService.createPropertyUpdateNotification(
                 updatedProperty.getId(),
                 updatedProperty.getAddress()
@@ -247,9 +204,6 @@ public class PropertyServiceImpl implements PropertyService {
         return mapToResponse(updatedProperty);
     }
 
-    // =====================================================
-    // ENTITY -> DTO
-    // =====================================================
 
     private PropertyResponse mapToResponse(
             Property property) {
@@ -264,11 +218,9 @@ public class PropertyServiceImpl implements PropertyService {
         response.setZipCode(property.getZipCode());
         response.setPropertyType(property.getPropertyType());
         response.setCreatedAt(property.getCreatedAt());
-
         response.setPrice(property.getPrice());
         response.setImageUrl(property.getImageUrl());
-
-        // ✅ MAP DUE DILIGENCE & STRUCTURAL FIELDS TO RESPONSE DTO
+        response.setImageUrls(property.getImageUrls());
         response.setSurveyNo(property.getSurveyNo());
         response.setRegistrationNo(property.getRegistrationNo());
         response.setArea(property.getArea());
@@ -278,5 +230,20 @@ public class PropertyServiceImpl implements PropertyService {
         response.setFurnishing(property.getFurnishing());
 
         return response;
+    }
+
+    @Override
+    @Transactional
+    public void deleteProperty(Long id) {
+
+        Property property = propertyRepository.findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Property not found with id: " + id
+                        )
+                );
+        zoningInfoRepository.deleteByPropertyId(id);
+
+        propertyRepository.delete(property);
     }
 }

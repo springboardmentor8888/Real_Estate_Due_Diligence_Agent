@@ -1,19 +1,17 @@
 package com.realestate.due_diligence.property.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.realestate.due_diligence.property.dto.AddressValidationRequest;
 import com.realestate.due_diligence.property.dto.AddressValidationResponse;
-import com.realestate.due_diligence.property.dto.PropertyRequest; // ✅ Import PropertyRequest or create DTO if needed
 import com.realestate.due_diligence.property.dto.PropertyResponse;
 import com.realestate.due_diligence.property.dto.PropertySearchRequest;
 import com.realestate.due_diligence.property.service.PropertyService;
-
 import jakarta.validation.Valid;
-
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -25,18 +23,12 @@ public class PropertyController {
 
     private final PropertyService propertyService;
 
-    // =====================================================
-    // GET ALL PROPERTIES
-    // =====================================================
 
     @GetMapping
     public List<PropertyResponse> getAllProperties() {
         return propertyService.getAllProperties();
     }
 
-    // =====================================================
-    // GET PROPERTY BY ID
-    // =====================================================
 
     @GetMapping("/{id}")
     public PropertyResponse getPropertyById(
@@ -44,20 +36,21 @@ public class PropertyController {
         return propertyService.getPropertyById(id);
     }
 
-    // =====================================================
-    // CREATE NEW PROPERTY (POST /api/properties)
-    // =====================================================
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteProperty(@PathVariable Long id) {
+        propertyService.deleteProperty(id);
+    }
+
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public PropertyResponse createProperty(
-            @Valid @RequestBody AddressValidationRequest request) { // Or PropertyRequest depending on Gautham's DTO
+            @Valid @RequestBody AddressValidationRequest request) {
+
         return propertyService.performDueDiligence(request);
     }
 
-    // =====================================================
-    // SEARCH PROPERTIES
-    // =====================================================
 
     @PostMapping("/search")
     public List<PropertyResponse> searchProperties(
@@ -65,9 +58,6 @@ public class PropertyController {
         return propertyService.searchProperties(request);
     }
 
-    // =====================================================
-    // VALIDATE ADDRESS
-    // =====================================================
 
     @PostMapping("/validate-address")
     public AddressValidationResponse validateAddress(
@@ -75,19 +65,15 @@ public class PropertyController {
         return propertyService.validateAddress(request);
     }
 
-    // =====================================================
-    // CREATE / DUE DILIGENCE
-    // =====================================================
 
     @PostMapping("/due-diligence")
+    @ResponseStatus(HttpStatus.CREATED)
     public PropertyResponse performDueDiligence(
             @Valid @RequestBody AddressValidationRequest request) {
+
         return propertyService.performDueDiligence(request);
     }
 
-    // =====================================================
-    // UPDATE PROPERTY
-    // =====================================================
 
     @PutMapping("/{id}")
     public PropertyResponse updateProperty(

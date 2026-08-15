@@ -9,4 +9,5 @@ public interface ZoningInfoRepository
         extends JpaRepository<ZoningInfo, Long> {
 
     List<ZoningInfo> findByPropertyId(Long propertyId);
+    void deleteByPropertyId(Long propertyId);
 }
