@@ -6,6 +6,8 @@ import Notifications from "./Notifications";
 import RecentReports from "./RecentReports";
 import { FaSearch, FaFileAlt, FaBookmark, FaBell } from "react-icons/fa";
 import axios from "axios";
+import LegalReviewerDashboard from "./LegalReviewerDashboard";
+import FinancialInstitutionDashboard from "./FinancialInstitutionDashboard";
 
 const Dashboard = () => {
   const [userName, setUserName] = useState("User");
@@ -17,9 +19,27 @@ const Dashboard = () => {
   });
   const [loading, setLoading] = useState(true);
 
+  const role =
+    localStorage.getItem("userRole") || localStorage.getItem("role") || "";
+
+  const normalizedRole = role
+    .replace(/^ROLE_/i, "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "_");
+
+  if (normalizedRole === "LEGAL_REVIEWER") {
+    return <LegalReviewerDashboard />;
+  }
+
+  if (normalizedRole === "FINANCIAL_INSTITUTION") {
+    return <FinancialInstitutionDashboard />;
+  }
+
   useEffect(() => {
     // 1. Fetch user name from stored session
-    const storedUser = localStorage.getItem("userName") || localStorage.getItem("user");
+    const storedUser =
+      localStorage.getItem("userName") || localStorage.getItem("user");
     if (storedUser) {
       try {
         const parsed = JSON.parse(storedUser);
@@ -42,7 +62,10 @@ const Dashboard = () => {
       // ✅ 1. Fetch live properties (using /api/properties, not /api/v1/properties)
       let propertiesCount = 0;
       try {
-        const propsRes = await axios.get("http://localhost:8080/api/properties", { headers });
+        const propsRes = await axios.get(
+          "http://localhost:8080/api/properties",
+          { headers },
+        );
         const propsList = Array.isArray(propsRes.data)
           ? propsRes.data
           : propsRes.data?.content || [];
@@ -54,7 +77,10 @@ const Dashboard = () => {
       // ✅ 2. Fetch live notifications / alerts count
       let unreadAlerts = 0;
       try {
-        const notifRes = await axios.get("http://localhost:8080/api/notifications", { headers });
+        const notifRes = await axios.get(
+          "http://localhost:8080/api/notifications",
+          { headers },
+        );
         const notifList = Array.isArray(notifRes.data) ? notifRes.data : [];
         unreadAlerts = notifList.filter((n) => !n.read).length;
       } catch (err) {

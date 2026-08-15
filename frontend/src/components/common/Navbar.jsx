@@ -13,11 +13,25 @@ const Navbar = ({ showFilter = false, showSearch = true, onToggleFilter }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const userRole =
     localStorage.getItem("userRole") || localStorage.getItem("role") || "";
-  const userName = localStorage.getItem("userName") || "User";
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
 
-  // Check if current user has permission to post properties
+  const userName =
+    storedUser.name || localStorage.getItem("userName") || "User";
+  const displayRole =
+    userRole
+      .replace(/^ROLE_/i, "")
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ") || "Buyer";
+
+  const normalizedRole = userRole
+    .replace(/^ROLE_/i, "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "_");
   const canPostProperty =
-    userRole.includes("REAL_ESTATE_AGENT") || userRole.includes("ADMIN");
+    normalizedRole === "REAL_ESTATE_AGENT" ||
+    normalizedRole === "ADMINISTRATOR";
 
   return (
     <header className="flex items-center justify-between bg-white px-8 py-4 shadow-sm border-b">
@@ -92,10 +106,7 @@ const Navbar = ({ showFilter = false, showSearch = true, onToggleFilter }) => {
           <div>
             <h2 className="font-semibold text-gray-800">{userName}</h2>
 
-            <p className="text-sm text-gray-500 capitalize">
-              {userRole.replace("ROLE_", "").replace("_", " ").toLowerCase() ||
-                "Buyer"}
-            </p>
+            <p className="text-sm text-gray-500 ">{displayRole}</p>
           </div>
 
           <FaChevronDown className="text-gray-500" />

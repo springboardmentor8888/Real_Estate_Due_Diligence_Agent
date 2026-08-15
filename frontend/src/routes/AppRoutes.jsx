@@ -8,6 +8,7 @@ import VerifyOtp from "../pages/VerifyOtp";
 import ResetPassword from "../pages/ResetPassword";
 
 import Dashboard from "../pages/Dashboard";
+import LegalReviewerDashboard from "../pages/LegalReviewerDashboard";
 import AdminDashboard from "../pages/AdminDashboard";
 import SearchProperty from "../pages/SearchProperty";
 import AddProperty from "../pages/AddProperty";
@@ -31,24 +32,23 @@ function AppRouter() {
     "LEGAL_REVIEWER",
     "FINANCIAL_INSTITUTION",
     "ADMINISTRATOR",
-    "ROLE_REAL_ESTATE_AGENT",
-    "ROLE_LEGAL_REVIEWER",
-    "ROLE_FINANCIAL_INSTITUTION",
-    "ROLE_ADMINISTRATOR",
   ];
 
-  const AGENT_ROLES = [
+  const COMPARISON_ROLES = [
+    "BUYER",
     "REAL_ESTATE_AGENT",
+    "LEGAL_REVIEWER",
+    "FINANCIAL_INSTITUTION",
     "ADMINISTRATOR",
-    "ROLE_REAL_ESTATE_AGENT",
-    "ROLE_ADMINISTRATOR",
   ];
 
-  const ADMIN_ROLES = ["ADMINISTRATOR", "ROLE_ADMINISTRATOR"];
+  const AGENT_ROLES = ["REAL_ESTATE_AGENT", "ADMINISTRATOR"];
+
+  const ADMIN_ROLES = ["ADMINISTRATOR"];
 
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<RoleBasedDashboard />} />
 
       <Route path="/login" element={<Login />} />
 
@@ -78,7 +78,7 @@ function AppRouter() {
             <Route path="/add-property" element={<AddProperty />} />
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={PRO_ROLES} />}>
+          <Route element={<ProtectedRoute allowedRoles={COMPARISON_ROLES} />}>
             <Route
               path="/property-comparison"
               element={<Navigate to="/search-property" replace />}
@@ -107,15 +107,19 @@ function AppRouter() {
             element={<PropertyDetails />}
           />
 
-          <Route
-            path="/property-history"
-            element={<Navigate to="/search-property" replace />}
-          />
+          <Route element={<ProtectedRoute allowedRoles={PRO_ROLES} />}>
+            <Route
+              path="/property-history"
+              element={<Navigate to="/search-property" replace />}
+            />
+          </Route>
 
-          <Route
-            path="/property-history/:propertyId"
-            element={<PropertyHistory />}
-          />
+          <Route element={<ProtectedRoute allowedRoles={PRO_ROLES} />}>
+            <Route
+              path="/property-history/:propertyId"
+              element={<PropertyHistory />}
+            />
+          </Route>
 
           <Route
             path="/reports"
@@ -146,6 +150,27 @@ function AppRouter() {
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
+}
+
+function RoleBasedDashboard() {
+  const role =
+    localStorage.getItem("userRole") || localStorage.getItem("role") || "";
+
+  const normalizedRole = role
+    .replace(/^ROLE_/i, "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "_");
+
+  if (normalizedRole === "LEGAL_REVIEWER") {
+    return <LegalReviewerDashboard />;
+  }
+
+  if (normalizedRole === "FINANCIAL_INSTITUTION") {
+    return <FinancialInstitutionDashboard />;
+  }
+
+  return <Dashboard />;
 }
 
 export default AppRouter;

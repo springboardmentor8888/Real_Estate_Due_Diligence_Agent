@@ -10,7 +10,11 @@ import {
   HiOutlineClipboardDocumentList,
   HiOutlineCog6Tooth,
   HiOutlineDocumentText,
+  HiOutlineDocumentMagnifyingGlass,
+  HiOutlineExclamationTriangle,
+  HiOutlineCheckBadge,
   HiOutlineHome,
+  HiOutlineBanknotes,
   HiOutlinePlusCircle,
   HiOutlineQuestionMarkCircle,
   HiOutlineShieldCheck,
@@ -23,37 +27,96 @@ const mainMenuItems = [
     icon: <HiOutlineHome />,
     label: "Dashboard",
     path: "/dashboard",
-    roles: ["BUYER", "REAL_ESTATE_AGENT", "LEGAL_REVIEWER", "FINANCIAL_INSTITUTION", "ADMIN", "USER"],
+    roles: [
+      "BUYER",
+      "REAL_ESTATE_AGENT",
+      "LEGAL_REVIEWER",
+      "FINANCIAL_INSTITUTION",
+      "ADMINISTRATOR",
+    ],
   },
   {
     icon: <HiMagnifyingGlass />,
     label: "Search Property",
     path: "/search-property",
-    roles: ["BUYER", "REAL_ESTATE_AGENT", "LEGAL_REVIEWER", "FINANCIAL_INSTITUTION", "ADMIN", "USER"],
+    roles: [
+      "BUYER",
+      "REAL_ESTATE_AGENT",
+      "LEGAL_REVIEWER",
+      "FINANCIAL_INSTITUTION",
+      "ADMINISTRATOR",
+    ],
   },
+
+  {
+    icon: <HiOutlineBanknotes />,
+    label: "Financial Assessment",
+    path: "/financial-assessment",
+    roles: ["FINANCIAL_INSTITUTION", "ADMINISTRATOR"],
+  },
+
+  {
+    icon: <HiOutlineDocumentMagnifyingGlass />,
+    label: "Legal Reviews",
+    path: "/legal-reviews",
+    roles: ["LEGAL_REVIEWER"],
+  },
+
+  {
+    icon: <HiOutlineExclamationTriangle />,
+    label: "Risk & Evidence",
+    path: "/risk-evidence",
+    roles: ["LEGAL_REVIEWER"],
+  },
+
+  {
+    icon: <HiOutlineDocumentText />,
+    label: "Due Diligence Reports",
+    path: "/reports",
+    roles: [
+      "LEGAL_REVIEWER",
+      "REAL_ESTATE_AGENT",
+      "FINANCIAL_INSTITUTION",
+      "ADMINISTRATOR",
+    ],
+  },
+
+  {
+    icon: <HiOutlineCheckBadge />,
+    label: "Review History",
+    path: "/review-history",
+    roles: ["LEGAL_REVIEWER"],
+  },
+
   {
     icon: <HiOutlinePlusCircle />,
     label: "Post Property",
     path: "/add-property",
-    roles: ["REAL_ESTATE_AGENT", "ADMIN"],
+    roles: ["REAL_ESTATE_AGENT", "ADMINISTRATOR"],
   },
-  {
-    icon: <HiOutlineDocumentText />,
-    label: "My Reports",
-    path: "/reports",
-    roles: ["BUYER", "REAL_ESTATE_AGENT", "LEGAL_REVIEWER", "FINANCIAL_INSTITUTION", "ADMIN", "USER"],
-  },
+
   {
     icon: <HiOutlineBookmark />,
     label: "Saved Properties",
     path: "/saved-properties",
-    roles: ["BUYER", "REAL_ESTATE_AGENT", "LEGAL_REVIEWER", "FINANCIAL_INSTITUTION", "ADMIN", "USER"],
+    roles: [
+      "BUYER",
+      "REAL_ESTATE_AGENT",
+      "FINANCIAL_INSTITUTION",
+      "ADMINISTRATOR",
+    ],
   },
   {
     icon: <HiOutlineBell />,
     label: "Alerts & Notifications",
     path: "/alerts",
-    roles: ["BUYER", "REAL_ESTATE_AGENT", "LEGAL_REVIEWER", "FINANCIAL_INSTITUTION", "ADMIN", "USER"],
+    roles: [
+      "BUYER",
+      "REAL_ESTATE_AGENT",
+      "LEGAL_REVIEWER",
+      "FINANCIAL_INSTITUTION",
+      "ADMINISTRATOR",
+    ],
   },
 ];
 
@@ -131,10 +194,17 @@ function Sidebar() {
     localStorage.getItem("userRole") ||
     storedUser.role ||
     "BUYER";
-  const userRole = rawRole.toUpperCase();
-  const isAdmin = userRole.includes("ADMIN");
+
+  const userRole = String(rawRole)
+    .replace(/^ROLE_/i, "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "_");
+
+  const isAdmin = userRole === "ADMINISTRATOR";
+
   const visibleMenuItems = mainMenuItems.filter((item) =>
-    item.roles.some((role) => userRole.includes(role)),
+    item.roles.includes(userRole),
   );
   const userName =
     storedUser.name ||
@@ -251,8 +321,13 @@ function Sidebar() {
             <p className="font-semibold text-white text-sm truncate capitalize">
               {userName}
             </p>
-            <p className="text-xs text-slate-400 uppercase tracking-wider">
-              {userRole.replace("_", " ")}
+            <p className="text-xs text-slate-400 tracking-wider">
+              {userRole === "ADMINISTRATOR"
+                ? "Administrator"
+                : userRole
+                    .replace(/_/g, " ")
+                    .toLowerCase()
+                    .replace(/\b\w/g, (char) => char.toUpperCase())}
             </p>
           </div>
         </div>

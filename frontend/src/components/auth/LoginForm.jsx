@@ -74,7 +74,7 @@ function LoginForm() {
     try {
       const response = await axios.post(
         "http://localhost:8080/auth/login",
-        form
+        form,
       );
 
       if (response.data && response.data.token) {
@@ -82,9 +82,14 @@ function LoginForm() {
 
         // 1. Read registered role cache BEFORE clearing localStorage
         const registeredRolesCache = JSON.parse(
-          localStorage.getItem("registeredRolesCache") || "{}"
+          localStorage.getItem("registeredRolesCache") || "{}",
         );
-        const cachedRole = registeredRolesCache[emailKey];
+        const cachedRole = registeredRolesCache[emailKey]
+          ? String(registeredRolesCache[emailKey])
+              .trim()
+              .toUpperCase()
+              .replace(/\s+/g, "_")
+          : "";
 
         // 2. Clear session tokens safely
         localStorage.removeItem("token");
@@ -108,13 +113,16 @@ function LoginForm() {
 
         // Clean formatting (e.g. "ROLE_LEGAL_REVIEWER" -> "LEGAL_REVIEWER")
         let cleanRole = String(rawRole)
-          .replace(/^ROLE_/, "")
+          .replace(/^ROLE_/i, "")
           .trim()
           .toUpperCase()
           .replace(/\s+/g, "_");
 
         // 4. Smart Fallback: Use cached registration role if backend returned empty, USER, or BUYER
-        if ((!cleanRole || cleanRole === "USER" || cleanRole === "BUYER") && cachedRole) {
+        if (
+          (!cleanRole || cleanRole === "USER" || cleanRole === "BUYER") &&
+          cachedRole
+        ) {
           cleanRole = cachedRole;
         }
 
@@ -140,7 +148,10 @@ function LoginForm() {
         localStorage.setItem("user", JSON.stringify(userObj));
 
         // Preserve role cache for subsequent logins
-        localStorage.setItem("registeredRolesCache", JSON.stringify(registeredRolesCache));
+        localStorage.setItem(
+          "registeredRolesCache",
+          JSON.stringify(registeredRolesCache),
+        );
 
         // 7. Redirect to Dashboard
         navigate("/dashboard");
