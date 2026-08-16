@@ -154,20 +154,29 @@ export function DashboardCard({ cards = MASTER_KPI_CARDS_DATA, analytics }) {
 
     const titleLower = (card.title || "").toLowerCase();
 
-    if (analytics.totalUsers !== undefined && (card.id === "kpi-1" || titleLower.includes("user"))) {
+    if (titleLower === "total users" && analytics.totalUsers !== undefined) {
       return { ...card, count: typeof analytics.totalUsers === "number" ? analytics.totalUsers.toLocaleString() : analytics.totalUsers };
     }
-    if (analytics.totalProperties !== undefined && (card.id === "kpi-3" || titleLower.includes("property") || titleLower.includes("properties"))) {
+    if (titleLower === "active users" && analytics.activeUsers !== undefined) {
+      return { ...card, count: typeof analytics.activeUsers === "number" ? analytics.activeUsers.toLocaleString() : analytics.activeUsers };
+    }
+    if (titleLower === "total properties" && analytics.totalProperties !== undefined) {
       return { ...card, count: typeof analytics.totalProperties === "number" ? analytics.totalProperties.toLocaleString() : analytics.totalProperties };
     }
-    if (analytics.totalReports !== undefined && (card.id === "kpi-4" || titleLower.includes("report"))) {
+    if (titleLower === "reports generated" && analytics.totalReports !== undefined) {
       return { ...card, count: typeof analytics.totalReports === "number" ? analytics.totalReports.toLocaleString() : analytics.totalReports };
     }
-    if (analytics.totalRiskAssessments !== undefined && (card.id === "kpi-5" || titleLower.includes("risk") || titleLower.includes("review"))) {
+    if (titleLower === "pending reviews" && analytics.totalRiskAssessments !== undefined) {
       return { ...card, count: typeof analytics.totalRiskAssessments === "number" ? analytics.totalRiskAssessments.toLocaleString() : analytics.totalRiskAssessments };
     }
-    if (analytics.totalAuditLogs !== undefined && (card.id === "kpi-8" || titleLower.includes("audit") || titleLower.includes("api"))) {
-      return { ...card, count: typeof analytics.totalAuditLogs === "number" ? analytics.totalAuditLogs.toLocaleString() : analytics.totalAuditLogs };
+    if (titleLower === "active sessions" && analytics.activeSessions !== undefined) {
+      return { ...card, count: typeof analytics.activeSessions === "number" ? analytics.activeSessions.toLocaleString() : analytics.activeSessions };
+    }
+    if (titleLower === "system health" && analytics.systemHealth !== undefined) {
+      return { ...card, count: typeof analytics.systemHealth === "number" ? `${analytics.systemHealth}%` : analytics.systemHealth };
+    }
+    if (titleLower === "today's api requests" && analytics.todayApiRequests !== undefined) {
+      return { ...card, count: typeof analytics.todayApiRequests === "number" ? analytics.todayApiRequests.toLocaleString() : analytics.todayApiRequests };
     }
 
     return card;

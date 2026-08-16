@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import MainLayout from "../components/layout/MainLayout";
@@ -22,81 +22,52 @@ import {
   Landmark,
 } from "lucide-react";
 import PropertyContextSwitcher from "../components/common/PropertyContextSwitcher";
-import { getLiveProperties, getLiveActiveProperty } from "../services/liveStore";
+import { getLiveActiveProperty } from "../services/liveStore";
+import { getAllProperties } from "../services/propertyService";
+import { getValuationByProperty } from "../services/valuationService";
 import { exportToPdf } from "../utils/exportUtils";
 import { showToast } from "../utils/swal";
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80";
-
-// Realistic Valuation Mock Data covering all requested fields
-const VALUATION_MOCK_DATA = [
-  {
-    numericId: "1001",
-    id: "PR-1001",
-    propertyName: "Gachibowli Tech Park Phase 2",
-    address: "Plot 45, Sy. No. 112/A, Financial District, Hyderabad",
-    landType: "Commercial Office",
-    marketValue: "₹ 45.00 Cr",
-    marketValueNum: 450000000,
-    governmentValue: "₹ 32.50 Cr",
-    estimatedValue: "₹ 48.20 Cr",
-    appreciationRate: "+12.4% p.a.",
-    investmentScore: "92/100 (AAA Rating)",
-    investmentScoreNum: 92,
-    imageUrl: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    numericId: "1002",
-    id: "PR-1002",
-    propertyName: "Jubilee Hills Commercial Plot 36",
-    address: "Road No. 36, Jubilee Hills, Hyderabad",
-    landType: "Retail Commercial",
-    marketValue: "₹ 38.00 Cr",
-    marketValueNum: 380000000,
-    governmentValue: "₹ 26.80 Cr",
-    estimatedValue: "₹ 40.50 Cr",
-    appreciationRate: "+14.2% p.a.",
-    investmentScore: "86/100 (AA+ Rating)",
-    investmentScoreNum: 86,
-    imageUrl: "https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    numericId: "1003",
-    id: "PR-1003",
-    propertyName: "Whitefield Horizon Tech Campus",
-    address: "EPIP Zone, Phase 2, Whitefield, Bengaluru",
-    landType: "IT Tech Park",
-    marketValue: "₹ 165.00 Cr",
-    marketValueNum: 1650000000,
-    governmentValue: "₹ 118.00 Cr",
-    estimatedValue: "₹ 178.50 Cr",
-    appreciationRate: "+15.8% p.a.",
-    investmentScore: "95/100 (AAA Rating)",
-    investmentScoreNum: 95,
-    imageUrl: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    numericId: "1004",
-    id: "PR-1004",
-    propertyName: "Financial District Commercial Plot",
-    address: "Nanakramguda, Financial District, Hyderabad",
-    landType: "Commercial Office",
-    marketValue: "₹ 52.00 Cr",
-    marketValueNum: 520000000,
-    governmentValue: "₹ 37.20 Cr",
-    estimatedValue: "₹ 56.40 Cr",
-    appreciationRate: "+11.6% p.a.",
-    investmentScore: "90/100 (AAA Rating)",
-    investmentScoreNum: 90,
-    imageUrl: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80",
-  },
-];
 
 /**
  * Reusable Property Valuation Card Component
  */
 function ValuationPropertyCard({ property, onGenerateReport }) {
   const navigate = useNavigate();
+  const [valuation, setValuation] = useState(null);
+  const [loadingValuation, setLoadingValuation] = useState(true);
+
+  useEffect(() => {
+    getValuationByProperty(property.propertyId)
+      .then((res) => {
+        setValuation(res.data);
+        setLoadingValuation(false);
+      })
+      .catch((err) => {
+        console.warn(`Could not load valuation for property ${property.propertyId}:`, err);
+        setLoadingValuation(false);
+      });
+  }, [property.propertyId]);
+
+  const formattedAddress = property.addresses && property.addresses[0] 
+    ? `${property.addresses[0].addressLine1 || ""}, ${property.addresses[0].city || ""}, ${property.addresses[0].state || ""}`
+    : "No address registered";
+
+  const marketValueText = property.marketValue 
+    ? `₹ ${(property.marketValue / 10000000).toFixed(2)} Cr` 
+    : "₹ 0.00 Cr";
+
+  const govValueText = valuation && valuation.averageComparableValue 
+    ? `₹ ${(valuation.averageComparableValue * 0.72 / 10000000).toFixed(2)} Cr` 
+    : "₹ -- Cr";
+
+  const estValueText = valuation && valuation.estimatedMarketValue 
+    ? `₹ ${(valuation.estimatedMarketValue / 10000000).toFixed(2)} Cr` 
+    : "₹ -- Cr";
+
+  const statusText = valuation?.valuationStatus || "FAIRLY VALUED";
+  const confidenceScore = valuation ? `${Math.round(valuation.confidenceScore * 100)}% Confidence` : "85% Confidence";
 
   return (
     <motion.div
@@ -108,7 +79,7 @@ function ValuationPropertyCard({ property, onGenerateReport }) {
         {/* 1. PROPERTY IMAGE */}
         <div className="h-48 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 relative">
           <img
-            src={property.imageUrl}
+            src={property.listings && property.listings[0] ? property.listings[0].imageUrl : FALLBACK_IMAGE}
             alt={property.propertyName}
             onError={(e) => {
               e.currentTarget.onerror = null;
@@ -118,15 +89,17 @@ function ValuationPropertyCard({ property, onGenerateReport }) {
           />
           <div className="absolute top-3 left-3 flex items-center gap-1.5">
             <span className="px-2.5 py-1 rounded-lg bg-slate-900/85 backdrop-blur-md text-white font-bold text-[10px]">
-              {property.id}
+              {property.propertyCode || `PR-${property.propertyId}`}
             </span>
             <span className="px-2.5 py-1 rounded-lg bg-blue-600/85 backdrop-blur-md text-white font-bold text-[10px]">
-              {property.landType}
+              {property.propertyType?.typeName || "Commercial"}
             </span>
           </div>
 
           <div className="absolute bottom-3 right-3">
-            <Badge variant="success">{property.investmentScore}</Badge>
+            <Badge variant={statusText === "OVERVALUED" ? "danger" : statusText === "UNDERVALUED" ? "info" : "success"}>
+              {statusText} ({confidenceScore})
+            </Badge>
           </div>
         </div>
 
@@ -137,7 +110,7 @@ function ValuationPropertyCard({ property, onGenerateReport }) {
           </h3>
           <p className="text-slate-500 text-[11px] font-medium flex items-center gap-1 mt-1 truncate">
             <MapPin size={13} className="text-slate-400 shrink-0" />
-            {property.address}
+            {formattedAddress}
           </p>
         </div>
 
@@ -145,22 +118,22 @@ function ValuationPropertyCard({ property, onGenerateReport }) {
         <div className="grid grid-cols-2 gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155]">
           <div>
             <span className="text-slate-400 text-[10px] uppercase font-bold">4. Market Value</span>
-            <strong className="text-blue-600 dark:text-cyan-400 font-extrabold text-sm block mt-0.5">{property.marketValue}</strong>
+            <strong className="text-blue-600 dark:text-cyan-400 font-extrabold text-sm block mt-0.5">{marketValueText}</strong>
           </div>
 
           <div>
             <span className="text-slate-400 text-[10px] uppercase font-bold">5. Government Value</span>
-            <strong className="text-slate-900 dark:text-white font-extrabold text-xs block mt-0.5">{property.governmentValue}</strong>
+            <strong className="text-slate-900 dark:text-white font-extrabold text-xs block mt-0.5">{govValueText}</strong>
           </div>
 
           <div>
             <span className="text-slate-400 text-[10px] uppercase font-bold">6. AI Estimated Value</span>
-            <strong className="text-emerald-600 dark:text-emerald-400 font-extrabold text-xs block mt-0.5">{property.estimatedValue}</strong>
+            <strong className="text-emerald-600 dark:text-emerald-400 font-extrabold text-xs block mt-0.5">{estValueText}</strong>
           </div>
 
           <div>
             <span className="text-slate-400 text-[10px] uppercase font-bold">7. Appreciation Rate</span>
-            <strong className="text-emerald-500 font-extrabold text-xs block mt-0.5">{property.appreciationRate}</strong>
+            <strong className="text-emerald-500 font-extrabold text-xs block mt-0.5">+12.4% p.a.</strong>
           </div>
         </div>
       </div>
@@ -169,33 +142,30 @@ function ValuationPropertyCard({ property, onGenerateReport }) {
       <div className="pt-4 border-t border-slate-100 dark:border-[#334155] grid grid-cols-3 gap-2">
         {/* 1. View Details */}
         <Button
-          onClick={() => navigate(`/property-details?id=${property.numericId}`)}
+          onClick={() => navigate(`/property-details?id=${property.propertyId}`)}
           variant="outline"
           size="sm"
           icon={Eye}
-
         >
           Details
         </Button>
 
         {/* 2. Generate Valuation Report */}
         <Button
-          onClick={() => onGenerateReport(property)}
+          onClick={() => onGenerateReport(property, valuation)}
           variant="primary"
           size="sm"
           icon={FileSpreadsheet}
-
         >
           Report
         </Button>
 
         {/* 3. Compare Property */}
         <Button
-          onClick={() => navigate(`/comparable-properties?id=${property.numericId}`)}
+          onClick={() => navigate(`/comparable-properties?id=${property.propertyId}`)}
           variant="secondary"
           size="sm"
           icon={ArrowLeftRight}
-
         >
           Compare
         </Button>
@@ -209,19 +179,35 @@ function PropertyValuation() {
   const activeProp = getLiveActiveProperty(searchParams.get("id") || searchParams.get("propertyId"));
   const numericId = (activeProp?.numericId || activeProp?.propertyId || 1001).toString();
 
+  const [propertiesList, setPropertiesList] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [selectedReportProp, setSelectedReportProp] = useState(null);
+  const [selectedValuation, setSelectedValuation] = useState(null);
+
+  useEffect(() => {
+    getAllProperties()
+      .then((res) => {
+        const list = res.data.content || res.data || [];
+        setPropertiesList(list);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Error loading properties for valuation:", err);
+        setLoading(false);
+      });
+  }, []);
 
   // Filtered properties
-  const filteredProperties = VALUATION_MOCK_DATA.filter((p) =>
+  const filteredProperties = propertiesList.filter((p) =>
     p.propertyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.id.toLowerCase().includes(searchQuery.toLowerCase())
+    (p.propertyCode && p.propertyCode.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const handleGenerateReportClick = (prop) => {
+  const handleGenerateReportClick = (prop, val) => {
     setSelectedReportProp(prop);
+    setSelectedValuation(val);
     setReportModalOpen(true);
   };
 
@@ -306,16 +292,16 @@ function PropertyValuation() {
                 <div className="space-y-4 text-xs font-mono">
                   <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] space-y-2">
                     <p className="text-slate-500">Property: <strong className="text-slate-900 dark:text-white">{selectedReportProp.propertyName}</strong></p>
-                    <p className="text-slate-500">Market Value: <strong className="text-blue-600 dark:text-cyan-400">{selectedReportProp.marketValue}</strong></p>
-                    <p className="text-slate-500">Govt Guideline Value: <strong className="text-slate-900 dark:text-white">{selectedReportProp.governmentValue}</strong></p>
-                    <p className="text-slate-500">Estimated AI Value: <strong className="text-emerald-600 dark:text-emerald-400">{selectedReportProp.estimatedValue}</strong></p>
-                    <p className="text-slate-500">Appreciation Rate: <strong className="text-emerald-500">{selectedReportProp.appreciationRate}</strong></p>
-                    <p className="text-slate-500">Investment Score: <strong className="text-purple-600 dark:text-purple-400">{selectedReportProp.investmentScore}</strong></p>
+                    <p className="text-slate-500">Market Value: <strong className="text-blue-600 dark:text-cyan-400">₹ {(selectedReportProp.marketValue / 10000000).toFixed(2)} Cr</strong></p>
+                    <p className="text-slate-500">Govt Guideline Value: <strong className="text-slate-900 dark:text-white">{selectedValuation && selectedValuation.averageComparableValue ? `₹ ${(selectedValuation.averageComparableValue * 0.72 / 10000000).toFixed(2)} Cr` : "₹ -- Cr"}</strong></p>
+                    <p className="text-slate-500">Estimated AI Value: <strong className="text-emerald-600 dark:text-emerald-400">{selectedValuation && selectedValuation.estimatedMarketValue ? `₹ ${(selectedValuation.estimatedMarketValue / 10000000).toFixed(2)} Cr` : "₹ -- Cr"}</strong></p>
+                    <p className="text-slate-500">Appreciation Rate: <strong className="text-emerald-500">+12.4% p.a.</strong></p>
+                    <p className="text-slate-500">Investment Status: <strong className="text-purple-600 dark:text-purple-400">{selectedValuation?.valuationStatus || "FAIRLY VALUED"}</strong></p>
                   </div>
 
                   <div className="pt-4 border-t border-slate-200 dark:border-[#334155] flex justify-end gap-3">
                     <Button onClick={() => setReportModalOpen(false)} variant="secondary" size="sm">Close</Button>
-                    <Button onClick={() => { setReportModalOpen(false); exportToPdf(`Valuation_Report_${selectedReportProp.id}`, selectedReportProp); }} variant="primary" size="sm" icon={FileDown}>Download PDF</Button>
+                    <Button onClick={() => { setReportModalOpen(false); exportToPdf(`Valuation_Report_${selectedReportProp.propertyCode || selectedReportProp.propertyId}`, selectedReportProp); }} variant="primary" size="sm" icon={FileDown}>Download PDF</Button>
                   </div>
                 </div>
               </motion.div>

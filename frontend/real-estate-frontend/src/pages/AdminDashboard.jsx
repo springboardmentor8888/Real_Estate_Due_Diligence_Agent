@@ -185,7 +185,9 @@ function AdminDashboard() {
 
   // Get User Profile from LocalStorage
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const userName = storedUser.name || "V Bharath";
+  const userName = storedUser.firstName 
+    ? `${storedUser.firstName} ${storedUser.lastName || ""}`.trim() 
+    : (storedUser.name || "Admin User");
 
   React.useEffect(() => {
     getAdminDashboardAnalytics()
@@ -272,22 +274,26 @@ function AdminDashboard() {
             </div>
 
             <div className="space-y-3 font-mono text-xs">
-              {MOCK_RECENT_ACTIVITIES.map((act) => (
-                <div
-                  key={act.id}
-                  className="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] flex items-center justify-between gap-3 hover:border-blue-500/40 transition-all"
-                >
-                  <div className="min-w-0">
-                    <h3 className="font-bold text-slate-900 dark:text-white text-xs truncate">
-                      {act.action}
-                    </h3>
-                    <span className="text-[10px] text-slate-400 block mt-0.5">
-                      By {act.user} • {act.timestamp}
-                    </span>
+              {auditLogs && auditLogs.length > 0 ? (
+                auditLogs.slice(0, 4).map((act) => (
+                  <div
+                    key={act.auditLogId}
+                    className="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] flex items-center justify-between gap-3 hover:border-blue-500/40 transition-all"
+                  >
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-slate-900 dark:text-white text-xs truncate">
+                        {act.action}
+                      </h3>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">
+                        By {act.userEmail || "System"} • {act.createdAt ? new Date(act.createdAt).toLocaleString() : "Recently"}
+                      </span>
+                    </div>
+                    <Badge variant="primary">{act.entityName || "Audit"}</Badge>
                   </div>
-                  <Badge variant={act.variant}>{act.status}</Badge>
-                </div>
-              ))}
+                ))
+              ) : (
+                <div className="text-center py-6 text-slate-500">No system activities recorded yet.</div>
+              )}
             </div>
           </div>
 
@@ -355,24 +361,30 @@ function AdminDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-[#334155]">
-                {MOCK_RECENT_REPORTS.map((rpt) => (
-                  <tr key={rpt.id} className="hover:bg-slate-50 dark:hover:bg-[#0F172A]">
-                    <td className="py-3 font-bold text-slate-900 dark:text-white">
-                      <div>{rpt.title}</div>
-                      <span className="text-[10px] text-blue-500 font-bold">{rpt.id}</span>
-                    </td>
-                    <td className="py-3 text-slate-600 dark:text-slate-300 font-medium">{rpt.property}</td>
-                    <td className="py-3 text-slate-600 dark:text-slate-300 font-medium">{rpt.applicant}</td>
-                    <td className="py-3 text-slate-400">{rpt.date}</td>
-                    <td className="py-3"><Badge variant="success">{rpt.status}</Badge></td>
-                    <td className="py-3 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button onClick={() => navigate(`/report-management`)} className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-cyan-300 hover:bg-blue-100 cursor-pointer" title="Preview"><Eye size={14} /></button>
-                        <button onClick={() => exportToPdf(rpt.id, rpt)} className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-100 cursor-pointer" title="Download PDF"><Download size={14} /></button>
-                      </div>
-                    </td>
+                {analytics && analytics.recentReports && analytics.recentReports.length > 0 ? (
+                  analytics.recentReports.map((rpt) => (
+                    <tr key={rpt.reportId} className="hover:bg-slate-50 dark:hover:bg-[#0F172A]">
+                      <td className="py-3 font-bold text-slate-900 dark:text-white">
+                        <div>{rpt.reportName}</div>
+                        <span className="text-[10px] text-blue-500 font-bold">RPT-{rpt.reportId}</span>
+                      </td>
+                      <td className="py-3 text-slate-600 dark:text-slate-300 font-medium">{rpt.propertyName}</td>
+                      <td className="py-3 text-slate-600 dark:text-slate-300 font-medium">{rpt.generatedByUserEmail}</td>
+                      <td className="py-3 text-slate-400">{rpt.generatedAt ? new Date(rpt.generatedAt).toLocaleDateString() : "N/A"}</td>
+                      <td className="py-3"><Badge variant="success">{rpt.reportStatus}</Badge></td>
+                      <td className="py-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button onClick={() => navigate(`/report-management`)} className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-cyan-300 hover:bg-blue-100 cursor-pointer" title="Preview"><Eye size={14} /></button>
+                          <button onClick={() => exportToPdf(rpt.reportId, rpt)} className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-100 cursor-pointer" title="Download PDF"><Download size={14} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="text-center py-6 text-slate-500">No reports generated yet.</td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
@@ -405,18 +417,24 @@ function AdminDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-[#334155]">
-                {MOCK_RECENT_USERS.map((usr) => (
-                  <tr key={usr.id} className="hover:bg-slate-50 dark:hover:bg-[#0F172A]">
-                    <td className="py-3 font-bold text-slate-900 dark:text-white">
-                      <div>{usr.name}</div>
-                      <span className="text-[10px] text-slate-400">{usr.id}</span>
-                    </td>
-                    <td className="py-3 text-blue-600 dark:text-cyan-400 font-medium">{usr.email}</td>
-                    <td className="py-3"><Badge variant="primary">{usr.role}</Badge></td>
-                    <td className="py-3 text-slate-600 dark:text-slate-300 font-medium">{usr.organization}</td>
-                    <td className="py-3 text-slate-400">{usr.date}</td>
+                {analytics && analytics.recentUsers && analytics.recentUsers.length > 0 ? (
+                  analytics.recentUsers.map((usr) => (
+                    <tr key={usr.userId} className="hover:bg-slate-50 dark:hover:bg-[#0F172A]">
+                      <td className="py-3 font-bold text-slate-900 dark:text-white">
+                        <div>{usr.firstName} {usr.lastName}</div>
+                        <span className="text-[10px] text-slate-400">USR-{usr.userId}</span>
+                      </td>
+                      <td className="py-3 text-blue-600 dark:text-cyan-400 font-medium">{usr.email}</td>
+                      <td className="py-3"><Badge variant="primary">{usr.role}</Badge></td>
+                      <td className="py-3 text-slate-600 dark:text-slate-300 font-medium">{usr.phone || "N/A"}</td>
+                      <td className="py-3 text-slate-400">{usr.createdAt ? new Date(usr.createdAt).toLocaleString() : "N/A"}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="5" className="text-center py-6 text-slate-500">No users registered yet.</td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
@@ -440,7 +458,7 @@ function AdminDashboard() {
             </div>
             <div className="h-64 w-full pt-2">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={MOCK_USER_GROWTH} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <AreaChart data={(analytics && analytics.userGrowth) || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
                   <XAxis dataKey="month" stroke="#94A3B8" fontSize={10} tickLine={false} />
                   <YAxis stroke="#94A3B8" fontSize={10} tickLine={false} />
@@ -468,9 +486,9 @@ function AdminDashboard() {
             <div className="h-64 w-full pt-2">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={MOCK_ROLE_DISTRIBUTION} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={4}>
-                    {MOCK_ROLE_DISTRIBUTION.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                  <Pie data={(analytics && analytics.roleDistribution) || []} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={4}>
+                    {((analytics && analytics.roleDistribution) || []).map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color || "#64748B"} />
                     ))}
                   </Pie>
                   <Tooltip contentStyle={{ backgroundColor: "#0F172A", borderColor: "#334155", borderRadius: "12px", color: "#FFF", fontSize: "11px" }} />

@@ -12,7 +12,7 @@ export const getComparablePropertiesByProperty = async (propertyId) => {
 
 // Get Comparable Property Analysis Summary
 export const getComparableAnalysis = async (propertyId) => {
-  return apiClient.get(`/api/comparable-properties/property/${propertyId}/analysis`);
+  return apiClient.get(`/api/comparable-properties/analysis/${propertyId}`);
 };
 
 // Create Comparable Property (Explicit user action)

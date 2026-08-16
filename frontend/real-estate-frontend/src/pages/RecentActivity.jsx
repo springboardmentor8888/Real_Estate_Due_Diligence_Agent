@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import MainLayout from "../components/layout/MainLayout";
 import Badge from "../components/common/Badge";
@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { exportToPdf } from "../utils/exportUtils";
 import { showSuccessAlert, showToast } from "../utils/swal";
+import { getAllAuditLogs } from "../services/auditService";
 
 // CENTRALIZED MOCK SYSTEM AUDIT LOGS DATASET (12 Enterprise Audit Records)
 const INITIAL_AUDIT_LOGS = [
@@ -189,7 +190,34 @@ const INITIAL_AUDIT_LOGS = [
 ];
 
 function RecentActivity() {
-  const [logs, setLogs] = useState(INITIAL_AUDIT_LOGS);
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getAllAuditLogs()
+      .then((res) => {
+        const list = res.data || [];
+        const mapped = list.map((log) => ({
+          id: `LOG-${log.logId}`,
+          user: `${log.user?.firstName || ""} ${log.user?.lastName || "System"} (${log.user?.role?.roleName || "User"})`,
+          rawUser: log.user?.firstName || "System",
+          action: log.action || "System action executed",
+          actionType: log.action || "Audit Record",
+          module: log.module || "General",
+          date: log.timestamp ? new Date(log.timestamp).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "Today",
+          time: log.timestamp ? new Date(log.timestamp).toLocaleTimeString("en-US", { hour: "numeric", minute: "numeric" }) : "Just Now",
+          ipAddress: log.ipAddress || "127.0.0.1",
+          status: "Success",
+          variant: "success",
+        }));
+        setLogs(mapped);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Error loading activity logs:", err);
+        setLoading(false);
+      });
+  }, []);
 
   // 4 REQUIRED DROPDOWN FILTERS: User, Action, Module, Date
   const [selectedUserFilter, setSelectedUserFilter] = useState("ALL");
@@ -233,6 +261,21 @@ function RecentActivity() {
       return b.id.localeCompare(a.id);
     });
   }, [logs, searchQuery, selectedUserFilter, selectedActionFilter, selectedModuleFilter, selectedDateFilter, sortBy]);
+
+  const userOptions = useMemo(() => {
+    const set = new Set(logs.map((l) => l.rawUser));
+    return Array.from(set).filter(Boolean);
+  }, [logs]);
+
+  const actionOptions = useMemo(() => {
+    const set = new Set(logs.map((l) => l.actionType));
+    return Array.from(set).filter(Boolean);
+  }, [logs]);
+
+  const moduleOptions = useMemo(() => {
+    const set = new Set(logs.map((l) => l.module));
+    return Array.from(set).filter(Boolean);
+  }, [logs]);
 
   // Pagination Math
   const totalPages = Math.ceil(filteredLogs.length / itemsPerPage) || 1;
@@ -306,13 +349,9 @@ function RecentActivity() {
                 className="w-full py-2.5 px-3 rounded-2xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-white font-medium cursor-pointer text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="ALL">All Users</option>
-                <option value="V Bharath">V Bharath</option>
-                <option value="Adv. Rajesh Sharma">Adv. Rajesh Sharma</option>
-                <option value="Adani Realty">Adani Realty</option>
-                <option value="System Telemetry">System Telemetry</option>
-                <option value="Venkatesh Iyer">Venkatesh Iyer</option>
-                <option value="Ananya Rao">Ananya Rao</option>
-                <option value="Adv. Meera Deshmukh">Adv. Meera Deshmukh</option>
+                {userOptions.map((u) => (
+                  <option key={u} value={u}>{u}</option>
+                ))}
               </select>
             </div>
 
@@ -327,12 +366,9 @@ function RecentActivity() {
                 className="w-full py-2.5 px-3 rounded-2xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-white font-medium cursor-pointer text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="ALL">All Actions</option>
-                <option value="Security Update">Security Update</option>
-                <option value="Encumbrance Certificate">Encumbrance Certificate</option>
-                <option value="Loan Application">Loan Application</option>
-                <option value="Sub-Registrar Sync">Sub-Registrar Sync</option>
-                <option value="Risk Assessment">Risk Assessment</option>
-                <option value="Tax Verification">Tax Verification</option>
+                {actionOptions.map((a) => (
+                  <option key={a} value={a}>{a}</option>
+                ))}
               </select>
             </div>
 
@@ -347,12 +383,9 @@ function RecentActivity() {
                 className="w-full py-2.5 px-3 rounded-2xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-white font-medium cursor-pointer text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="ALL">All Modules</option>
-                <option value="Security">Security</option>
-                <option value="Title Audit">Title Audit</option>
-                <option value="Loan Reviews">Loan Reviews</option>
-                <option value="Telemetry">Telemetry</option>
-                <option value="Financial Reports">Financial Reports</option>
-                <option value="Tax Ledger">Tax Ledger</option>
+                {moduleOptions.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
               </select>
             </div>
 
@@ -367,7 +400,7 @@ function RecentActivity() {
                 className="w-full py-2.5 px-3 rounded-2xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-white font-medium cursor-pointer text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="ALL">All Dates</option>
-                <option value="TODAY">Today (05 Aug)</option>
+                <option value="TODAY">Today</option>
                 <option value="PAST_7">Past 7 Days</option>
               </select>
             </div>

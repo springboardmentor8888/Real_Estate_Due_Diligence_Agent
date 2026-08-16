@@ -98,8 +98,12 @@ function ProfileHeader({ profileData, onEditClick, avatarUrl, setAvatarUrl }) {
 
           <p className="text-sm font-semibold text-slate-600 dark:text-[#CBD5E1] flex items-center justify-center md:justify-start gap-2">
             <span>{profileData.role}</span>
-            <span className="text-slate-300 dark:text-slate-600">•</span>
-            <span className="text-slate-500 dark:text-[#94A3B8]">{profileData.organization}</span>
+            {profileData.role !== "Administrator" && profileData.organization && (
+              <>
+                <span className="text-slate-300 dark:text-slate-600">•</span>
+                <span className="text-slate-500 dark:text-[#94A3B8]">{profileData.organization}</span>
+              </>
+            )}
           </p>
 
           {/* Quick Meta Badges */}
@@ -110,11 +114,15 @@ function ProfileHeader({ profileData, onEditClick, avatarUrl, setAvatarUrl }) {
             </span>
             <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#1E293B] px-3 py-1.5 rounded-xl border border-slate-200/60 dark:border-[#334155]">
               <Calendar size={14} className="text-indigo-500 dark:text-indigo-400" />
-              Member Since: <strong className="text-slate-700 dark:text-slate-200 font-semibold">Jan 2024</strong>
+              Member Since: <strong className="text-slate-700 dark:text-slate-200 font-semibold">
+                {profileData.createdAt ? new Date(profileData.createdAt).toLocaleDateString([], { year: 'numeric', month: 'short' }) : "Recently"}
+              </strong>
             </span>
             <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#1E293B] px-3 py-1.5 rounded-xl border border-slate-200/60 dark:border-[#334155]">
               <Clock size={14} className="text-emerald-500 dark:text-emerald-400" />
-              Last Login: <strong className="text-slate-700 dark:text-slate-200 font-semibold">Today, 02:15 PM</strong>
+              Last Login: <strong className="text-slate-700 dark:text-slate-200 font-semibold">
+                {profileData.lastLogin ? new Date(profileData.lastLogin).toLocaleString([], { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : "Recently"}
+              </strong>
             </span>
           </div>
         </div>
