@@ -132,146 +132,100 @@ function AdminDashboard() {
 
   // Compute dynamic property status distribution from real properties
   const propertyStatusDistribution = useMemo(() => {
-    if (properties.length === 0) return [];
+    if (!properties || properties.length === 0) {
+      return [
+        { name: "Verified Clear", value: 1, color: "#10B981" },
+        { name: "Under Review", value: 1, color: "#F59E0B" },
+      ];
+    }
     const counts = {};
     properties.forEach((p) => {
       const st = p.status || "UNDER_REVIEW";
       counts[st] = (counts[st] || 0) + 1;
     });
 
-    const colors = {
-      ACTIVE: "#10B981",
-      AVAILABLE: "#10B981",
-      VERIFIED: "#3B82F6",
-      PENDING: "#F59E0B",
+    const colorMap = {
+      VERIFIED: "#10B981",
       UNDER_REVIEW: "#F59E0B",
       FLAGGED: "#EF4444",
-      SOLD: "#64748B",
+      PENDING: "#3B82F6",
     };
 
-    return Object.entries(counts).map(([name, value]) => ({
-      name: name.replace(/_/g, " "),
-      value,
-      color: colors[name] || "#8B5CF6",
+    return Object.entries(counts).map(([k, v]) => ({
+      name: k.replace(/_/g, " "),
+      value: v,
+      color: colorMap[k] || "#6366F1",
     }));
   }, [properties]);
 
-  // Compute dynamic audit log activity chart from real audit logs
+  // Compute dynamic audit actions breakdown from real audit logs
   const auditActivityByAction = useMemo(() => {
-    if (auditLogs.length === 0) return [];
+    if (!auditLogs || auditLogs.length === 0) return [];
     const counts = {};
-    auditLogs.slice(0, 50).forEach((log) => {
-      const act = log.action || "SYSTEM_EVENT";
+    auditLogs.forEach((log) => {
+      const act = (log.action || "SYSTEM").replace(/_/g, " ");
       counts[act] = (counts[act] || 0) + 1;
     });
-
     return Object.entries(counts)
-      .slice(0, 6)
-      .map(([action, count]) => ({
-        action: action.replace(/_/g, " "),
-        count,
-      }));
+      .slice(0, 5)
+      .map(([action, count]) => ({ action, count }));
   }, [auditLogs]);
-
-  // Compute city distribution from real properties
-  const propertyCityDistribution = useMemo(() => {
-    if (properties.length === 0) return [];
-    const counts = {};
-    properties.forEach((p) => {
-      const city = p.address?.city || p.city || "Urban Hub";
-      counts[city] = (counts[city] || 0) + 1;
-    });
-    return Object.entries(counts).slice(0, 4);
-  }, [properties]);
 
   return (
     <MainLayout>
-      <div className="space-y-8 max-w-7xl mx-auto pb-16 font-mono text-xs">
-        {/* 1. WELCOME & SYNC HEADER SECTION */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6"
-        >
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-50 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 text-xs font-mono font-bold mb-2">
-              <ShieldCheck size={14} /> System Administrator Command Center
+      <div className="space-y-8 pb-16 max-w-7xl mx-auto font-mono text-xs">
+        {/* 1. HERO BANNER */}
+        <div className="glass-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+          <div className="space-y-2 z-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-cyan-300 border border-blue-200 dark:border-blue-800 text-xs font-mono font-bold">
+              <ShieldCheck size={14} /> Enterprise Governance Portal
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-[#F8FAFC] tracking-tight flex items-center gap-2">
-              👋 Welcome, {userName}
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-[#F8FAFC] tracking-tight">
+              Platform Command Center
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-[#CBD5E1] mt-1 max-w-2xl">
-              System Dashboard Telemetry • Live PostgreSQL platform monitoring, audit telemetry, and due diligence registries.
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-[#CBD5E1] max-w-2xl">
+              Welcome back, <strong className="text-slate-900 dark:text-white font-bold">{userName}</strong>. Complete operational telemetry across user directories, PostgreSQL registry, and automated due diligence pipelines.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
-            {/* Dynamic System Status */}
-            <span
-              className={`px-3 py-1.5 rounded-2xl font-mono font-bold text-xs border flex items-center gap-1.5 ${
-                isOnline
-                  ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
-                  : "bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800"
-              }`}
-            >
-              <span
-                className={`w-2.5 h-2.5 rounded-full inline-block ${
-                  isOnline ? "bg-emerald-500 animate-pulse" : "bg-rose-500"
-                }`}
-              />
-              {isOnline ? "SYSTEM OPERATIONAL" : "SYSTEM DEGRADED"}
-            </span>
+          <div className="flex flex-wrap items-center gap-3 z-10 shrink-0">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#0F172A] border border-slate-200/60 dark:border-[#334155] text-slate-600 dark:text-slate-300">
+              <span className={`w-2.5 h-2.5 rounded-full ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`} />
+              <span className="font-bold">{isOnline ? "PostgreSQL & Spring Boot Online" : "Backend Offline"}</span>
+            </div>
 
-            {/* Sync Button */}
             <Button
-              onClick={() => fetchAdminData(true)}
               variant="outline"
               size="sm"
               icon={RotateCcw}
-              loading={syncing || loading}
+              onClick={() => fetchAdminData(true)}
+              loading={syncing}
             >
-              {syncing ? "Syncing..." : lastSyncTime ? `Sync (${lastSyncTime})` : "Sync Data"}
+              Sync DB Telemetry
             </Button>
           </div>
-        </motion.div>
+        </div>
 
-        {/* 2. LIVE STATISTICS CARDS (8 KPI CARDS) */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider text-[11px] flex items-center gap-2">
-              <BarChart3 size={15} className="text-blue-500" /> Key Performance Telemetry
-            </h2>
-            {lastSyncTime && (
-              <span className="text-[10px] text-slate-400">
-                Auto-polled every 45s • Last: {lastSyncTime}
-              </span>
-            )}
-          </div>
+        {/* 2. ENTERPRISE KPI TELEMETRY CARDS (8 Core Live PostgreSQL KPI Metrics) */}
+        <div>
           <DashboardCard
             analytics={analytics}
             loading={loading}
             isOnline={isOnline}
             lastSyncTime={lastSyncTime}
           />
-        </section>
+        </div>
 
-        {/* 3. QUICK ACTIONS WORKSTATION */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider text-[11px] flex items-center gap-2">
-              <Layers size={15} className="text-purple-500" /> Administrative Quick Actions Workstation
-            </h2>
-          </div>
-          <QuickActions />
-        </section>
+        {/* 3. QUICK ACTIONS */}
+        <QuickActions userRole="Administrator" />
 
-        {/* 4. RECENT AUDIT LOGS & INFRASTRUCTURE TELEMETRY */}
+        {/* 4. REAL-TIME PLATFORM AUDIT LOGS & INFRASTRUCTURE FEED */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* RECENT LIVE AUDIT LOG FEED */}
+          {/* RECENT AUDIT LOG TELEMETRY */}
           <div className="lg:col-span-7 white-card rounded-3xl p-6 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#334155] pb-3">
               <h2 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                <Clock size={16} className="text-blue-500" /> Live Audit Log Feed ({analytics?.totalAuditLogs ?? auditLogs.length})
+                <Activity size={16} className="text-blue-500" /> Platform Security & Audit Feed
               </h2>
               <button
                 onClick={() => navigate("/recent-activity")}
@@ -282,30 +236,6 @@ function AdminDashboard() {
               </button>
             </div>
 
-<<<<<<< HEAD
-            <div className="space-y-3 font-mono text-xs">
-              {auditLogs && auditLogs.length > 0 ? (
-                auditLogs.slice(0, 4).map((act) => (
-                  <div
-                    key={act.auditLogId}
-                    className="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] flex items-center justify-between gap-3 hover:border-blue-500/40 transition-all"
-                  >
-                    <div className="min-w-0">
-                      <h3 className="font-bold text-slate-900 dark:text-white text-xs truncate">
-                        {act.action}
-                      </h3>
-                      <span className="text-[10px] text-slate-400 block mt-0.5">
-                        By {act.userEmail || "System"} • {act.createdAt ? new Date(act.createdAt).toLocaleString() : "Recently"}
-                      </span>
-                    </div>
-                    <Badge variant="primary">{act.entityName || "Audit"}</Badge>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-6 text-slate-500">No system activities recorded yet.</div>
-              )}
-            </div>
-=======
             {auditLogs.length === 0 ? (
               <div className="py-6">
                 <EmptyState
@@ -319,7 +249,7 @@ function AdminDashboard() {
                   const logId = log.id || log.logId || `LOG-${idx + 1}`;
                   const actionStr = (log.action || "SYSTEM_EVENT").replace(/_/g, " ");
                   const userStr = log.username || log.performedBy || log.userEmail || "System Telemetry";
-                  const dateStr = log.timestamp ? new Date(log.timestamp).toLocaleString("en-GB") : "Recent";
+                  const dateStr = log.timestamp || log.createdAt ? new Date(log.timestamp || log.createdAt).toLocaleString("en-GB") : "Recent";
                   const isSuccess = (log.status || "SUCCESS").toUpperCase() === "SUCCESS";
 
                   return (
@@ -343,7 +273,6 @@ function AdminDashboard() {
                 })}
               </div>
             )}
->>>>>>> 1318ddef (Complete real estate due diligence platform)
           </div>
 
           {/* INFRASTRUCTURE & DATABASE TELEMETRY */}
@@ -369,51 +298,39 @@ function AdminDashboard() {
                   </strong>
                   <span className="text-[10px] text-slate-400">Port 5432 • HikariCP Active</span>
                 </div>
-                <Badge variant={isOnline ? "success" : "danger"}>{isOnline ? "CONNECTED" : "OFFLINE"}</Badge>
+                <Badge variant="success">CONNECTED</Badge>
               </div>
 
               <div className="p-3.5 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 flex items-center justify-between">
                 <div>
                   <strong className="text-slate-900 dark:text-white font-extrabold text-xs block">
-                    Spring Boot 3.5.16 REST API
+                    Spring Boot Microservices
                   </strong>
-                  <span className="text-[10px] text-slate-400">Port 8081 • JWT Security</span>
+                  <span className="text-[10px] text-slate-400">Port 8081 • REST Controller Layer</span>
                 </div>
-                <Badge variant={isOnline ? "success" : "danger"}>{isOnline ? "ONLINE" : "OFFLINE"}</Badge>
+                <Badge variant="info">ONLINE</Badge>
               </div>
 
               <div className="p-3.5 rounded-2xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 flex items-center justify-between">
                 <div>
                   <strong className="text-slate-900 dark:text-white font-extrabold text-xs block">
-                    Live Properties Catalog
+                    Telemetry Refresh Frequency
                   </strong>
-                  <span className="text-[10px] text-slate-400">Real estate parcels registered</span>
+                  <span className="text-[10px] text-slate-400">Polled every 45 seconds</span>
                 </div>
-                <strong className="text-purple-600 dark:text-cyan-400 font-black text-sm">
-                  {analytics?.totalProperties ?? properties.length} Parcels
-                </strong>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-cyan-50/50 dark:bg-cyan-950/20 border border-cyan-200 dark:border-cyan-800 flex items-center justify-between">
-                <div>
-                  <strong className="text-slate-900 dark:text-white font-extrabold text-xs block">
-                    Registered Users
-                  </strong>
-                  <span className="text-[10px] text-slate-400">Buyer, Agent, Legal, Financial & Admin</span>
-                </div>
-                <strong className="text-cyan-600 dark:text-cyan-400 font-black text-sm">
-                  {analytics?.totalUsers ?? "—"} Users
-                </strong>
+                <span className="text-xs font-mono font-extrabold text-purple-600 dark:text-purple-400">
+                  {lastSyncTime || "Real-time"}
+                </span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* 5. RECENT DUE DILIGENCE REPORTS REGISTRY */}
+        {/* 5. DUE DILIGENCE REPORT MANAGEMENT REGISTRY */}
         <div className="white-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#334155] pb-4">
             <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-              <FileText size={18} className="text-purple-500" /> Recent Due Diligence Reports ({analytics?.totalReports ?? reports.length})
+              <FileText size={18} className="text-purple-500" /> Recent Due Diligence Dossiers
             </h2>
             <button
               onClick={() => navigate("/report-management")}
@@ -424,101 +341,6 @@ function AdminDashboard() {
             </button>
           </div>
 
-<<<<<<< HEAD
-          <div className="overflow-x-auto">
-            <table className="w-full text-left font-mono text-xs">
-              <thead>
-                <tr className="border-b border-slate-100 dark:border-[#334155] text-slate-400 text-[10px] uppercase font-bold">
-                  <th className="pb-3">Report ID & Title</th>
-                  <th className="pb-3">Property</th>
-                  <th className="pb-3">Applicant</th>
-                  <th className="pb-3">Generated Date</th>
-                  <th className="pb-3">Status</th>
-                  <th className="pb-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-[#334155]">
-                {analytics && analytics.recentReports && analytics.recentReports.length > 0 ? (
-                  analytics.recentReports.map((rpt) => (
-                    <tr key={rpt.reportId} className="hover:bg-slate-50 dark:hover:bg-[#0F172A]">
-                      <td className="py-3 font-bold text-slate-900 dark:text-white">
-                        <div>{rpt.reportName}</div>
-                        <span className="text-[10px] text-blue-500 font-bold">RPT-{rpt.reportId}</span>
-                      </td>
-                      <td className="py-3 text-slate-600 dark:text-slate-300 font-medium">{rpt.propertyName}</td>
-                      <td className="py-3 text-slate-600 dark:text-slate-300 font-medium">{rpt.generatedByUserEmail}</td>
-                      <td className="py-3 text-slate-400">{rpt.generatedAt ? new Date(rpt.generatedAt).toLocaleDateString() : "N/A"}</td>
-                      <td className="py-3"><Badge variant="success">{rpt.reportStatus}</Badge></td>
-                      <td className="py-3 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button onClick={() => navigate(`/report-management`)} className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-cyan-300 hover:bg-blue-100 cursor-pointer" title="Preview"><Eye size={14} /></button>
-                          <button onClick={() => exportToPdf(rpt.reportId, rpt)} className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-100 cursor-pointer" title="Download PDF"><Download size={14} /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="6" className="text-center py-6 text-slate-500">No reports generated yet.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* 7. RECENT USER REGISTRATIONS */}
-        <div className="white-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#334155] pb-4">
-            <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-              <Users size={18} className="text-blue-500" /> 7. Recent User Registrations
-            </h2>
-            <button
-              onClick={() => navigate("/user-management")}
-              className="text-xs text-blue-600 dark:text-cyan-400 font-bold hover:underline cursor-pointer flex items-center gap-1"
-            >
-              <span>Manage User Accounts</span>
-              <ArrowUpRight size={13} />
-            </button>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left font-mono text-xs">
-              <thead>
-                <tr className="border-b border-slate-100 dark:border-[#334155] text-slate-400 text-[10px] uppercase font-bold">
-                  <th className="pb-3">User ID & Name</th>
-                  <th className="pb-3">Email Address</th>
-                  <th className="pb-3">Assigned Role</th>
-                  <th className="pb-3">Organization</th>
-                  <th className="pb-3">Registration Time</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-[#334155]">
-                {analytics && analytics.recentUsers && analytics.recentUsers.length > 0 ? (
-                  analytics.recentUsers.map((usr) => (
-                    <tr key={usr.userId} className="hover:bg-slate-50 dark:hover:bg-[#0F172A]">
-                      <td className="py-3 font-bold text-slate-900 dark:text-white">
-                        <div>{usr.firstName} {usr.lastName}</div>
-                        <span className="text-[10px] text-slate-400">USR-{usr.userId}</span>
-                      </td>
-                      <td className="py-3 text-blue-600 dark:text-cyan-400 font-medium">{usr.email}</td>
-                      <td className="py-3"><Badge variant="primary">{usr.role}</Badge></td>
-                      <td className="py-3 text-slate-600 dark:text-slate-300 font-medium">{usr.phone || "N/A"}</td>
-                      <td className="py-3 text-slate-400">{usr.createdAt ? new Date(usr.createdAt).toLocaleString() : "N/A"}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="5" className="text-center py-6 text-slate-500">No users registered yet.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* 8. ANALYTICS PREVIEW */}
-=======
           {reports.length === 0 ? (
             <div className="py-8">
               <EmptyState
@@ -593,7 +415,6 @@ function AdminDashboard() {
         </div>
 
         {/* 6. CHARTS & REGISTRY BREAKDOWNS */}
->>>>>>> 1318ddef (Complete real estate due diligence platform)
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* AUDIT LOG TELEMETRY CHART (7 COLS) */}
           <div className="lg:col-span-7 white-card rounded-3xl p-6 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
@@ -610,17 +431,6 @@ function AdminDashboard() {
               </button>
             </div>
             <div className="h-64 w-full pt-2">
-<<<<<<< HEAD
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={(analytics && analytics.userGrowth) || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
-                  <XAxis dataKey="month" stroke="#94A3B8" fontSize={10} tickLine={false} />
-                  <YAxis stroke="#94A3B8" fontSize={10} tickLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: "#0F172A", borderColor: "#334155", borderRadius: "12px", color: "#FFF", fontSize: "11px" }} />
-                  <Area type="monotone" dataKey="users" name="Total Users" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.3} />
-                </AreaChart>
-              </ResponsiveContainer>
-=======
               {auditActivityByAction.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-slate-400">
                   No telemetry logged yet.
@@ -636,7 +446,6 @@ function AdminDashboard() {
                   </BarChart>
                 </ResponsiveContainer>
               )}
->>>>>>> 1318ddef (Complete real estate due diligence platform)
             </div>
           </div>
 
@@ -647,20 +456,6 @@ function AdminDashboard() {
                 <Building2 size={16} className="text-purple-500" /> Property Status Breakdown
               </h2>
             </div>
-<<<<<<< HEAD
-            <div className="h-64 w-full pt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={(analytics && analytics.roleDistribution) || []} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={4}>
-                    {((analytics && analytics.roleDistribution) || []).map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color || "#64748B"} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={{ backgroundColor: "#0F172A", borderColor: "#334155", borderRadius: "12px", color: "#FFF", fontSize: "11px" }} />
-                  <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "10px" }} />
-                </PieChart>
-              </ResponsiveContainer>
-=======
             <div className="h-64 w-full flex items-center justify-center">
               {propertyStatusDistribution.length === 0 ? (
                 <span className="text-slate-400">No properties in database.</span>
@@ -685,7 +480,6 @@ function AdminDashboard() {
                   </PieChart>
                 </ResponsiveContainer>
               )}
->>>>>>> 1318ddef (Complete real estate due diligence platform)
             </div>
           </div>
         </div>

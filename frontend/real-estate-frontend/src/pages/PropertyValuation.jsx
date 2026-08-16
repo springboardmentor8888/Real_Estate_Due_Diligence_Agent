@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import React, { useState, useEffect } from "react";
-=======
 import React, { useState, useEffect, useMemo } from "react";
->>>>>>> 1318ddef (Complete real estate due diligence platform)
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import MainLayout from "../components/layout/MainLayout";
@@ -33,12 +29,6 @@ import {
   User,
 } from "lucide-react";
 import PropertyContextSwitcher from "../components/common/PropertyContextSwitcher";
-<<<<<<< HEAD
-import { getLiveActiveProperty } from "../services/liveStore";
-import { getAllProperties } from "../services/propertyService";
-import { getValuationByProperty } from "../services/valuationService";
-=======
->>>>>>> 1318ddef (Complete real estate due diligence platform)
 import { exportToPdf } from "../utils/exportUtils";
 import { showToast, showSuccessAlert } from "../utils/swal";
 import { getAllProperties, getPropertyDetails } from "../services/propertyService";
@@ -50,43 +40,11 @@ const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1486406146926-c627a92a
  */
 function ValuationPropertyCard({ property, isSelected, onGenerateReport }) {
   const navigate = useNavigate();
-  const [valuation, setValuation] = useState(null);
-  const [loadingValuation, setLoadingValuation] = useState(true);
-
-  useEffect(() => {
-    getValuationByProperty(property.propertyId)
-      .then((res) => {
-        setValuation(res.data);
-        setLoadingValuation(false);
-      })
-      .catch((err) => {
-        console.warn(`Could not load valuation for property ${property.propertyId}:`, err);
-        setLoadingValuation(false);
-      });
-  }, [property.propertyId]);
-
-  const formattedAddress = property.addresses && property.addresses[0] 
-    ? `${property.addresses[0].addressLine1 || ""}, ${property.addresses[0].city || ""}, ${property.addresses[0].state || ""}`
-    : "No address registered";
-
-  const marketValueText = property.marketValue 
-    ? `₹ ${(property.marketValue / 10000000).toFixed(2)} Cr` 
-    : "₹ 0.00 Cr";
-
-  const govValueText = valuation && valuation.averageComparableValue 
-    ? `₹ ${(valuation.averageComparableValue * 0.72 / 10000000).toFixed(2)} Cr` 
-    : "₹ -- Cr";
-
-  const estValueText = valuation && valuation.estimatedMarketValue 
-    ? `₹ ${(valuation.estimatedMarketValue / 10000000).toFixed(2)} Cr` 
-    : "₹ -- Cr";
-
-  const statusText = valuation?.valuationStatus || "FAIRLY VALUED";
-  const confidenceScore = valuation ? `${Math.round(valuation.confidenceScore * 100)}% Confidence` : "85% Confidence";
 
   return (
     <motion.div
-      whileHover={{ y: -6, scale: 1.01 }}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
       className={`white-card rounded-3xl p-6 bg-white dark:bg-[#1E293B] border ${
         isSelected
@@ -98,11 +56,7 @@ function ValuationPropertyCard({ property, isSelected, onGenerateReport }) {
         {/* 1. PROPERTY IMAGE & BADGES */}
         <div className="h-48 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 relative">
           <img
-<<<<<<< HEAD
-            src={property.listings && property.listings[0] ? property.listings[0].imageUrl : FALLBACK_IMAGE}
-=======
             src={property.imageUrl || FALLBACK_IMAGE}
->>>>>>> 1318ddef (Complete real estate due diligence platform)
             alt={property.propertyName}
             onError={(e) => {
               e.currentTarget.onerror = null;
@@ -112,21 +66,15 @@ function ValuationPropertyCard({ property, isSelected, onGenerateReport }) {
           />
           <div className="absolute top-3 left-3 flex items-center gap-1.5">
             <span className="px-2.5 py-1 rounded-lg bg-slate-900/85 backdrop-blur-md text-white font-bold text-[10px]">
-              {property.propertyCode || `PR-${property.propertyId}`}
+              {property.id}
             </span>
             <span className="px-2.5 py-1 rounded-lg bg-blue-600/85 backdrop-blur-md text-white font-bold text-[10px]">
-              {property.propertyType?.typeName || "Commercial"}
+              {property.landType}
             </span>
           </div>
 
           <div className="absolute bottom-3 right-3">
-<<<<<<< HEAD
-            <Badge variant={statusText === "OVERVALUED" ? "danger" : statusText === "UNDERVALUED" ? "info" : "success"}>
-              {statusText} ({confidenceScore})
-            </Badge>
-=======
             <Badge variant={property.statusVariant || "success"}>{property.investmentScore}</Badge>
->>>>>>> 1318ddef (Complete real estate due diligence platform)
           </div>
         </div>
 
@@ -138,13 +86,13 @@ function ValuationPropertyCard({ property, isSelected, onGenerateReport }) {
             </h3>
             {isSelected && (
               <span className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-cyan-300 text-[9px] font-bold shrink-0">
-                ACTIVE PARCEL
+                ACTIVE
               </span>
             )}
           </div>
-          <p className="text-slate-500 text-[11px] font-medium flex items-center gap-1 mt-1 truncate">
-            <MapPin size={13} className="text-slate-400 shrink-0" />
-            {formattedAddress}
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5 truncate">
+            <MapPin size={13} className="text-blue-500 shrink-0" />
+            <span className="truncate">{property.address}</span>
           </p>
         </div>
 
@@ -190,7 +138,7 @@ function ValuationPropertyCard({ property, isSelected, onGenerateReport }) {
       <div className="pt-4 border-t border-slate-100 dark:border-[#334155] grid grid-cols-3 gap-2">
         {/* 1. View Details */}
         <Button
-          onClick={() => navigate(`/property-details?id=${property.propertyId}`)}
+          onClick={() => navigate(`/property-details?id=${property.numericId}`)}
           variant="outline"
           size="sm"
           icon={Eye}
@@ -200,7 +148,7 @@ function ValuationPropertyCard({ property, isSelected, onGenerateReport }) {
 
         {/* 2. Generate Valuation Report */}
         <Button
-          onClick={() => onGenerateReport(property, valuation)}
+          onClick={() => onGenerateReport(property)}
           variant="primary"
           size="sm"
           icon={FileSpreadsheet}
@@ -210,7 +158,7 @@ function ValuationPropertyCard({ property, isSelected, onGenerateReport }) {
 
         {/* 3. Compare Property */}
         <Button
-          onClick={() => navigate(`/comparable-properties?id=${property.propertyId}`)}
+          onClick={() => navigate(`/comparable-properties?id=${property.numericId}`)}
           variant="secondary"
           size="sm"
           icon={ArrowLeftRight}
@@ -234,7 +182,6 @@ function PropertyValuation() {
   const [searchQuery, setSearchQuery] = useState("");
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [selectedReportProp, setSelectedReportProp] = useState(null);
-  const [selectedValuation, setSelectedValuation] = useState(null);
 
   const fetchValuationRegistry = async () => {
     try {
@@ -362,21 +309,26 @@ function PropertyValuation() {
 
   const activePropertyTitle = activePropertyDetail?.propertyName || activeProperty?.propertyName || `Property Parcel PR-${numericId}`;
   const activePropertyCode = activePropertyDetail?.propertyCode || activeProperty?.id || `PR-${numericId}`;
->>>>>>> 1318ddef (Complete real estate due diligence platform)
 
-  const handleGenerateReportClick = (prop, val) => {
+  const handleGenerateReportClick = (prop) => {
     setSelectedReportProp(prop);
-    setSelectedValuation(val);
     setReportModalOpen(true);
   };
 
   const handleDownloadPdf = () => {
     if (!selectedReportProp) return;
     exportToPdf(`Valuation_Certificate_${selectedReportProp.id}`, {
-      ...selectedReportProp,
-      generatedDate: new Date().toLocaleDateString("en-GB"),
+      title: `Valuation Certificate - ${selectedReportProp.propertyName}`,
+      propertyId: selectedReportProp.id,
+      marketValue: selectedReportProp.marketValue,
+      governmentValue: selectedReportProp.governmentValue,
+      estimatedValue: selectedReportProp.estimatedValue,
+      investmentScore: selectedReportProp.investmentScore,
+      appreciationRate: selectedReportProp.appreciationRate,
+      owner: selectedReportProp.owner,
+      address: selectedReportProp.address,
+      lastUpdated: selectedReportProp.lastUpdated,
     });
-    showSuccessAlert("Valuation Certificate Exported", `Ready Reckoner certificate downloaded for ${selectedReportProp.propertyName}`);
     setReportModalOpen(false);
   };
 
@@ -415,48 +367,60 @@ function PropertyValuation() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
-            <Button onClick={fetchValuationRegistry} variant="outline" size="sm" icon={RotateCcw} loading={loading}>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              onClick={fetchValuationRegistry}
+              variant="outline"
+              size="sm"
+              icon={RotateCcw}
+            >
               Refresh Registry
             </Button>
           </div>
         </div>
 
-        {/* CONTROLS BAR: SEARCH */}
-        <div className="white-card rounded-3xl p-5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs">
-          <div className="relative">
+        {/* SEARCH BAR */}
+        <div className="white-card rounded-2xl p-4 bg-white dark:bg-[#1E293B] border border-slate-200/80 dark:border-[#334155] shadow-xs flex flex-col sm:flex-row items-center gap-4">
+          <div className="relative flex-1 w-full">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search valuation registry by Property Name, Address, City, or Parcel Ref ID..."
+              placeholder="Search parcels by name, ID, city, or property type..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] font-bold text-slate-900 dark:text-slate-100 pl-10 pr-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+              className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-xs font-mono text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             />
           </div>
+          <span className="text-xs font-bold text-slate-500 whitespace-nowrap">
+            Showing {filteredProperties.length} Properties
+          </span>
         </div>
 
-        {/* ERROR STATE */}
+        {/* ERROR NOTICE */}
         {error && (
-          <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 font-mono text-xs flex items-center justify-between">
-            <span>⚠️ {error}</span>
-            <Button onClick={fetchValuationRegistry} variant="danger" size="xs">Retry</Button>
+          <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 flex items-center gap-3">
+            <AlertCircle size={18} className="shrink-0" />
+            <p className="text-xs font-semibold">{error}</p>
           </div>
         )}
 
-        {/* REUSABLE PROPERTY CARDS GRID */}
+        {/* PROPERTIES VALUATION GRID */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
-            <Skeleton className="h-96 rounded-3xl" />
-            <Skeleton className="h-96 rounded-3xl" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-96 rounded-3xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
+            ))}
           </div>
         ) : filteredProperties.length === 0 ? (
-          <EmptyState title="No property valuation records found" message="No property matches your search query in the PostgreSQL database." />
+          <EmptyState
+            title="No Properties Found"
+            message="No registered property matches your search criteria. Try a different search term or add properties to the registry."
+          />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredProperties.map((prop) => (
               <ValuationPropertyCard
-                key={prop.id}
+                key={prop.numericId}
                 property={prop}
                 isSelected={prop.numericId === numericId.toString()}
                 onGenerateReport={handleGenerateReportClick}
@@ -465,7 +429,7 @@ function PropertyValuation() {
           </div>
         )}
 
-        {/* MODAL: GENERATE VALUATION REPORT MODAL */}
+        {/* VALUATION REPORT MODAL */}
         <AnimatePresence>
           {reportModalOpen && selectedReportProp && (
             <>
@@ -481,13 +445,6 @@ function PropertyValuation() {
                 <div className="space-y-4 text-xs font-mono">
                   <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] space-y-2">
                     <p className="text-slate-500">Property: <strong className="text-slate-900 dark:text-white">{selectedReportProp.propertyName}</strong></p>
-<<<<<<< HEAD
-                    <p className="text-slate-500">Market Value: <strong className="text-blue-600 dark:text-cyan-400">₹ {(selectedReportProp.marketValue / 10000000).toFixed(2)} Cr</strong></p>
-                    <p className="text-slate-500">Govt Guideline Value: <strong className="text-slate-900 dark:text-white">{selectedValuation && selectedValuation.averageComparableValue ? `₹ ${(selectedValuation.averageComparableValue * 0.72 / 10000000).toFixed(2)} Cr` : "₹ -- Cr"}</strong></p>
-                    <p className="text-slate-500">Estimated AI Value: <strong className="text-emerald-600 dark:text-emerald-400">{selectedValuation && selectedValuation.estimatedMarketValue ? `₹ ${(selectedValuation.estimatedMarketValue / 10000000).toFixed(2)} Cr` : "₹ -- Cr"}</strong></p>
-                    <p className="text-slate-500">Appreciation Rate: <strong className="text-emerald-500">+12.4% p.a.</strong></p>
-                    <p className="text-slate-500">Investment Status: <strong className="text-purple-600 dark:text-purple-400">{selectedValuation?.valuationStatus || "FAIRLY VALUED"}</strong></p>
-=======
                     <p className="text-slate-500">Market Value: <strong className="text-blue-600 dark:text-cyan-400">{selectedReportProp.marketValue}</strong></p>
                     <p className="text-slate-500">Govt Guideline Value: <strong className="text-slate-900 dark:text-white">{selectedReportProp.governmentValue}</strong></p>
                     <p className="text-slate-500">Estimated AI Value: <strong className="text-emerald-600 dark:text-emerald-400">{selectedReportProp.estimatedValue}</strong></p>
@@ -495,16 +452,11 @@ function PropertyValuation() {
                     <p className="text-slate-500">Investment Score: <strong className="text-purple-600 dark:text-purple-400">{selectedReportProp.investmentScore}</strong></p>
                     <p className="text-slate-500">Owner: <strong className="text-slate-900 dark:text-white">{selectedReportProp.owner}</strong></p>
                     <p className="text-slate-500">Last Updated: <strong className="text-slate-900 dark:text-white">{selectedReportProp.lastUpdated}</strong></p>
->>>>>>> 1318ddef (Complete real estate due diligence platform)
                   </div>
 
                   <div className="pt-4 border-t border-slate-200 dark:border-[#334155] flex justify-end gap-3">
                     <Button onClick={() => setReportModalOpen(false)} variant="secondary" size="sm">Close</Button>
-<<<<<<< HEAD
-                    <Button onClick={() => { setReportModalOpen(false); exportToPdf(`Valuation_Report_${selectedReportProp.propertyCode || selectedReportProp.propertyId}`, selectedReportProp); }} variant="primary" size="sm" icon={FileDown}>Download PDF</Button>
-=======
                     <Button onClick={handleDownloadPdf} variant="primary" size="sm" icon={FileDown}>Download Certificate</Button>
->>>>>>> 1318ddef (Complete real estate due diligence platform)
                   </div>
                 </div>
               </motion.div>

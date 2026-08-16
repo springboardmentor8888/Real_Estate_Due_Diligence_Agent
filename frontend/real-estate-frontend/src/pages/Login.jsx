@@ -113,6 +113,8 @@ function Login() {
     if (loginData.password.length < 6) {
       showErrorAlert("Weak Password", "Password must be at least 6 characters long.");
       return;
+    }
+
     setLoading(true);
 
     try {

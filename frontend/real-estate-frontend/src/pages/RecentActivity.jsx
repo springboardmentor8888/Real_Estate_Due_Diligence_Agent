@@ -103,29 +103,28 @@ function RecentActivity() {
     fetchAuditLogs();
   }, []);
 
-  // Compute Dynamic Filter Options from Database
+  // Derive Dynamic Filter Options from live data
   const filterOptions = useMemo(() => {
-    const users = Array.from(new Set(logs.map((l) => l.userEmail).filter(Boolean)));
-    const actions = Array.from(new Set(logs.map((l) => l.action).filter(Boolean)));
-    const entities = Array.from(new Set(logs.map((l) => l.entityName).filter(Boolean)));
+    const users = Array.from(new Set(logs.map((l) => l.user).filter(Boolean))).sort();
+    const actions = Array.from(new Set(logs.map((l) => l.action).filter(Boolean))).sort();
+    const entities = Array.from(new Set(logs.map((l) => l.entityName).filter(Boolean))).sort();
 
     return { users, actions, entities };
   }, [logs]);
 
-  // Search & Filter Logic
+  // Filter Logic
   const filteredLogs = useMemo(() => {
     return logs.filter((log) => {
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
         !q ||
+        log.id.toLowerCase().includes(q) ||
         log.user.toLowerCase().includes(q) ||
         log.action.toLowerCase().includes(q) ||
         log.entityTarget.toLowerCase().includes(q) ||
-        log.ipAddress.toLowerCase().includes(q) ||
-        log.date.toLowerCase().includes(q) ||
-        log.id.toLowerCase().includes(q);
+        log.ipAddress.toLowerCase().includes(q);
 
-      const matchesUser = selectedUserFilter === "ALL" || log.userEmail === selectedUserFilter;
+      const matchesUser = selectedUserFilter === "ALL" || log.user === selectedUserFilter;
       const matchesAction = selectedActionFilter === "ALL" || log.action === selectedActionFilter;
       const matchesEntity = selectedEntityFilter === "ALL" || log.entityName === selectedEntityFilter;
 
@@ -133,25 +132,6 @@ function RecentActivity() {
     });
   }, [logs, searchQuery, selectedUserFilter, selectedActionFilter, selectedEntityFilter]);
 
-<<<<<<< HEAD
-  const userOptions = useMemo(() => {
-    const set = new Set(logs.map((l) => l.rawUser));
-    return Array.from(set).filter(Boolean);
-  }, [logs]);
-
-  const actionOptions = useMemo(() => {
-    const set = new Set(logs.map((l) => l.actionType));
-    return Array.from(set).filter(Boolean);
-  }, [logs]);
-
-  const moduleOptions = useMemo(() => {
-    const set = new Set(logs.map((l) => l.module));
-    return Array.from(set).filter(Boolean);
-  }, [logs]);
-
-  // Pagination Math
-  const totalPages = Math.ceil(filteredLogs.length / itemsPerPage) || 1;
-=======
   // Sort Logic
   const sortedLogs = useMemo(() => {
     const list = [...filteredLogs];
@@ -169,7 +149,6 @@ function RecentActivity() {
 
   // Pagination Calculation
   const totalPages = Math.max(1, Math.ceil(sortedLogs.length / itemsPerPage));
->>>>>>> 1318ddef (Complete real estate due diligence platform)
   const paginatedLogs = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
     return sortedLogs.slice(start, start + itemsPerPage);
@@ -178,179 +157,115 @@ function RecentActivity() {
   // Live Export Functionality
   const handleExportLogs = () => {
     if (sortedLogs.length === 0) {
-      showToast("No audit records available to export.", "warning");
+      showToast("No audit logs available to export.", "info");
       return;
     }
 
-    const headers = ["Log ID", "User", "Action", "Target Entity", "IP Address", "Date", "Time", "Status"];
+    const headers = ["Log ID", "User", "Action", "Target Entity", "Date", "Time", "IP Address", "Status"];
     const rows = sortedLogs.map((l) => [
       l.id,
-      `"${l.user}"`,
-      `"${l.action}"`,
-      `"${l.entityTarget}"`,
-      `"${l.ipAddress}"`,
-      `"${l.date}"`,
-      `"${l.time}"`,
-      `"${l.status}"`,
+      `"${l.user.replace(/"/g, '""')}"`,
+      `"${l.action.replace(/"/g, '""')}"`,
+      `"${l.entityTarget.replace(/"/g, '""')}"`,
+      l.date,
+      l.time,
+      l.ipAddress,
+      l.status,
     ]);
 
-    const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Audit_Logs_Export_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `platform_audit_logs_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
-    showSuccessAlert("Export Complete", `Exported ${sortedLogs.length} audit records to CSV.`);
+    showSuccessAlert("Audit Export Generated", `Exported ${sortedLogs.length} audit logs to CSV successfully.`);
   };
 
   return (
     <MainLayout>
       <div className="space-y-8 pb-16 max-w-7xl mx-auto font-mono text-xs">
-        {/* BREADCRUMB HEADER */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-slate-500 dark:text-[#CBD5E1]">
-          <nav className="flex items-center gap-2">
-            <Link to="/admin/dashboard" className="hover:text-blue-600 dark:text-cyan-400 transition-colors flex items-center gap-1.5">
-              <Home size={14} /> Admin Workspace
-            </Link>
-            <ChevronRight size={14} className="text-slate-400" />
+        {/* Breadcrumb Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-medium text-slate-500 dark:text-[#CBD5E1]">
+          <div className="flex items-center gap-2">
+            <Activity size={14} className="text-blue-500 dark:text-cyan-400" />
+            <span>/</span>
             <span className="text-slate-900 dark:text-[#F8FAFC] font-extrabold">
-              Audit Logs & Telemetry
+              Platform Audit & Activity Trail
             </span>
-          </nav>
+          </div>
 
-          <div className="flex items-center gap-3">
-            {lastSyncTime && (
-              <span className="text-[11px] text-slate-400">
-                Synced {lastSyncTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-              </span>
-            )}
-            <Button
-              variant="outline"
-              size="xs"
-              onClick={fetchAuditLogs}
-              loading={loading}
-              icon={RefreshCw}
-            >
-              Sync
-            </Button>
+          <div className="flex items-center gap-2">
+            <span className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-cyan-300 font-mono font-bold text-xs border border-blue-200 dark:border-blue-800">
+              AUDIT STREAM • POSTGRESQL LIVE
+            </span>
           </div>
         </div>
 
-        {/* ERROR STATE BANNER */}
-        {error && (
-          <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <AlertCircle size={20} className="shrink-0" />
-              <div>
-                <p className="font-bold">Unable to load audit logs</p>
-                <p className="text-[11px] text-rose-600 dark:text-rose-400 mt-0.5">{error}</p>
-              </div>
-            </div>
-            <Button variant="danger" size="xs" onClick={fetchAuditLogs}>
-              Retry
-            </Button>
-          </div>
-        )}
-
         {/* HERO BANNER */}
-        <div className="glass-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-cyan-300 border border-blue-200 dark:border-blue-800 text-xs font-bold">
-              <Database size={13} />
-              POSTGRESQL AUDIT TRAIL • {loading ? "..." : `${logs.length} RECORDS`}
+        <div className="glass-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+          <div className="space-y-2 z-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-cyan-300 border border-blue-200 dark:border-blue-800 text-xs font-mono font-bold">
+              <ShieldCheck size={14} /> Immutable System Audit Ledger
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-[#F8FAFC] tracking-tight">
-              🛡️ Audit Logs & Telemetry
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-[#F8FAFC] tracking-tight flex items-center gap-2">
+              System Audit & Activity Trail
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-[#CBD5E1] max-w-2xl">
-              Immutable event log recording property operations, report compilations, and authentication events.
+              Real-time administrative ledger capturing authentication events, role changes, valuation reports, and database transactions across the platform.
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-3 z-10 shrink-0">
             <Button
               onClick={handleExportLogs}
-              variant="outline"
+              variant="secondary"
               size="sm"
               icon={Download}
             >
-              Export Audit Logs
+              Export CSV
+            </Button>
+            <Button
+              onClick={fetchAuditLogs}
+              variant="outline"
+              size="sm"
+              icon={RefreshCw}
+            >
+              Refresh
             </Button>
           </div>
         </div>
 
-        {/* SUMMARY METRICS CARDS */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="white-card rounded-3xl p-5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs">
-            <span className="text-slate-400 uppercase text-[10px] font-bold block">Total Audit Events</span>
-            <div className="flex items-center justify-between mt-2">
-              <strong className="text-2xl font-black text-slate-900 dark:text-white">
-                {loading ? "..." : logs.length}
-              </strong>
-              <div className="p-2.5 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-cyan-400">
-                <Activity size={18} />
-              </div>
-            </div>
+        {/* ERROR BANNER */}
+        {error && (
+          <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 flex items-center gap-3">
+            <AlertCircle size={18} className="shrink-0" />
+            <p className="text-xs font-semibold">{error}</p>
           </div>
+        )}
 
-          <div className="white-card rounded-3xl p-5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs">
-            <span className="text-slate-400 uppercase text-[10px] font-bold block">Active Users Recorded</span>
-            <div className="flex items-center justify-between mt-2">
-              <strong className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
-                {loading ? "..." : filterOptions.users.length}
-              </strong>
-              <div className="p-2.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
-                <Users size={18} />
-              </div>
-            </div>
-          </div>
-
-          <div className="white-card rounded-3xl p-5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs">
-            <span className="text-slate-400 uppercase text-[10px] font-bold block">Action Types</span>
-            <div className="flex items-center justify-between mt-2">
-              <strong className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                {loading ? "..." : filterOptions.actions.length}
-              </strong>
-              <div className="p-2.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
-                <Terminal size={18} />
-              </div>
-            </div>
-          </div>
-
-          <div className="white-card rounded-3xl p-5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs">
-            <span className="text-slate-400 uppercase text-[10px] font-bold block">Protected Modules</span>
-            <div className="flex items-center justify-between mt-2">
-              <strong className="text-2xl font-black text-purple-600 dark:text-purple-400">
-                {loading ? "..." : filterOptions.entities.length}
-              </strong>
-              <div className="p-2.5 rounded-2xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400">
-                <Layers size={18} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* SEARCH & FILTERS BAR */}
-        <div className="white-card rounded-3xl p-4 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="relative flex-1">
-            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+        {/* FILTER & SEARCH CONTROL STRIP */}
+        <div className="white-card rounded-2xl p-4 bg-white dark:bg-[#1E293B] border border-slate-200/80 dark:border-[#334155] shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+          {/* Search Box */}
+          <div className="relative flex-1 w-full">
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search User, Action, Module, IP Address, Date..."
+              placeholder="Search logs by ID, user, action, target entity, or IP..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-xs font-bold text-slate-900 dark:text-slate-100 pl-10 pr-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-xs font-mono text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          {/* Quick Filters */}
+          <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
             {/* User Filter */}
             <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] px-3 py-1.5 rounded-xl">
               <Users size={12} className="text-slate-400" />
@@ -362,17 +277,11 @@ function RecentActivity() {
                 }}
                 className="bg-transparent text-slate-900 dark:text-slate-100 font-bold focus:outline-none cursor-pointer text-xs"
               >
-<<<<<<< HEAD
-                <option value="ALL">All Users</option>
-                {userOptions.map((u) => (
-                  <option key={u} value={u}>{u}</option>
-=======
                 <option value="ALL">All Users ({logs.length})</option>
                 {filterOptions.users.map((u) => (
                   <option key={u} value={u}>
                     {u}
                   </option>
->>>>>>> 1318ddef (Complete real estate due diligence platform)
                 ))}
               </select>
             </div>
@@ -389,15 +298,10 @@ function RecentActivity() {
                 className="bg-transparent text-slate-900 dark:text-slate-100 font-bold focus:outline-none cursor-pointer text-xs"
               >
                 <option value="ALL">All Actions</option>
-<<<<<<< HEAD
-                {actionOptions.map((a) => (
-                  <option key={a} value={a}>{a}</option>
-=======
                 {filterOptions.actions.map((a) => (
                   <option key={a} value={a}>
                     {a}
                   </option>
->>>>>>> 1318ddef (Complete real estate due diligence platform)
                 ))}
               </select>
             </div>
@@ -414,33 +318,11 @@ function RecentActivity() {
                 className="bg-transparent text-slate-900 dark:text-slate-100 font-bold focus:outline-none cursor-pointer text-xs"
               >
                 <option value="ALL">All Modules</option>
-<<<<<<< HEAD
-                {moduleOptions.map((m) => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* FILTER 4: DATE */}
-            <div className="lg:col-span-2">
-              <select
-                value={selectedDateFilter}
-                onChange={(e) => {
-                  setSelectedDateFilter(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full py-2.5 px-3 rounded-2xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-white font-medium cursor-pointer text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="ALL">All Dates</option>
-                <option value="TODAY">Today</option>
-                <option value="PAST_7">Past 7 Days</option>
-=======
                 {filterOptions.entities.map((en) => (
                   <option key={en} value={en}>
                     {en}
                   </option>
                 ))}
->>>>>>> 1318ddef (Complete real estate due diligence platform)
               </select>
             </div>
           </div>
@@ -499,64 +381,73 @@ function RecentActivity() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-[#334155]">
-                  {paginatedLogs.map((log) => (
-                    <tr
-                      key={log.id}
-                      className="hover:bg-slate-50/80 dark:hover:bg-[#0F172A]/40 transition-colors"
-                    >
-                      <td className="py-4 px-5 font-bold text-blue-600 dark:text-cyan-400 font-mono text-[11px]">
-                        {log.id}
-                      </td>
-                      <td className="py-4 px-5 font-bold text-slate-900 dark:text-white">
-                        {log.user}
-                      </td>
-                      <td className="py-4 px-5">
-                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold font-mono bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-cyan-300 border border-blue-200 dark:border-blue-800">
+                  {paginatedLogs.map((log) => {
+                    const isSuccess = log.status === "Success" || log.status === "SUCCESS";
+
+                    return (
+                      <tr
+                        key={log.id}
+                        className="hover:bg-slate-50/80 dark:hover:bg-[#0F172A]/40 transition-colors"
+                      >
+                        <td className="py-4 px-5 font-bold text-blue-600 dark:text-cyan-400 whitespace-nowrap">
+                          {log.id}
+                        </td>
+                        <td className="py-4 px-5 font-bold text-slate-900 dark:text-white">
+                          <div>{log.user}</div>
+                          <span className="text-[10px] text-slate-400 font-normal">
+                            {log.userEmail}
+                          </span>
+                        </td>
+                        <td className="py-4 px-5 font-medium text-slate-700 dark:text-slate-200">
                           {log.action}
-                        </span>
-                      </td>
-                      <td className="py-4 px-5 text-slate-600 dark:text-slate-300 font-medium">
-                        {log.entityTarget}
-                      </td>
-                      <td className="py-4 px-5 text-slate-500 font-mono text-[11px]">
-                        <div>{log.date}</div>
-                        <div className="text-[10px] text-slate-400">{log.time}</div>
-                      </td>
-                      <td className="py-4 px-5 font-mono text-slate-500 text-[11px]">
-                        {log.ipAddress}
-                      </td>
-                      <td className="py-4 px-5 text-right">
-                        <Badge variant="success">{log.status}</Badge>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="py-4 px-5 font-bold text-slate-800 dark:text-slate-300">
+                          {log.entityTarget}
+                        </td>
+                        <td className="py-4 px-5 text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                          <div>{log.date}</div>
+                          <span className="text-[10px] text-slate-400">{log.time}</span>
+                        </td>
+                        <td className="py-4 px-5 text-slate-500 dark:text-slate-400 font-mono text-[11px] whitespace-nowrap">
+                          {log.ipAddress}
+                        </td>
+                        <td className="py-4 px-5 text-right whitespace-nowrap">
+                          <Badge variant={isSuccess ? "success" : "danger"}>
+                            {log.status}
+                          </Badge>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
 
-            {/* PAGINATION FOOTER */}
-            <div className="p-4 border-t border-slate-100 dark:border-[#334155] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-slate-500">
-              <span>
-                Showing {Math.min(paginatedLogs.length, sortedLogs.length)} of {sortedLogs.length} audit records (Page {currentPage} of {totalPages})
-              </span>
-              {totalPages > 1 && (
-                <div className="flex items-center gap-2">
-                  <button
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] font-bold text-xs disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
-                  >
-                    Previous
-                  </button>
-                  <button
-                    disabled={currentPage >= totalPages}
-                    onClick={() => setCurrentPage((p) => p + 1)}
-                    className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] font-bold text-xs disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
+            {/* PAGINATION STRIP */}
+            <div className="p-4 border-t border-slate-100 dark:border-[#334155] flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                Showing <strong className="text-slate-900 dark:text-white font-bold">{Math.min((currentPage - 1) * itemsPerPage + 1, sortedLogs.length)}</strong> to <strong className="text-slate-900 dark:text-white font-bold">{Math.min(currentPage * itemsPerPage, sortedLogs.length)}</strong> of <strong className="text-slate-900 dark:text-white font-bold">{sortedLogs.length}</strong> entries
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-[#334155] text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#0F172A] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                >
+                  <ChevronLeft size={14} /> Previous
+                </button>
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 px-2">
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-[#334155] text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#0F172A] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                >
+                  Next <ChevronRight size={14} />
+                </button>
+              </div>
             </div>
           </div>
         )}
