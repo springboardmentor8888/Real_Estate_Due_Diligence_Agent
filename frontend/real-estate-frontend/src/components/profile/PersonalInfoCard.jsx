@@ -256,88 +256,96 @@ function PersonalInfoCard({ profileData, setProfileData }) {
           </div>
 
           {/* Company Name */}
-          <div>
-            <label className="block text-xs font-mono font-bold text-slate-500 dark:text-[#94A3B8] uppercase mb-2 flex items-center gap-1.5">
-              <Building2 size={13} className="text-cyan-500" />
-              Company Name
-            </label>
-            {isEditing ? (
-              <input
-                type="text"
-                name="company"
-                value={formData.company}
-                onChange={handleChange}
-                className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-              />
-            ) : (
-              <p className="p-3 rounded-xl bg-slate-50/70 dark:bg-[#0F172A]/70 border border-slate-200/50 dark:border-[#334155]/50 text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
-                {formData.company}
-              </p>
-            )}
-          </div>
+          {profileData.role !== "Administrator" && (
+            <div>
+              <label className="block text-xs font-mono font-bold text-slate-500 dark:text-[#94A3B8] uppercase mb-2 flex items-center gap-1.5">
+                <Building2 size={13} className="text-cyan-500" />
+                Company Name
+              </label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  name="company"
+                  value={formData.company}
+                  onChange={handleChange}
+                  className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                />
+              ) : (
+                <p className="p-3 rounded-xl bg-slate-50/70 dark:bg-[#0F172A]/70 border border-slate-200/50 dark:border-[#334155]/50 text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
+                  {formData.company}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Address */}
-          <div>
-            <label className="block text-xs font-mono font-bold text-slate-500 dark:text-[#94A3B8] uppercase mb-2 flex items-center gap-1.5">
-              <MapPin size={13} className="text-amber-500" />
-              Address
-            </label>
-            {isEditing ? (
-              <input
-                type="text"
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-              />
-            ) : (
-              <p className="p-3 rounded-xl bg-slate-50/70 dark:bg-[#0F172A]/70 border border-slate-200/50 dark:border-[#334155]/50 text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
-                {formData.address}
-              </p>
-            )}
-          </div>
+          {profileData.role !== "Administrator" && (
+            <div>
+              <label className="block text-xs font-mono font-bold text-slate-500 dark:text-[#94A3B8] uppercase mb-2 flex items-center gap-1.5">
+                <MapPin size={13} className="text-amber-500" />
+                Address
+              </label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                />
+              ) : (
+                <p className="p-3 rounded-xl bg-slate-50/70 dark:bg-[#0F172A]/70 border border-slate-200/50 dark:border-[#334155]/50 text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
+                  {formData.address}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* City */}
-          <div>
-            <label className="block text-xs font-mono font-bold text-slate-500 dark:text-[#94A3B8] uppercase mb-2 flex items-center gap-1.5">
-              <Navigation size={13} className="text-rose-500" />
-              City
-            </label>
-            {isEditing ? (
-              <input
-                type="text"
-                name="city"
-                value={formData.city}
-                onChange={handleChange}
-                className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-              />
-            ) : (
-              <p className="p-3 rounded-xl bg-slate-50/70 dark:bg-[#0F172A]/70 border border-slate-200/50 dark:border-[#334155]/50 text-sm font-semibold text-slate-800 dark:text-slate-200">
-                {formData.city}
-              </p>
-            )}
-          </div>
+          {profileData.role !== "Administrator" && (
+            <div>
+              <label className="block text-xs font-mono font-bold text-slate-500 dark:text-[#94A3B8] uppercase mb-2 flex items-center gap-1.5">
+                <Navigation size={13} className="text-rose-500" />
+                City
+              </label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleChange}
+                  className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200/50 dark:border-[#334155]/50 text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                />
+              ) : (
+                <p className="p-3 rounded-xl bg-slate-50/70 dark:bg-[#0F172A]/70 border border-slate-200/50 dark:border-[#334155]/50 text-sm font-semibold text-slate-800 dark:text-slate-200">
+                  {formData.city}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* State */}
-          <div>
-            <label className="block text-xs font-mono font-bold text-slate-500 dark:text-[#94A3B8] uppercase mb-2 flex items-center gap-1.5">
-              <Globe size={13} className="text-purple-500" />
-              State
-            </label>
-            {isEditing ? (
-              <input
-                type="text"
-                name="state"
-                value={formData.state}
-                onChange={handleChange}
-                className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-              />
-            ) : (
-              <p className="p-3 rounded-xl bg-slate-50/70 dark:bg-[#0F172A]/70 border border-slate-200/50 dark:border-[#334155]/50 text-sm font-semibold text-slate-800 dark:text-slate-200">
-                {formData.state}
-              </p>
-            )}
-          </div>
+          {profileData.role !== "Administrator" && (
+            <div>
+              <label className="block text-xs font-mono font-bold text-slate-500 dark:text-[#94A3B8] uppercase mb-2 flex items-center gap-1.5">
+                <Globe size={13} className="text-purple-500" />
+                State
+              </label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  name="state"
+                  value={formData.state}
+                  onChange={handleChange}
+                  className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200/50 dark:border-[#334155]/50 text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                />
+              ) : (
+                <p className="p-3 rounded-xl bg-slate-50/70 dark:bg-[#0F172A]/70 border border-slate-200/50 dark:border-[#334155]/50 text-sm font-semibold text-slate-800 dark:text-slate-200">
+                  {formData.state}
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {isEditing && (

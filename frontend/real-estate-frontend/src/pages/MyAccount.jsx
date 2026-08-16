@@ -12,6 +12,7 @@ import RecentActivityFeed from "../components/dashboard/RecentActivityFeed";
 import SettingsAndPreferences from "../components/profile/SettingsAndPreferences";
 import DownloadsAndDangerZone from "../components/profile/DownloadsAndDangerZone";
 import { showErrorAlert, showSuccessAlert } from "../utils/swal";
+import { getUserProfile } from "../services/propertyService";
 import {
   User,
   Shield,
@@ -64,34 +65,38 @@ function MyAccount() {
         const derivedName = parsed.name || (parsed.firstName ? `${parsed.firstName} ${parsed.lastName || ""}`.trim() : null) || "Rama Charan";
         return {
           name: derivedName,
-          email: parsed.email || "ramacharan@gmail.com",
+          email: parsed.email || "",
           role: parsed.role || "Real Estate Agent",
-          organization: parsed.organization || "Apex Due Diligence Advisors India Pvt. Ltd.",
-          phone: parsed.phone || "+91 98490 12345",
-          address: parsed.address || "Plot 45, Sy. No. 112/A, Financial District",
-          city: parsed.city || "Hyderabad",
-          state: parsed.state || "Telangana",
-          country: parsed.country || "India",
+          organization: parsed.organization || "Not Provided",
+          phone: parsed.phone || "Not Provided",
+          address: parsed.address || "Not Provided",
+          city: parsed.city || "Not Provided",
+          state: parsed.state || "Not Provided",
+          country: parsed.country || "Not Provided",
           currentPassword: "",
           newPassword: "",
           confirmPassword: "",
+          createdAt: parsed.createdAt || null,
+          lastLogin: parsed.lastLogin || null,
         };
       }
     } catch (e) {}
 
     return {
       name: "Rama Charan",
-      email: "ramacharan@gmail.com",
+      email: "",
       role: "Real Estate Agent",
-      organization: "Apex Due Diligence Advisors India Pvt. Ltd.",
-      phone: "+91 98490 12345",
-      address: "Plot 45, Sy. No. 112/A, Financial District",
-      city: "Hyderabad",
-      state: "Telangana",
-      country: "India",
+      organization: "Not Provided",
+      phone: "Not Provided",
+      address: "Not Provided",
+      city: "Not Provided",
+      state: "Not Provided",
+      country: "Not Provided",
       currentPassword: "",
       newPassword: "",
       confirmPassword: "",
+      createdAt: null,
+      lastLogin: null,
     };
   };
 
@@ -102,6 +107,31 @@ function MyAccount() {
   });
 
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    getUserProfile()
+      .then((res) => {
+        if (res && res.data) {
+          const u = res.data;
+          const derivedName = `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email;
+          setProfileData((prev) => ({
+            ...prev,
+            name: derivedName,
+            email: u.email,
+            role: u.role,
+            phone: u.phone || "Not Provided",
+            organization: u.organization || "Not Provided",
+            address: u.address || "Not Provided",
+            city: u.city || "Not Provided",
+            state: u.state || "Not Provided",
+            country: u.country || "Not Provided",
+            createdAt: u.createdAt,
+            lastLogin: u.lastLogin,
+          }));
+        }
+      })
+      .catch((err) => console.warn("Failed to fetch user profile:", err));
+  }, []);
 
   useEffect(() => {
     const handleProfileUpdate = () => {

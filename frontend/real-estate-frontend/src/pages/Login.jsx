@@ -125,6 +125,13 @@ function Login() {
 
     // Development-only Administrator Login
     if (loginData.email.trim().toLowerCase() === "bharath@gmail.com" && loginData.password === "Admin@123") {
+      if (!isAdminLogin) {
+        showErrorAlert(
+          "Administrator Login Required",
+          "Please switch to the 'Administrator' portal tab to log in with administrative credentials."
+        );
+        return;
+      }
       handleDemoAdminLogin();
       return;
     }
@@ -138,10 +145,30 @@ function Login() {
       });
 
       if (response && response.data && response.data.token) {
+        const userRole = response.data.role || "Buyer";
+        const isUserAdmin = userRole === "Administrator";
+
+        if (isAdminLogin && !isUserAdmin) {
+          showErrorAlert(
+            "Access Denied",
+            "This portal tab is reserved for Administrators. Please switch to the 'Sign in' tab for customer and agent accounts."
+          );
+          setLoading(false);
+          return;
+        }
+
+        if (!isAdminLogin && isUserAdmin) {
+          showErrorAlert(
+            "Administrator Login Required",
+            "Please switch to the 'Administrator' portal tab to log in with administrative credentials."
+          );
+          setLoading(false);
+          return;
+        }
+
         localStorage.setItem("token", response.data.token);
         localStorage.setItem("user", JSON.stringify(response.data));
         showToast("Signed in successfully", "success");
-        const userRole = response.data.role || "Buyer";
         navigate(getRoleDashboardPath(userRole));
       } else {
         showErrorAlert("Login Failed", "Server did not return a valid authentication token.");

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import MainLayout from "../components/layout/MainLayout";
@@ -33,6 +33,7 @@ import {
 import { showToast, showConfirmDialog, showSuccessAlert } from "../utils/swal";
 import ReportGeneratorModal from "../components/dashboard/ReportGeneratorModal";
 import { getReportsByProperty } from "../services/reportService";
+import { getAllReports } from "../services/propertyService";
 
 // Master Initial Mock Reports Dataset across 4 categories
 const INITIAL_MOCK_REPORTS = [
@@ -159,7 +160,35 @@ const INITIAL_MOCK_REPORTS = [
 
 function ReportHistory() {
   const navigate = useNavigate();
-  const [reportsList, setReportsList] = useState(INITIAL_MOCK_REPORTS);
+  const [reportsList, setReportsList] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getAllReports()
+      .then((res) => {
+        const list = res.data || [];
+        const mapped = list.map((r) => ({
+          reportId: `REP-${r.reportId}`,
+          propertyId: r.property?.propertyId?.toString() || "1001",
+          propertyName: r.property?.propertyName || r.reportName || `Property PR-${r.property?.propertyId}`,
+          client: r.generatedBy?.email || "System Agent",
+          generatedDate: r.generatedAt ? new Date(r.generatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "Today",
+          rawDate: r.generatedAt ? new Date(r.generatedAt).getTime() : Date.now(),
+          riskScore: r.overallRiskScore || 0,
+          category: r.reportStatus === "ARCHIVED" ? "Archived" : r.reportStatus === "PENDING" ? "Pending" : "Generated",
+          status: r.reportStatus === "PENDING" ? "Pending Review" : "Report Generated",
+          owner: r.property?.propertyName || "Property Owner",
+          marketValue: r.property?.marketValue ? `₹ ${(r.property.marketValue / 10000000).toFixed(2)} Cr` : "N/A",
+          address: "Registered land parcel",
+        }));
+        setReportsList(mapped);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Error loading reports:", err);
+        setLoading(false);
+      });
+  }, []);
 
   // Tab & Controls State
   const [activeCategoryTab, setActiveCategoryTab] = useState("ALL"); // 'ALL', 'Generated', 'Pending', 'Shared', 'Archived'

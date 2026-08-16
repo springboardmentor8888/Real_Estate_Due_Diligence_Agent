@@ -242,18 +242,12 @@ export const getPropertyDocuments = async (propertyId) => {
 // Get Reports for Property
 export const getReportsByProperty = async (propertyId) => {
   const cleanId = typeof propertyId === "number" ? propertyId : parseInt((propertyId || "1").toString().replace(/\D/g, "") || "1", 10);
-  return withFallback(
-    () => apiClient.get(`/api/reports/property/${cleanId}`),
-    getMockPropertyReportHistory(cleanId)
-  );
+  return apiClient.get(`/api/reports/property/${cleanId}`);
 };
 
 // Get All Audit Reports
 export const getAllReports = async () => {
-  return withFallback(
-    () => apiClient.get("/api/reports"),
-    getMockDueDiligenceReports()
-  );
+  return apiClient.get("/api/reports");
 };
 
 // Get Risk Assessments for Property
@@ -265,26 +259,17 @@ export const getRiskAssessmentsByProperty = async (propertyId) => {
 // Get Comparable Properties for Property
 export const getComparableProperties = async (propertyId) => {
   const cleanId = typeof propertyId === "number" ? propertyId : parseInt((propertyId || "1").toString().replace(/\D/g, "") || "1", 10);
-  return withFallback(
-    () => apiClient.get(`/api/comparable-properties/property/${cleanId}`),
-    getMockComparableProperties(cleanId)
-  );
+  return apiClient.get(`/api/comparable-properties/property/${cleanId}`);
 };
 
 // Get Audit Logs & Activity Feed
 export const getAuditLogs = async () => {
-  return withFallback(
-    () => apiClient.get("/api/admin/audit-logs"),
-    getMockAuditLogs()
-  );
+  return apiClient.get("/api/audit-logs");
 };
 
 // Get Dashboard Statistics
 export const getDashboardStats = async () => {
-  return withFallback(
-    () => apiClient.get("/api/dashboard/stats"),
-    getMockDashboardStats()
-  );
+  return apiClient.get("/api/admin/dashboard/analytics");
 };
 
 // Get User Profile
