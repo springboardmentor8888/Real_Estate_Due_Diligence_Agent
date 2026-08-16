@@ -28,11 +28,14 @@ public class OAuth2ConfigLogger implements ApplicationRunner {
             boolean hasClientId = clientId != null && !clientId.isBlank() && !clientId.contains("placeholder");
             boolean hasClientSecret = clientSecret != null && !clientSecret.isBlank() && !clientSecret.contains("placeholder");
 
-            log.info("OAuth2 Registration [google] -> Client ID configured: {} (length: {}), Client Secret configured: {} (length: {})",
+            log.info("OAuth2 Registration [google] -> Client ID configured: {} (length: {}), Client Secret configured: {} (length: {}), Auth Method: {}, Token URI: {}, Redirect Template: {}",
                     hasClientId,
                     clientId != null ? clientId.length() : 0,
                     hasClientSecret,
-                    clientSecret != null ? clientSecret.length() : 0);
+                    clientSecret != null ? clientSecret.length() : 0,
+                    google.getClientAuthenticationMethod() != null ? google.getClientAuthenticationMethod().getValue() : "default",
+                    google.getProviderDetails() != null ? google.getProviderDetails().getTokenUri() : "default",
+                    google.getRedirectUri());
         } else {
             log.warn("OAuth2 Registration [google] is NOT registered in ClientRegistrationRepository");
         }

@@ -59,3 +59,7 @@ application:
     jwt:
       secret-key: ${JWT_SECRET_KEY:dGVzdHNlY3JldGtleWZvcmhlbHBpbmdidWlsZGluZ3RoZXJlYWxlc3RhdGVkdWVkaWxpZ2VuY2VwbGF0Zm9ybQ==}
       expiration: ${JWT_EXPIRATION:86400000} # 24 hours in milliseconds
+
+logging:
+  level:
+    org.springframework.security.oauth2: DEBUG
