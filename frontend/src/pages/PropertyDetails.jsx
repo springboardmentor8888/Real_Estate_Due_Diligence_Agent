@@ -412,7 +412,7 @@ function PropertyDetails() {
         )}
       </header>
 
-      {purchaseStatus && (
+      {isBuyer && purchaseStatus && (
         <div className="mt-4 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
