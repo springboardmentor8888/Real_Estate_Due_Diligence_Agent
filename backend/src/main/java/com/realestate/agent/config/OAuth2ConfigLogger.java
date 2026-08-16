@@ -26,13 +26,17 @@ public class OAuth2ConfigLogger implements ApplicationRunner {
             String clientSecret = google.getClientSecret();
 
             boolean hasClientId = clientId != null && !clientId.isBlank() && !clientId.contains("placeholder");
+            boolean matchesExpectedClientId = "342328203507-3hs5jq2hk17ccimncsn9n4g3q3rk8pho.apps.googleusercontent.com".equals(clientId);
             boolean hasClientSecret = clientSecret != null && !clientSecret.isBlank() && !clientSecret.contains("placeholder");
+            boolean secretStartsWithGocspx = clientSecret != null && clientSecret.startsWith("GOCSPX-");
+            boolean secretHasWhitespace = clientSecret != null && (clientSecret.contains(" ") || clientSecret.contains("\t") || clientSecret.contains("\n") || clientSecret.contains("\r"));
 
-            log.info("OAuth2 Registration [google] -> Client ID configured: {} (length: {}), Client Secret configured: {} (length: {}), Auth Method: {}, Token URI: {}, Redirect Template: {}",
-                    hasClientId,
-                    clientId != null ? clientId.length() : 0,
-                    hasClientSecret,
-                    clientSecret != null ? clientSecret.length() : 0,
+            log.info("OAuth2 Runtime Verification [google] ->");
+            log.info("  GOOGLE_CLIENT_ID configured: {} (matches expected: {}, length: {})",
+                    hasClientId, matchesExpectedClientId, clientId != null ? clientId.length() : 0);
+            log.info("  GOOGLE_CLIENT_SECRET configured: {} (length: {}, startsWith 'GOCSPX-': {}, contains whitespace: {})",
+                    hasClientSecret, clientSecret != null ? clientSecret.length() : 0, secretStartsWithGocspx, secretHasWhitespace);
+            log.info("  Auth Method: {}, Token URI: {}, Redirect Template: {}",
                     google.getClientAuthenticationMethod() != null ? google.getClientAuthenticationMethod().getValue() : "default",
                     google.getProviderDetails() != null ? google.getProviderDetails().getTokenUri() : "default",
                     google.getRedirectUri());

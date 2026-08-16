@@ -95,6 +95,9 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
+                        .tokenEndpoint(token -> token
+                                .accessTokenResponseClient(new OAuth2DiagnosticTokenResponseClient())
+                        )
                         .successHandler(oauth2AuthenticationSuccessHandler)
                         .failureHandler(oauth2AuthenticationFailureHandler)
                 )
