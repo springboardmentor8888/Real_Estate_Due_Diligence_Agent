@@ -26,13 +26,13 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     private final AuthService authService;
     private final JwtService jwtService;
 
-    @Value("${application.frontend.redirect-uri:http://localhost:5173/oauth2/redirect}")
+    @Value("${application.frontend.redirect-uri:http://localhost:5174/oauth2/redirect}")
     private String frontendRedirectUri;
 
-    @Value("${application.frontend.login-uri:http://localhost:5173/login}")
+    @Value("${application.frontend.login-uri:http://localhost:5174/login}")
     private String frontendLoginUri;
 
-    @Value("${application.frontend.complete-oauth-registration-uri:http://localhost:5173/complete-oauth-registration}")
+    @Value("${application.frontend.complete-oauth-registration-uri:http://localhost:5174/complete-oauth-registration}")
     private String frontendCompleteRegistrationUri;
 
     public OAuth2AuthenticationSuccessHandler(@Lazy AuthService authService, JwtService jwtService) {

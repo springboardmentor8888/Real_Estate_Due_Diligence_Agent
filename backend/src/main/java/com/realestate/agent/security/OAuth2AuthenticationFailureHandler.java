@@ -16,7 +16,7 @@ import java.nio.charset.StandardCharsets;
 @Component
 public class OAuth2AuthenticationFailureHandler extends SimpleUrlAuthenticationFailureHandler {
 
-    @Value("${application.frontend.login-uri:http://localhost:5173/login}")
+    @Value("${application.frontend.login-uri:http://localhost:5174/login}")
     private String frontendLoginUri;
 
     @Override

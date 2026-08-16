@@ -52,9 +52,9 @@ server:
 
 application:
   frontend:
-    redirect-uri: ${FRONTEND_REDIRECT_URI:http://localhost:5173/oauth2/redirect}
-    login-uri: ${FRONTEND_LOGIN_URI:http://localhost:5173/login}
-    complete-oauth-registration-uri: ${FRONTEND_COMPLETE_OAUTH_REGISTRATION_URI:http://localhost:5173/complete-oauth-registration}
+    redirect-uri: ${FRONTEND_REDIRECT_URI:http://localhost:5174/oauth2/redirect}
+    login-uri: ${FRONTEND_LOGIN_URI:http://localhost:5174/login}
+    complete-oauth-registration-uri: ${FRONTEND_COMPLETE_OAUTH_REGISTRATION_URI:http://localhost:5174/complete-oauth-registration}
   security:
     jwt:
       secret-key: ${JWT_SECRET_KEY:dGVzdHNlY3JldGtleWZvcmhlbHBpbmdidWlsZGluZ3RoZXJlYWxlc3RhdGVkdWVkaWxpZ2VuY2VwbGF0Zm9ybQ==}
