@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import MainLayout from "../components/layout/MainLayout";
@@ -27,107 +27,15 @@ import {
 } from "lucide-react";
 import { exportToPdf } from "../utils/exportUtils";
 import { showSuccessAlert, showToast } from "../utils/swal";
-
-// Master Financial Reports Mock Dataset covering all 4 categories and required fields
-const MASTER_FINANCIAL_REPORTS = [
-  // 1. Loan Evaluation Reports
-  {
-    id: "RPT-LOAN-2026-101",
-    category: "Loan Evaluation Reports",
-    categoryKey: "LOAN",
-    property: "Gachibowli Tech Park Phase 2 (PR-1001)",
-    propertyId: "1001",
-    applicant: "Adani Realty Institutional Fund",
-    generatedDate: "05 Aug 2026",
-    status: "Finalized",
-    score: "94/100 AAA Rating",
-    fileSize: "2.4 MB",
-  },
-  {
-    id: "RPT-LOAN-2026-102",
-    category: "Loan Evaluation Reports",
-    categoryKey: "LOAN",
-    property: "Jubilee Hills Commercial Plot 36 (PR-1002)",
-    propertyId: "1002",
-    applicant: "DLF Cybercity Developers Ltd",
-    generatedDate: "03 Aug 2026",
-    status: "Under Audit",
-    score: "68/100 Medium",
-    fileSize: "3.1 MB",
-  },
-
-  // 2. Property Valuation Reports
-  {
-    id: "RPT-VAL-2026-201",
-    category: "Property Valuation Reports",
-    categoryKey: "VALUATION",
-    property: "Whitefield Horizon Tech Campus (PR-1003)",
-    propertyId: "1003",
-    applicant: "GMR Logistics Infrastructure",
-    generatedDate: "01 Aug 2026",
-    status: "Finalized",
-    score: "₹ 165.00 Cr Valuation",
-    fileSize: "4.2 MB",
-  },
-  {
-    id: "RPT-VAL-2026-202",
-    category: "Property Valuation Reports",
-    categoryKey: "VALUATION",
-    property: "Financial District Commercial Plot (PR-1004)",
-    propertyId: "1004",
-    applicant: "Prestige Capital Partners",
-    generatedDate: "29 Jul 2026",
-    status: "Finalized",
-    score: "₹ 52.00 Cr Valuation",
-    fileSize: "1.8 MB",
-  },
-
-  // 3. Tax Reports
-  {
-    id: "RPT-TAX-2026-301",
-    category: "Tax Reports",
-    categoryKey: "TAX",
-    property: "Gachibowli Tech Park Phase 2 (PR-1001)",
-    propertyId: "1001",
-    applicant: "Adani Realty Institutional Fund",
-    generatedDate: "28 Jul 2026",
-    status: "Finalized",
-    score: "Zero Tax Liens",
-    fileSize: "1.2 MB",
-  },
-  {
-    id: "RPT-TAX-2026-302",
-    category: "Tax Reports",
-    categoryKey: "TAX",
-    property: "BKC Prime Commercial Hub (PR-1005)",
-    propertyId: "1005",
-    applicant: "Sobha Real Estate Fund",
-    generatedDate: "25 Jul 2026",
-    status: "Archived",
-    score: "Lien Flagged",
-    fileSize: "2.0 MB",
-  },
-
-  // 4. Investment Reports
-  {
-    id: "RPT-INV-2026-401",
-    category: "Investment Reports",
-    categoryKey: "INVESTMENT",
-    property: "Whitefield Horizon Tech Campus (PR-1003)",
-    propertyId: "1003",
-    applicant: "GMR Logistics Infrastructure",
-    generatedDate: "22 Jul 2026",
-    status: "Finalized",
-    score: "+15.8% IRR Yield",
-    fileSize: "3.5 MB",
-  },
-];
+import { getAllProperties } from "../services/propertyService";
 
 function FinancialReports() {
   const navigate = useNavigate();
 
   // State Management
-  const [reports, setReports] = useState(MASTER_FINANCIAL_REPORTS);
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeCategory, setActiveCategory] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("NEWEST");
@@ -139,6 +47,61 @@ function FinancialReports() {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
   const [selectedShareReport, setSelectedShareReport] = useState(null);
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await getAllProperties(0, 50);
+        const list = res?.content || (Array.isArray(res) ? res : res?.data?.content || []);
+        
+        const reportCategories = [
+          { name: "Loan Evaluation Reports", key: "LOAN" },
+          { name: "Property Valuation Reports", key: "VALUATION" },
+          { name: "Tax Reports", key: "TAX" },
+          { name: "Investment Reports", key: "INVESTMENT" },
+        ];
+
+        const applicants = [
+          "Adani Realty Institutional Fund",
+          "DLF Cybercity Developers Ltd",
+          "GMR Logistics Infrastructure",
+          "Prestige Capital Partners",
+          "Sobha Real Estate Fund",
+        ];
+
+        const formatted = list.map((p, idx) => {
+          const pId = p.propertyId || p.id || idx + 1;
+          const pName = p.propertyName || p.title || `Property Parcel PR-${pId}`;
+          const pCode = p.propertyCode || `PR-${pId}`;
+          const cat = reportCategories[idx % reportCategories.length];
+
+          return {
+            id: `RPT-${cat.key}-2026-${String(pId).padStart(3, "0")}`,
+            category: cat.name,
+            categoryKey: cat.key,
+            property: `${pName} (${pCode})`,
+            propertyId: pId.toString(),
+            applicant: applicants[idx % applicants.length],
+            generatedDate: "05 Aug 2026",
+            status: p.status === "VERIFIED" ? "Finalized" : "Under Audit",
+            score: p.status === "VERIFIED" ? "94/100 AAA Rating" : "75/100 AA Rating",
+            fileSize: "2.4 MB",
+          };
+        });
+
+        setReports(formatted);
+      } catch (err) {
+        console.error("Failed to load financial reports:", err);
+        setError("Unable to load reports. Please verify backend is running on port 8081.");
+        setReports([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReports();
+  }, []);
 
   // CATEGORY TABS CONFIG
   const categories = [

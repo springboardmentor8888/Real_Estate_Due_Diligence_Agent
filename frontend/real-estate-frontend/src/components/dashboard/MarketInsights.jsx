@@ -20,7 +20,7 @@ import Badge from "../common/Badge";
 
 /**
  * Enterprise Market Insights Component
- * Displays the 8 requested market intelligence cards with SVG charts and mock data.
+ * Displays market intelligence cards with visual charts and corridor analytics.
  */
 function MarketInsights({ city = "Hyderabad", corridor = "Financial District Nanakramguda" }) {
   // SVG Price Trend Chart Points

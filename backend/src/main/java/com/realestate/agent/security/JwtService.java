@@ -53,6 +53,33 @@ public class JwtService {
                 .compact();
     }
 
+    public String generateOAuthRegistrationToken(String email, String firstName, String lastName, String provider) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("email", email);
+        claims.put("firstName", firstName != null ? firstName : "");
+        claims.put("lastName", lastName != null ? lastName : "");
+        claims.put("provider", provider != null ? provider : "google");
+        claims.put("purpose", "oauth_registration");
+
+        return Jwts.builder()
+                .claims(claims)
+                .subject(email)
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + 15 * 60 * 1000)) // 15 minutes validity
+                .signWith(getSigningKey(), Jwts.SIG.HS256)
+                .compact();
+    }
+
+    public boolean isOAuthRegistrationTokenValid(String token) {
+        try {
+            Claims claims = extractAllClaims(token);
+            String purpose = claims.get("purpose", String.class);
+            return "oauth_registration".equals(purpose) && !isTokenExpired(token);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
         return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);

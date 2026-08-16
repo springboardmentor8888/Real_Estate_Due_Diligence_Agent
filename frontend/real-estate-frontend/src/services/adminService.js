@@ -4,3 +4,8 @@ import apiClient from "./apiClient";
 export const getAdminDashboardAnalytics = async () => {
   return apiClient.get("/api/admin/dashboard/analytics");
 };
+
+// Get Live System Monitoring Telemetry
+export const getSystemMonitoringTelemetry = async () => {
+  return apiClient.get("/api/admin/system-monitoring");
+};

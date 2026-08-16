@@ -27,10 +27,48 @@ public class PropertySpecification {
             }
 
             Join<Property, Address> addressJoin = null;
+            Join<Property, PropertyType> typeJoin = null;
+
+            // Search Keyword / Query / PropertyName across multiple columns
+            String searchTerm = null;
+            if (StringUtils.hasText(criteria.getKeyword())) {
+                searchTerm = criteria.getKeyword().trim();
+            } else if (StringUtils.hasText(criteria.getQuery())) {
+                searchTerm = criteria.getQuery().trim();
+            } else if (StringUtils.hasText(criteria.getPropertyName())) {
+                searchTerm = criteria.getPropertyName().trim();
+            }
+
+            if (StringUtils.hasText(searchTerm)) {
+                if (addressJoin == null) {
+                    addressJoin = root.join("addresses", JoinType.LEFT);
+                }
+                if (typeJoin == null) {
+                    typeJoin = root.join("propertyType", JoinType.LEFT);
+                }
+
+                String pattern = "%" + searchTerm.toLowerCase() + "%";
+                Predicate nameMatch = criteriaBuilder.like(criteriaBuilder.lower(root.get("propertyName")), pattern);
+                Predicate codeMatch = criteriaBuilder.like(criteriaBuilder.lower(root.get("propertyCode")), pattern);
+                Predicate descMatch = criteriaBuilder.like(criteriaBuilder.lower(root.get("description")), pattern);
+                Predicate typeMatch = criteriaBuilder.like(criteriaBuilder.lower(typeJoin.get("typeName")), pattern);
+                Predicate cityMatch = criteriaBuilder.like(criteriaBuilder.lower(addressJoin.get("city")), pattern);
+                Predicate stateMatch = criteriaBuilder.like(criteriaBuilder.lower(addressJoin.get("state")), pattern);
+                Predicate addr1Match = criteriaBuilder.like(criteriaBuilder.lower(addressJoin.get("addressLine1")), pattern);
+                Predicate addr2Match = criteriaBuilder.like(criteriaBuilder.lower(addressJoin.get("addressLine2")), pattern);
+                Predicate districtMatch = criteriaBuilder.like(criteriaBuilder.lower(addressJoin.get("district")), pattern);
+
+                predicates.add(criteriaBuilder.or(
+                        nameMatch, codeMatch, descMatch, typeMatch,
+                        cityMatch, stateMatch, addr1Match, addr2Match, districtMatch
+                ));
+            }
 
             // Filter by City
             if (StringUtils.hasText(criteria.getCity())) {
-                addressJoin = root.join("addresses", JoinType.LEFT);
+                if (addressJoin == null) {
+                    addressJoin = root.join("addresses", JoinType.LEFT);
+                }
                 predicates.add(criteriaBuilder.equal(
                         criteriaBuilder.lower(addressJoin.get("city")),
                         criteria.getCity().toLowerCase().trim()
@@ -61,7 +99,9 @@ public class PropertySpecification {
 
             // Filter by Property Type
             if (StringUtils.hasText(criteria.getPropertyType())) {
-                Join<Property, PropertyType> typeJoin = root.join("propertyType", JoinType.INNER);
+                if (typeJoin == null) {
+                    typeJoin = root.join("propertyType", JoinType.INNER);
+                }
                 predicates.add(criteriaBuilder.equal(
                         criteriaBuilder.lower(typeJoin.get("typeName")),
                         criteria.getPropertyType().toLowerCase().trim()

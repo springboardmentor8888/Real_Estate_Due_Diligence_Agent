@@ -11,7 +11,6 @@ import {
   Search,
   CheckCircle2,
   ShieldCheck,
-  FileDown,
   Printer,
   Sparkles,
   X,
@@ -29,7 +28,6 @@ import {
   Send,
 } from "lucide-react";
 import { showSuccessAlert, showToast } from "../utils/swal";
-import { exportToPdf } from "../utils/exportUtils";
 import PropertyContextSwitcher from "../components/common/PropertyContextSwitcher";
 import { getLiveActiveProperty } from "../services/liveStore";
 import { getEnvironmentalRecords } from "../services/propertyService";
@@ -144,14 +142,10 @@ function Environmental() {
             </p>
           </div>
 
-          {/* THE 4 ACTION BUTTONS */}
+          {/* THE 3 ACTION BUTTONS */}
           <div className="flex flex-wrap items-center gap-3 shrink-0">
             <Button onClick={handleVerifyNoc} loading={isVerifying} variant="primary" size="sm" icon={ShieldCheck}>
               Verify NOC
-            </Button>
-
-            <Button onClick={() => exportToPdf(`Environmental_Audit_PR-${numericId}`, currentEnv)} variant="secondary" size="sm" icon={FileDown}>
-              Download Report
             </Button>
 
             <Button onClick={handleRunSampling} variant="outline" size="sm" icon={FlaskConical}>

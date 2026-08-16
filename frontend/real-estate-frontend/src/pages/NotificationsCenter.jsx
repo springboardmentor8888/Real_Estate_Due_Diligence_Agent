@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import MainLayout from "../components/layout/MainLayout";
 import Badge from "../components/common/Badge";
@@ -23,93 +23,43 @@ import {
   X,
 } from "lucide-react";
 import { showSuccessAlert, showToast, showConfirmDialog } from "../utils/swal";
-
-// MASTER MOCK NOTIFICATIONS DATASET COVERING ALL 7 REQUIRED TYPES
-const INITIAL_NOTIFICATIONS = [
-  {
-    id: "NOTIF-101",
-    type: "Security Alert",
-    title: "Unusual Authentication Attempt Detected",
-    message: "3 consecutive failed login attempts detected from IP 198.51.100.42 targeting admin accounts.",
-    timestamp: "10 mins ago",
-    read: false,
-    icon: Lock,
-    color: "rose",
-  },
-  {
-    id: "NOTIF-102",
-    type: "High Risk Property",
-    title: "High Risk Encumbrance Flagged",
-    message: "Civil court stay order detected under Suit No. 441/2025 for Koramangala Commercial Hub (Risk Score: 74).",
-    timestamp: "25 mins ago",
-    read: false,
-    icon: ShieldAlert,
-    color: "amber",
-  },
-  {
-    id: "NOTIF-103",
-    type: "New User Registered",
-    title: "New Enterprise Account Registered",
-    message: "Dr. Arvind Swamy registered as Financial Institution (HDFC Commercial Capital).",
-    timestamp: "1 hour ago",
-    read: false,
-    icon: UserPlus,
-    color: "blue",
-  },
-  {
-    id: "NOTIF-104",
-    type: "Report Generated",
-    title: "Audit Dossier PDF Available",
-    message: "13-vector due diligence audit dossier #RPT-2026-901 generated for Gachibowli Tech Park Phase 2.",
-    timestamp: "2 hours ago",
-    read: false,
-    icon: FileText,
-    color: "purple",
-  },
-  {
-    id: "NOTIF-105",
-    type: "API Failure",
-    title: "Sub-Registrar API Endpoint Timeout",
-    message: "Sub-Registrar OAuth2 token refresh timeout occurred on secondary Telangana land registry endpoint.",
-    timestamp: "3 hours ago",
-    read: false,
-    icon: AlertTriangle,
-    color: "rose",
-  },
-  {
-    id: "NOTIF-106",
-    type: "Property Added",
-    title: "New Property Parcel Listed",
-    message: "Commercial parcel 'Jubilee Hills Plot 36' (APN-HYD-500033-1002) added by Ananya Rao.",
-    timestamp: "4 hours ago",
-    read: true,
-    icon: Building2,
-    color: "emerald",
-  },
-  {
-    id: "NOTIF-107",
-    type: "Server Alert",
-    title: "Daily Storage Backup Snapshot Created",
-    message: "Automated daily snapshot of PostgreSQL 16.2 cluster and AWS S3 document vault completed successfully.",
-    timestamp: "5 hours ago",
-    read: true,
-    icon: Server,
-    color: "cyan",
-  },
-  {
-    id: "NOTIF-108",
-    type: "Security Alert",
-    title: "RBAC Role Permission Override",
-    message: "Admin V Bharath updated granular permission matrix for Financial Institution role.",
-    timestamp: "Yesterday at 04:30 PM",
-    read: true,
-    icon: Lock,
-    color: "purple",
-  },
-];
+import { getMyNotifications, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification } from "../services/notificationService";
 
 function NotificationsCenter() {
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Load live notifications from backend
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await getMyNotifications();
+      const rawList = Array.isArray(res) ? res : res?.data || [];
+      const formatted = rawList.map((item) => ({
+        id: item.notificationId || item.id || `NOTIF-${Math.random()}`,
+        type: item.type || "System Alert",
+        title: item.title || "Notification Update",
+        message: item.message || "",
+        timestamp: item.createdAt ? new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Recently",
+        read: item.isRead || item.read || false,
+        icon: item.type?.includes("Security") ? Lock : item.type?.includes("Risk") ? ShieldAlert : item.type?.includes("Report") ? FileText : Building2,
+        color: item.type?.includes("Security") ? "rose" : item.type?.includes("Risk") ? "amber" : "blue",
+      }));
+      setNotifications(formatted);
+    } catch (err) {
+      console.error("Failed to load notifications:", err);
+      setError("Unable to connect to notification service. Please verify backend is running on port 8081.");
+      setNotifications([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
 
   // Filters & Controls
   const [searchQuery, setSearchQuery] = useState("");

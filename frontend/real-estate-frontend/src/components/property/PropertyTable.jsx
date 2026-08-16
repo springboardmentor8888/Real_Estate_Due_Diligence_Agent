@@ -9,10 +9,10 @@ function PropertyTable({ properties = [] }) {
 
   const handleOpenDetails = (item, e) => {
     if (e) e.stopPropagation();
-    const pid = item.numericId || item.propertyId || item.id;
+    const pid = item.propertyId || item.numericId || item.id;
     if (pid) {
       setLiveActiveProperty(pid);
-      navigate(`/property-details?id=${pid}`, { state: { property: item } });
+      navigate(`/properties/${pid}`, { state: { property: item } });
     }
   };
 

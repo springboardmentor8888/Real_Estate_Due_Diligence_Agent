@@ -8,27 +8,19 @@ import PersonalInfoCard from "../components/profile/PersonalInfoCard";
 import AccountSecurityCard from "../components/profile/AccountSecurityCard";
 import SavedPropertiesCard from "../components/profile/SavedPropertiesCard";
 import RecentActivityTimeline from "../components/profile/RecentActivityTimeline";
-import RecentActivityFeed from "../components/dashboard/RecentActivityFeed";
 import SettingsAndPreferences from "../components/profile/SettingsAndPreferences";
 import DownloadsAndDangerZone from "../components/profile/DownloadsAndDangerZone";
-import { showErrorAlert, showSuccessAlert } from "../utils/swal";
+import { User, Shield, Sliders, Bell, Activity } from "lucide-react";
+import { normalizeRole } from "../utils/roleUtils";
 import { getUserProfile } from "../services/propertyService";
-import {
-  User,
-  Shield,
-  Sliders,
-  Bell,
-  Activity,
-  Sparkles,
-} from "lucide-react";
 
 // THE 5 EXACT TABS REQUIRED FOR MY ACCOUNT
 const ACCOUNT_TABS = [
-  { id: "profile", label: "Profile", icon: User, desc: "Personal info, bio & account dossier" },
-  { id: "security", label: "Security", icon: Shield, desc: "Password, 2FA & active sessions" },
-  { id: "preferences", label: "Preferences", icon: Sliders, desc: "Theme, language & localization" },
-  { id: "notifications", label: "Notifications", icon: Bell, desc: "Email alerts & property updates" },
-  { id: "activity", label: "Activity", icon: Activity, desc: "User audit log & search timeline" },
+  { id: "profile", label: "Profile", icon: User, desc: "Personal info & account profile" },
+  { id: "security", label: "Security", icon: Shield, desc: "Password & security settings" },
+  { id: "preferences", label: "Preferences", icon: Sliders, desc: "Theme & platform preferences" },
+  { id: "notifications", label: "Notifications", icon: Bell, desc: "Alerts & update preferences" },
+  { id: "activity", label: "Activity", icon: Activity, desc: "Recent account activity & history" },
 ];
 
 function MyAccount() {
@@ -36,9 +28,10 @@ function MyAccount() {
   const location = useLocation();
 
   const initialTabFromUrl = searchParams.get("tab");
-  const isSettingsRoute = location.pathname.includes("/settings") || location.pathname.includes("/platform-settings");
+  const isSettingsRoute =
+    location.pathname.includes("/settings") || location.pathname.includes("/platform-settings");
   const defaultTab = isSettingsRoute ? "preferences" : "profile";
-  
+
   const isValidTab = ACCOUNT_TABS.some((t) => t.id === initialTabFromUrl);
   const [activeTab, setActiveTab] = useState(isValidTab ? initialTabFromUrl : defaultTab);
 
@@ -47,7 +40,10 @@ function MyAccount() {
     const currentTab = searchParams.get("tab");
     if (currentTab && ACCOUNT_TABS.some((t) => t.id === currentTab)) {
       setActiveTab(currentTab);
-    } else if ((location.pathname.includes("/settings") || location.pathname.includes("/platform-settings")) && !currentTab) {
+    } else if (
+      (location.pathname.includes("/settings") || location.pathname.includes("/platform-settings")) &&
+      !currentTab
+    ) {
       setActiveTab("preferences");
     }
   }, [searchParams, location]);
@@ -62,17 +58,27 @@ function MyAccount() {
       const savedUser = localStorage.getItem("user");
       if (savedUser) {
         const parsed = JSON.parse(savedUser);
-        const derivedName = parsed.name || (parsed.firstName ? `${parsed.firstName} ${parsed.lastName || ""}`.trim() : null) || "Rama Charan";
+        const derivedName =
+          parsed.fullName ||
+          parsed.name ||
+          (parsed.firstName
+            ? `${parsed.firstName} ${parsed.lastName || ""}`.trim()
+            : parsed.email ? parsed.email.split("@")[0] : "User");
+
         return {
           name: derivedName,
+          fullName: derivedName,
+          firstName: parsed.firstName || derivedName.split(" ")[0] || "",
+          lastName: parsed.lastName || derivedName.split(" ").slice(1).join(" ") || "",
           email: parsed.email || "",
-          role: parsed.role || "Real Estate Agent",
-          organization: parsed.organization || "Not Provided",
-          phone: parsed.phone || "Not Provided",
-          address: parsed.address || "Not Provided",
-          city: parsed.city || "Not Provided",
-          state: parsed.state || "Not Provided",
-          country: parsed.country || "Not Provided",
+          role: parsed.role || parsed.roleName || "Buyer",
+          organization: parsed.company || parsed.organization || "",
+          company: parsed.company || parsed.organization || "",
+          phone: parsed.phone || parsed.phoneNumber || "",
+          address: parsed.address || "",
+          city: parsed.city || "",
+          state: parsed.state || "",
+          country: parsed.country || "India",
           currentPassword: "",
           newPassword: "",
           confirmPassword: "",
@@ -83,15 +89,19 @@ function MyAccount() {
     } catch (e) {}
 
     return {
-      name: "Rama Charan",
+      name: "User",
+      fullName: "User",
+      firstName: "",
+      lastName: "",
       email: "",
-      role: "Real Estate Agent",
-      organization: "Not Provided",
-      phone: "Not Provided",
-      address: "Not Provided",
-      city: "Not Provided",
-      state: "Not Provided",
-      country: "Not Provided",
+      role: "Buyer",
+      organization: "",
+      company: "",
+      phone: "",
+      address: "",
+      city: "",
+      state: "",
+      country: "India",
       currentPassword: "",
       newPassword: "",
       confirmPassword: "",
@@ -106,8 +116,6 @@ function MyAccount() {
     return localStorage.getItem("user_avatar_url") || null;
   });
 
-  const [loading, setLoading] = useState(false);
-
   useEffect(() => {
     getUserProfile()
       .then((res) => {
@@ -117,16 +125,20 @@ function MyAccount() {
           setProfileData((prev) => ({
             ...prev,
             name: derivedName,
+            fullName: derivedName,
+            firstName: u.firstName || "",
+            lastName: u.lastName || "",
             email: u.email,
-            role: u.role,
-            phone: u.phone || "Not Provided",
-            organization: u.organization || "Not Provided",
-            address: u.address || "Not Provided",
-            city: u.city || "Not Provided",
-            state: u.state || "Not Provided",
-            country: u.country || "Not Provided",
-            createdAt: u.createdAt,
-            lastLogin: u.lastLogin,
+            role: u.role || prev.role,
+            phone: u.phone || prev.phone,
+            organization: u.organization || prev.organization,
+            company: u.organization || prev.company,
+            address: u.address || prev.address,
+            city: u.city || prev.city,
+            state: u.state || prev.state,
+            country: u.country || prev.country,
+            createdAt: u.createdAt || prev.createdAt,
+            lastLogin: u.lastLogin || prev.lastLogin,
           }));
         }
       })
@@ -148,179 +160,104 @@ function MyAccount() {
     }
   }, [avatarUrl]);
 
-  // Handle Input Changes for Security Form & Profile
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setProfileData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+  // Calculate real profile completion percentage based on actual fields
+  const completionPercentage = (() => {
+    const fields = [
+      Boolean(profileData.name && profileData.name !== "User"),
+      Boolean(profileData.email),
+      Boolean(profileData.role),
+      Boolean(profileData.phone),
+      Boolean(profileData.organization || profileData.company),
+      Boolean(profileData.city || profileData.address),
+    ];
+    const completedCount = fields.filter(Boolean).length;
+    return Math.round((completedCount / fields.length) * 100);
+  })();
 
-  // Security Credentials Update (Password Change)
-  const handleUpdateSecurity = (e) => {
-    e.preventDefault();
-
-    if (!profileData.newPassword) {
-      showErrorAlert("Password Required", "Please enter a new password.");
-      return;
-    }
-
-    if (profileData.newPassword.length < 8) {
-      showErrorAlert("Weak Password", "New password must be at least 8 characters long.");
-      return;
-    }
-
-    if (profileData.newPassword !== profileData.confirmPassword) {
-      showErrorAlert("Password Mismatch", "New passwords do not match.");
-      return;
-    }
-
-    setLoading(true);
-
+  const scrollToPersonalInfo = () => {
+    setActiveTab("profile");
     setTimeout(() => {
-      setLoading(false);
-      setProfileData((prev) => ({
-        ...prev,
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      }));
-      showSuccessAlert(
-        "Security Credentials Updated",
-        "Your account password and security tokens have been updated securely."
-      );
-    }, 600);
-  };
-
-  const handleScrollToPersonalInfo = () => {
-    handleTabChange("profile");
-    setTimeout(() => {
-      const elem = document.getElementById("personal-info-card");
-      if (elem) {
-        elem.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
+      const el = document.getElementById("personal-info-card");
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 100);
-  };
-
-  // Calculate profile completion score
-  const calculateCompletion = () => {
-    let score = 0;
-    if (profileData.name) score += 20;
-    if (profileData.email) score += 20;
-    if (profileData.organization) score += 15;
-    if (profileData.phone) score += 15;
-    if (profileData.address) score += 15;
-    if (profileData.city && profileData.state) score += 15;
-    return score;
   };
 
   return (
     <MainLayout>
-      <div className="space-y-8 max-w-7xl mx-auto pb-16">
-        {/* HERO PAGE TITLE BANNER */}
-        <div className="glass-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-cyan-300 border border-blue-200 dark:border-blue-800 text-xs font-mono font-bold mb-2">
-              <Sparkles size={14} /> Account Management Center
-            </div>
-            <h1 className="text-xl sm:text-3xl font-extrabold text-slate-900 dark:text-[#F8FAFC] tracking-tight flex items-center gap-2">
-              👤 My Account
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-[#CBD5E1] mt-1">
-              Unified control panel for personal profile details, password security, appearance preferences, notification toggles, and activity history.
-            </p>
-          </div>
-        </div>
+      <div className="space-y-8 pb-16 max-w-7xl mx-auto font-mono text-xs">
+        {/* Profile Header Dossier */}
+        <ProfileHeader
+          profileData={profileData}
+          onEditClick={scrollToPersonalInfo}
+          avatarUrl={avatarUrl}
+          setAvatarUrl={setAvatarUrl}
+        />
 
-        {/* 5 MAIN NAVIGATION TABS FOR MY ACCOUNT */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 p-1.5 rounded-3xl bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155]">
+        {/* Dynamic Profile Completion Status */}
+        <ProfileCompletionCard
+          completionPercentage={completionPercentage}
+          onCompleteClick={scrollToPersonalInfo}
+        />
+
+        {/* Real User Statistics Grid */}
+        <UserStatsGrid
+          userRole={profileData.role}
+          completionPercentage={completionPercentage}
+        />
+
+        {/* Tab Navigation Strip */}
+        <div className="white-card rounded-2xl p-1.5 bg-white dark:bg-[#1E293B] border border-slate-200/80 dark:border-[#334155] shadow-xs flex flex-wrap items-center gap-1">
           {ACCOUNT_TABS.map((tab) => {
-            const IconComp = tab.icon;
-            const isActive = activeTab === tab.id;
-
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
-                className={`flex items-center justify-center gap-2.5 px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
-                  isActive
-                    ? "bg-white dark:bg-[#1E293B] text-blue-600 dark:text-cyan-400 shadow-md border border-slate-200/80 dark:border-[#334155]"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-[#1E293B]/60"
+                className={`flex-1 min-w-[120px] py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 font-bold text-xs transition-all cursor-pointer ${
+                  active
+                    ? "bg-blue-600 text-white shadow-md"
+                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#0F172A]"
                 }`}
               >
-                <IconComp size={16} className={isActive ? "text-blue-600 dark:text-cyan-400" : "text-slate-400"} />
+                <Icon size={15} />
                 <span>{tab.label}</span>
               </button>
             );
           })}
         </div>
 
-        {/* TAB 1: PROFILE TAB */}
+        {/* TAB CONTENTS */}
         {activeTab === "profile" && (
           <div className="space-y-8">
-            <ProfileHeader
-              profileData={profileData}
-              onEditClick={handleScrollToPersonalInfo}
-              avatarUrl={avatarUrl}
-              setAvatarUrl={setAvatarUrl}
-            />
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-              <div className="lg:col-span-1 flex flex-col justify-between">
-                <ProfileCompletionCard
-                  completionPercentage={calculateCompletion()}
-                  onCompleteClick={handleScrollToPersonalInfo}
-                />
-              </div>
-              <div className="lg:col-span-2">
-                <UserStatsGrid />
-              </div>
-            </div>
-
             <PersonalInfoCard
               profileData={profileData}
               setProfileData={setProfileData}
             />
-
             <SavedPropertiesCard />
-
-            <DownloadsAndDangerZone profileData={profileData} />
           </div>
         )}
 
-        {/* TAB 2: SECURITY TAB */}
         {activeTab === "security" && (
           <div className="space-y-8">
             <AccountSecurityCard
               profileData={profileData}
-              handleChange={handleChange}
-              handleUpdateSecurity={handleUpdateSecurity}
-              loading={loading}
+              setProfileData={setProfileData}
             />
+            <DownloadsAndDangerZone />
           </div>
         )}
 
-        {/* TAB 3: PREFERENCES TAB */}
         {activeTab === "preferences" && (
-          <div className="space-y-8">
-            <SettingsAndPreferences filterSection="preferences" />
-          </div>
+          <SettingsAndPreferences />
         )}
 
-        {/* TAB 4: NOTIFICATIONS TAB */}
         {activeTab === "notifications" && (
-          <div className="space-y-8">
-            <SettingsAndPreferences filterSection="notifications" />
-          </div>
+          <SettingsAndPreferences initialSection="notifications" />
         )}
 
-        {/* TAB 5: ACTIVITY TAB */}
         {activeTab === "activity" && (
-          <div className="space-y-8">
-            <RecentActivityFeed isFullPage={true} />
-            <RecentActivityTimeline />
-          </div>
+          <RecentActivityTimeline />
         )}
       </div>
     </MainLayout>

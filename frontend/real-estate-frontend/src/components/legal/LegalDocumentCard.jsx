@@ -98,8 +98,8 @@ function LegalDocumentCard({
             <span className="text-slate-400 text-[10px] uppercase font-bold flex items-center gap-1">
               <User size={11} /> Verified By
             </span>
-            <strong className="text-blue-600 dark:text-cyan-400 font-extrabold text-xs block mt-1 truncate" title={doc.verifiedBy}>
-              {doc.verifiedBy || "Adv. Rajesh Sharma"}
+            <strong className="text-slate-700 dark:text-slate-300 font-extrabold text-xs block mt-1 truncate" title={doc.verifiedBy}>
+              {doc.verifiedBy || "Legal Review Pending"}
             </strong>
           </div>
         </div>

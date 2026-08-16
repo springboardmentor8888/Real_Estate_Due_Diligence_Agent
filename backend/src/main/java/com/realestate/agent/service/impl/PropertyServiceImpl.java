@@ -22,6 +22,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class PropertyServiceImpl implements PropertyService {
@@ -126,12 +128,63 @@ public class PropertyServiceImpl implements PropertyService {
         Specification<Property> specification = PropertySpecification.build(criteria);
         Page<Property> propertiesPage = propertyRepository.findAll(specification, pageable);
 
+        List<Property> propertyList = propertiesPage.getContent();
+        if (propertyList.isEmpty()) {
+            return propertiesPage.map(p -> propertyMapper.toResponse(p, null, List.of()));
+        }
+
+        List<Long> propertyIds = propertyList.stream()
+                .map(Property::getPropertyId)
+                .collect(Collectors.toList());
+
+        Map<Long, Address> addressMap = addressRepository.findByPropertyPropertyIdIn(propertyIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        addr -> addr.getProperty().getPropertyId(),
+                        addr -> addr,
+                        (existing, replacement) -> existing
+                ));
+
+        Map<Long, List<PropertyListing>> listingMap = propertyListingRepository.findByPropertyPropertyIdIn(propertyIds)
+                .stream()
+                .collect(Collectors.groupingBy(listing -> listing.getProperty().getPropertyId()));
+
         return propertiesPage.map(property -> {
-            Address address = addressRepository.findByPropertyPropertyId(property.getPropertyId())
-                    .stream()
-                    .findFirst()
-                    .orElse(null);
-            List<PropertyListing> listings = propertyListingRepository.findByPropertyPropertyId(property.getPropertyId());
+            Address address = addressMap.get(property.getPropertyId());
+            List<PropertyListing> listings = listingMap.getOrDefault(property.getPropertyId(), List.of());
+            return propertyMapper.toResponse(property, address, listings);
+        });
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PropertyResponse> getMyProperties(Long currentUserId, Pageable pageable) {
+        Page<Property> propertiesPage = propertyRepository.findByCreatedBy_UserId(currentUserId, pageable);
+
+        List<Property> propertyList = propertiesPage.getContent();
+        if (propertyList.isEmpty()) {
+            return propertiesPage.map(p -> propertyMapper.toResponse(p, null, List.of()));
+        }
+
+        List<Long> propertyIds = propertyList.stream()
+                .map(Property::getPropertyId)
+                .collect(Collectors.toList());
+
+        Map<Long, Address> addressMap = addressRepository.findByPropertyPropertyIdIn(propertyIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        addr -> addr.getProperty().getPropertyId(),
+                        addr -> addr,
+                        (existing, replacement) -> existing
+                ));
+
+        Map<Long, List<PropertyListing>> listingMap = propertyListingRepository.findByPropertyPropertyIdIn(propertyIds)
+                .stream()
+                .collect(Collectors.groupingBy(listing -> listing.getProperty().getPropertyId()));
+
+        return propertiesPage.map(property -> {
+            Address address = addressMap.get(property.getPropertyId());
+            List<PropertyListing> listings = listingMap.getOrDefault(property.getPropertyId(), List.of());
             return propertyMapper.toResponse(property, address, listings);
         });
     }

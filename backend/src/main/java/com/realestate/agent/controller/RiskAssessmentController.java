@@ -74,6 +74,18 @@ public class RiskAssessmentController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/my")
+    @Operation(summary = "Get risk assessments conducted by authenticated user", description = "Lists all risk assessments performed by the currently logged-in reviewer.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "User risk assessments retrieved")
+    })
+    public ResponseEntity<List<RiskAssessmentResponse>> getMyAssessments(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        List<RiskAssessmentResponse> response = riskService.getMyAssessments(userDetails.getUserId());
+        return ResponseEntity.ok(response);
+    }
+
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'LEGAL_REVIEWER', 'REAL_ESTATE_AGENT')")
     @Operation(summary = "Update risk assessment", description = "Updates details of an existing risk assessment. Only Administrators, Legal Reviewers, and Real Estate Agents can perform this action.")

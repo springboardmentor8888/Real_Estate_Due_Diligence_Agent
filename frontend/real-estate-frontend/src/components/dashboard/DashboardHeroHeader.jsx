@@ -10,9 +10,21 @@ import {
   Bookmark,
   CheckCircle2,
   UserCheck,
+  Building2,
 } from "lucide-react";
 
-function DashboardHeroHeader({ userName, userRole }) {
+function DashboardHeroHeader({
+  userName = "Legal Reviewer",
+  userRole = "Legal Reviewer",
+  metrics = {
+    activeReports: 0,
+    reportsToday: 0,
+    pendingReviews: 0,
+    highRiskCount: 0,
+    portfolioCount: 0,
+  },
+  verificationBadge = "Registry Verified",
+}) {
   const navigate = useNavigate();
 
   // Dynamic greeting based on current time
@@ -30,12 +42,18 @@ function DashboardHeroHeader({ userName, userRole }) {
     day: "numeric",
   });
 
+  const activeReports = metrics?.activeReports ?? 0;
+  const reportsToday = metrics?.reportsToday ?? 0;
+  const pendingReviews = metrics?.pendingReviews ?? 0;
+  const highRiskCount = metrics?.highRiskCount ?? 0;
+  const portfolioCount = metrics?.portfolioCount ?? 0;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="glass-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200/80 dark:border-[#334155] shadow-xl relative overflow-hidden"
+      className="glass-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200/80 dark:border-[#334155] shadow-xl relative overflow-hidden font-mono"
     >
       {/* Ambient background glow */}
       <div className="absolute top-0 right-0 -mt-10 -mr-10 w-80 h-80 bg-gradient-to-br from-blue-500/10 via-indigo-500/10 to-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
@@ -49,7 +67,7 @@ function DashboardHeroHeader({ userName, userRole }) {
               Real Estate Due Diligence Enterprise Suite
             </span>
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-              <CheckCircle2 size={13} /> Level 4 Verified
+              <CheckCircle2 size={13} /> {verificationBadge}
             </span>
           </div>
 
@@ -58,11 +76,11 @@ function DashboardHeroHeader({ userName, userRole }) {
           </h1>
 
           <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-slate-500 dark:text-[#94A3B8] pt-1">
-            {/* Non-editable static Role Badge */}
+            {/* Non-editable dynamic Role Badge */}
             <div className="role-badge flex items-center gap-1.5 bg-slate-100 dark:bg-[#0F172A] px-3.5 py-1.5 rounded-xl border border-slate-200/80 dark:border-[#334155] select-none">
               <UserCheck size={14} className="text-blue-600 dark:text-cyan-400 shrink-0" />
               <span className="text-slate-500 dark:text-slate-400">Role:</span>
-              <span className="font-bold text-slate-800 dark:text-slate-200">{userRole || "Buyer"}</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200">{userRole}</span>
             </div>
 
             <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#0F172A] px-3.5 py-1.5 rounded-xl border border-slate-200/80 dark:border-[#334155]">
@@ -77,7 +95,7 @@ function DashboardHeroHeader({ userName, userRole }) {
           </div>
         </div>
 
-        {/* Right Side: Quick Summary Metric Cards Grid */}
+        {/* Right Side: Quick Summary Metric Cards Grid (100% Live DB Metrics) */}
         <div className="grid grid-cols-2 gap-3 shrink-0 lg:w-80">
           <div
             onClick={() => navigate("/report-history")}
@@ -90,10 +108,10 @@ function DashboardHeroHeader({ userName, userRole }) {
               <FileText size={16} className="text-blue-600 dark:text-cyan-400 group-hover:scale-110 transition-transform" />
             </div>
             <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1 font-mono">
-              14
+              {activeReports}
             </h3>
             <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block mt-1">
-              +2 generated today
+              {reportsToday > 0 ? `+${reportsToday} generated today` : "0 generated today"}
             </span>
           </div>
 
@@ -108,10 +126,10 @@ function DashboardHeroHeader({ userName, userRole }) {
               <Clock size={16} className="text-amber-500 group-hover:scale-110 transition-transform" />
             </div>
             <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1 font-mono">
-              3
+              {pendingReviews}
             </h3>
             <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 block mt-1">
-              Requires clearance
+              {pendingReviews > 0 ? "Requires clearance" : "All cleared"}
             </span>
           </div>
 
@@ -126,28 +144,28 @@ function DashboardHeroHeader({ userName, userRole }) {
               <AlertTriangle size={16} className="text-rose-500 group-hover:scale-110 transition-transform" />
             </div>
             <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1 font-mono">
-              2
+              {highRiskCount}
             </h3>
             <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 block mt-1">
-              Action required
+              {highRiskCount > 0 ? "Action required" : "Zero high risk"}
             </span>
           </div>
 
           <div
-            onClick={() => navigate("/profile")}
+            onClick={() => navigate("/property-search")}
             className="p-3.5 rounded-2xl bg-slate-50/80 dark:bg-[#0F172A] border border-slate-200/80 dark:border-[#334155] shadow-xs hover:shadow-md transition-all cursor-pointer group"
           >
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500 uppercase">
-                Saved Properties
+                Audited Parcels
               </span>
-              <Bookmark size={16} className="text-emerald-500 group-hover:scale-110 transition-transform" />
+              <Building2 size={16} className="text-emerald-500 group-hover:scale-110 transition-transform" />
             </div>
             <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1 font-mono">
-              18
+              {portfolioCount}
             </h3>
             <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block mt-1">
-              Portfolio bookmarked
+              {portfolioCount > 0 ? "Parcels under audit" : "No parcels recorded"}
             </span>
           </div>
         </div>

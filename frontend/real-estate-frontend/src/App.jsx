@@ -39,10 +39,8 @@ import LegalAnalytics from "./pages/LegalAnalytics";
 import PropertyValuation from "./pages/PropertyValuation";
 import FinancialRiskAnalysis from "./pages/FinancialRiskAnalysis";
 import FinancialReports from "./pages/FinancialReports";
-import InvestmentAnalysis from "./pages/InvestmentAnalysis";
 import LoanReview from "./pages/LoanReview";
 import FinancialAnalytics from "./pages/FinancialAnalytics";
-import HelpSupport from "./pages/HelpSupport";
 import LegalDocuments from "./pages/LegalDocuments";
 import FinancialLoans from "./pages/FinancialLoans";
 
@@ -68,6 +66,8 @@ import PropertyWatchlist from "./pages/PropertyWatchlist";
 import MyAccount from "./pages/MyAccount";
 import NotFound from "./pages/NotFound";
 import Unauthorized from "./pages/Unauthorized";
+import OAuth2RedirectHandler from "./pages/OAuth2RedirectHandler";
+import CompleteOAuthRegistration from "./pages/CompleteOAuthRegistration";
 
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import { getCurrentUserRole, getRoleDashboardPath } from "./utils/roleUtils";
@@ -87,6 +87,8 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/oauth2/redirect" element={<OAuth2RedirectHandler />} />
+      <Route path="/complete-oauth-registration" element={<CompleteOAuthRegistration />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
 
       {/* Generic /dashboard redirect */}
@@ -151,6 +153,22 @@ function App() {
       />
       <Route
         path="/agent/properties"
+        element={
+          <ProtectedRoute allowedRoles={["Real Estate Agent", "Administrator"]}>
+            <AgentProperties />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/agent/my-properties"
+        element={
+          <ProtectedRoute allowedRoles={["Real Estate Agent", "Administrator"]}>
+            <AgentProperties />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/my-properties"
         element={
           <ProtectedRoute allowedRoles={["Real Estate Agent", "Administrator"]}>
             <AgentProperties />
@@ -257,7 +275,7 @@ function App() {
       <Route
         path="/legal/reviews"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Legal Reviewer", "Administrator"]}>
             <LegalReviews />
           </ProtectedRoute>
         }
@@ -265,7 +283,7 @@ function App() {
       <Route
         path="/reviews"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Legal Reviewer", "Administrator"]}>
             <LegalReviews />
           </ProtectedRoute>
         }
@@ -273,7 +291,7 @@ function App() {
       <Route
         path="/legal/property-review"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Legal Reviewer", "Administrator"]}>
             <PropertyReview />
           </ProtectedRoute>
         }
@@ -281,7 +299,7 @@ function App() {
       <Route
         path="/property-review"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Legal Reviewer", "Administrator"]}>
             <PropertyReview />
           </ProtectedRoute>
         }
@@ -289,7 +307,7 @@ function App() {
       <Route
         path="/legal/checklist"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Legal Reviewer", "Administrator"]}>
             <ReviewChecklistPage />
           </ProtectedRoute>
         }
@@ -297,7 +315,7 @@ function App() {
       <Route
         path="/review-checklist"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Legal Reviewer", "Administrator"]}>
             <ReviewChecklistPage />
           </ProtectedRoute>
         }
@@ -305,7 +323,7 @@ function App() {
       <Route
         path="/legal/history"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Legal Reviewer", "Administrator"]}>
             <CaseHistory />
           </ProtectedRoute>
         }
@@ -313,7 +331,7 @@ function App() {
       <Route
         path="/case-history"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Legal Reviewer", "Administrator"]}>
             <CaseHistory />
           </ProtectedRoute>
         }
@@ -335,9 +353,17 @@ function App() {
         }
       />
       <Route
+        path="/financial/dashboard"
+        element={
+          <ProtectedRoute allowedRoles={["Financial Institution", "Administrator"]}>
+            <FinancialDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/financial/valuation"
         element={
-          <ProtectedRoute font-mono>
+          <ProtectedRoute>
             <PropertyValuation />
           </ProtectedRoute>
         }
@@ -415,22 +441,6 @@ function App() {
         }
       />
       <Route
-        path="/investment-analysis"
-        element={
-          <ProtectedRoute>
-            <InvestmentAnalysis />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/financial/investment"
-        element={
-          <ProtectedRoute>
-            <InvestmentAnalysis />
-          </ProtectedRoute>
-        }
-      />
-      <Route
         path="/loan-review"
         element={
           <ProtectedRoute>
@@ -486,42 +496,14 @@ function App() {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/help-support"
-        element={
-          <ProtectedRoute>
-            <HelpSupport />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/help"
-        element={
-          <ProtectedRoute>
-            <HelpSupport />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/support"
-        element={
-          <ProtectedRoute>
-            <HelpSupport />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/financial/help"
-        element={
-          <ProtectedRoute>
-            <HelpSupport />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/help-support" element={<Navigate to="/financial/dashboard" replace />} />
+      <Route path="/help" element={<Navigate to="/financial/dashboard" replace />} />
+      <Route path="/support" element={<Navigate to="/financial/dashboard" replace />} />
+      <Route path="/financial/help" element={<Navigate to="/financial/dashboard" replace />} />
       <Route
         path="/legal/documents"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Legal Reviewer", "Administrator"]}>
             <LegalDocuments />
           </ProtectedRoute>
         }
@@ -564,7 +546,7 @@ function App() {
       <Route
         path="/user-management"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Administrator"]}>
             <UserManagement />
           </ProtectedRoute>
         }
@@ -572,7 +554,7 @@ function App() {
       <Route
         path="/admin/users"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Administrator"]}>
             <UserManagement />
           </ProtectedRoute>
         }
@@ -580,7 +562,7 @@ function App() {
       <Route
         path="/users"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Administrator"]}>
             <UserManagement />
           </ProtectedRoute>
         }
@@ -589,7 +571,7 @@ function App() {
       <Route
         path="/role-management"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Administrator"]}>
             <RoleManagement />
           </ProtectedRoute>
         }
@@ -597,7 +579,7 @@ function App() {
       <Route
         path="/admin/roles"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Administrator"]}>
             <RoleManagement />
           </ProtectedRoute>
         }
@@ -605,7 +587,7 @@ function App() {
       <Route
         path="/roles"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Administrator"]}>
             <RoleManagement />
           </ProtectedRoute>
         }
@@ -614,7 +596,7 @@ function App() {
       <Route
         path="/property-management"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Administrator"]}>
             <PropertyManagement />
           </ProtectedRoute>
         }
@@ -622,7 +604,7 @@ function App() {
       <Route
         path="/admin/properties"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Administrator"]}>
             <PropertyManagement />
           </ProtectedRoute>
         }
@@ -630,7 +612,7 @@ function App() {
       <Route
         path="/manage-properties"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Administrator"]}>
             <PropertyManagement />
           </ProtectedRoute>
         }
@@ -639,7 +621,7 @@ function App() {
       <Route
         path="/report-management"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Administrator"]}>
             <ReportManagement />
           </ProtectedRoute>
         }
@@ -647,7 +629,7 @@ function App() {
       <Route
         path="/admin/reports"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Administrator"]}>
             <ReportManagement />
           </ProtectedRoute>
         }
@@ -655,7 +637,7 @@ function App() {
       <Route
         path="/manage-reports"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Administrator"]}>
             <ReportManagement />
           </ProtectedRoute>
         }
@@ -664,7 +646,7 @@ function App() {
       <Route
         path="/system-monitoring"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Administrator"]}>
             <SystemMonitoring />
           </ProtectedRoute>
         }
@@ -672,7 +654,7 @@ function App() {
       <Route
         path="/admin/system"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Administrator"]}>
             <SystemMonitoring />
           </ProtectedRoute>
         }
@@ -680,7 +662,7 @@ function App() {
       <Route
         path="/system-settings"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Administrator"]}>
             <SystemMonitoring />
           </ProtectedRoute>
         }
@@ -688,7 +670,7 @@ function App() {
       <Route
         path="/system-health"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Administrator"]}>
             <SystemMonitoring />
           </ProtectedRoute>
         }
@@ -705,7 +687,7 @@ function App() {
       <Route
         path="/admin/notifications"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Administrator"]}>
             <NotificationsCenter />
           </ProtectedRoute>
         }
@@ -722,7 +704,7 @@ function App() {
       <Route
         path="/security-center"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Administrator"]}>
             <SecurityCenter />
           </ProtectedRoute>
         }
@@ -730,7 +712,7 @@ function App() {
       <Route
         path="/admin/security"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Administrator"]}>
             <SecurityCenter />
           </ProtectedRoute>
         }
@@ -738,7 +720,7 @@ function App() {
       <Route
         path="/security"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Administrator"]}>
             <SecurityCenter />
           </ProtectedRoute>
         }
@@ -747,7 +729,7 @@ function App() {
       <Route
         path="/data-management"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Administrator"]}>
             <DataManagement />
           </ProtectedRoute>
         }
@@ -755,7 +737,7 @@ function App() {
       <Route
         path="/admin/data"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Administrator"]}>
             <DataManagement />
           </ProtectedRoute>
         }
@@ -763,7 +745,7 @@ function App() {
       <Route
         path="/export-data"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Administrator"]}>
             <DataManagement />
           </ProtectedRoute>
         }
@@ -786,22 +768,7 @@ function App() {
         }
       />
 
-      <Route
-        path="/help-support"
-        element={
-          <ProtectedRoute>
-            <HelpSupport />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/help"
-        element={
-          <ProtectedRoute>
-            <HelpSupport />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/admin/help" element={<Navigate to="/admin/dashboard" replace />} />
 
       {/* Financial, Reports, Analytics & Activity Routes */}
       <Route
@@ -893,14 +860,6 @@ function App() {
         }
       />
       <Route
-        path="/investment-analysis"
-        element={
-          <ProtectedRoute>
-            <InvestmentAnalysis />
-          </ProtectedRoute>
-        }
-      />
-      <Route
         path="/loan-review"
         element={
           <ProtectedRoute>
@@ -925,6 +884,38 @@ function App() {
             <PropertyDetails />
           </ProtectedRoute>
         }
+      />
+      <Route
+        path="/property-details/:id"
+        element={
+          <ProtectedRoute>
+            <PropertyDetails />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/properties/:id"
+        element={
+          <ProtectedRoute>
+            <PropertyDetails />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/property/:id"
+        element={
+          <ProtectedRoute>
+            <PropertyDetails />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/properties"
+        element={<Navigate to="/property-search" replace />}
+      />
+      <Route
+        path="/search"
+        element={<Navigate to="/property-search" replace />}
       />
       <Route
         path="/risk-assessment"
@@ -960,6 +951,14 @@ function App() {
       />
       <Route
         path="/report-history"
+        element={
+          <ProtectedRoute>
+            <ReportHistory />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/my-reports"
         element={
           <ProtectedRoute>
             <ReportHistory />

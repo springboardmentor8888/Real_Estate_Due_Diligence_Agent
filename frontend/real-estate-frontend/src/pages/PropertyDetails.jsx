@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { useLocation, useSearchParams, Link } from "react-router-dom";
+import { useLocation, useSearchParams, useParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import MainLayout from "../components/layout/MainLayout";
 import Badge from "../components/common/Badge";
 import Button from "../components/common/Button";
 import EmptyState from "../components/common/EmptyState";
+import { Skeleton } from "../components/common/Skeleton";
 import {
   Home,
   User,
@@ -39,6 +40,7 @@ import {
   X,
   Send,
   Sparkles,
+  ArrowLeft,
 } from "lucide-react";
 import { showToast, showSuccessAlert } from "../utils/swal";
 import { exportToPdf } from "../utils/exportUtils";
@@ -46,6 +48,7 @@ import {
   getPropertyDetails,
   getOwnershipRecords,
   getPropertyTaxHistory,
+  getRiskAssessmentsByProperty,
   getZoningInformation,
   getFloodZoneInformation,
   getEnvironmentalRecords,
@@ -61,15 +64,36 @@ import ReportGeneratorModal from "../components/dashboard/ReportGeneratorModal";
 
 function PropertyDetails() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { id: pathId, propertyId: pathPropId } = useParams();
 
-  const rawUrlId = searchParams.get("id") || searchParams.get("propertyId") || location.state?.property?.propertyId || location.state?.property?.numericId;
-  const activeProp = getLiveActiveProperty(rawUrlId);
-  const targetId = activeProp ? (activeProp.propertyId || activeProp.numericId || activeProp.id) : 1;
-  const cleanId = typeof targetId === "number" ? targetId : parseInt(targetId.toString().replace(/\D/g, "") || "1", 10);
+  const rawUrlId =
+    pathId ||
+    pathPropId ||
+    searchParams.get("id") ||
+    searchParams.get("propertyId") ||
+    location.state?.property?.propertyId ||
+    location.state?.property?.numericId ||
+    location.state?.propertyId;
 
-  const [property, setProperty] = useState(activeProp || location.state?.property || null);
-  const [loading, setLoading] = useState(false);
+  const cleanId = rawUrlId ? parseInt(rawUrlId.toString().replace(/\D/g, ""), 10) : 1;
+
+  const [property, setProperty] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const userRole = storedUser.role || "Buyer";
+  const dashboardPath = userRole.toLowerCase().includes("agent")
+    ? "/agent/dashboard"
+    : userRole.toLowerCase().includes("legal")
+    ? "/legal/dashboard"
+    : userRole.toLowerCase().includes("financial")
+    ? "/financial/dashboard"
+    : userRole.toLowerCase().includes("admin")
+    ? "/admin/dashboard"
+    : "/buyer/dashboard";
 
   // THE 9 REQUIRED TABS
   const [activeTab, setActiveTab] = useState("overview");
@@ -93,92 +117,106 @@ function PropertyDetails() {
   const [selectedClientName, setSelectedClientName] = useState("Adani Realty Institutional Fund");
 
   useEffect(() => {
-    if (!cleanId) return;
-    setLoading(true);
+    if (!cleanId || isNaN(cleanId)) {
+      setNotFound(true);
+      setLoading(false);
+      return;
+    }
 
-    // Fetch core property details
+    setLoading(true);
+    setNotFound(false);
+
+    // Fetch core property details from PostgreSQL Spring Boot API
     getPropertyDetails(cleanId)
       .then((res) => {
-        if (res && res.data) {
-          const p = res.data;
-          
+        if (res && (res.data || res.propertyId)) {
+          const p = res.data || res;
+
           let addressString = "";
           if (typeof p.address === "string") {
             addressString = p.address;
           } else if (p.address && typeof p.address === "object") {
-            addressString = `${p.address.addressLine1 || ""}, ${p.address.city || ""}, ${p.address.state || ""}`.replace(/^, |, $/g, "");
+            const parts = [
+              p.address.addressLine1,
+              p.address.addressLine2,
+              p.address.city,
+              p.address.district,
+              p.address.state,
+              p.address.postalCode,
+            ].filter(Boolean);
+            addressString = parts.join(", ");
           } else {
-            addressString = p.propertyName || p.title || "Financial District, Nanakramguda";
+            addressString = `${p.propertyName || "Property Parcel"}, ${p.city || "Hyderabad"}`;
           }
 
+          const propTypeName =
+            typeof p.propertyType === "object"
+              ? p.propertyType?.typeName
+              : p.propertyType || "Residential";
+
+          const mv = Number(p.marketValue || 0);
+
           const propObj = {
-            id: p.propertyCode || p.id || `PROP-HYD-${String(p.propertyId || cleanId).padStart(3, "0")}`,
+            id: p.propertyCode || `PROP-${cleanId}`,
             propertyId: p.propertyId || cleanId,
             numericId: p.propertyId || cleanId,
-            apnNumber: p.apnNumber || `APN-${(p.city || "HYD").slice(0,3).toUpperCase()}-${p.pincode || p.postalCode || "500032"}-${p.numericId || "1001"}`,
-            title: p.propertyName || p.title || addressString,
-            propertyName: p.propertyName || p.title || addressString,
+            apnNumber: p.apnNumber || `APN-${(p.address?.city || p.city || "HYD").slice(0, 3).toUpperCase()}-${cleanId}`,
+            title: p.propertyName || `Property Parcel PR-${cleanId}`,
+            propertyName: p.propertyName || `Property Parcel PR-${cleanId}`,
             address: addressString,
-            city: p.city || (typeof p.address === "object" ? p.address?.city : null) || "Hyderabad",
-            state: p.state || (typeof p.address === "object" ? p.address?.state : null) || "Telangana",
-            pincode: p.pincode || p.postalCode || (typeof p.address === "object" ? p.address?.postalCode : null) || "500032",
-            latitude: p.latitude || 17.4156,
-            longitude: p.longitude || 78.3421,
-            propertyType: p.propertyType || p.landType || p.type || "Commercial Office",
-            category: p.category || p.landType || p.type || "Commercial",
-            owner: p.ownerName || p.owner || "Venkateswara Rao K",
-            ownerName: p.ownerName || p.owner || "Venkateswara Rao K",
-            displayPrice: p.displayPrice || (p.marketValue ? `₹${(p.marketValue / 10000000).toFixed(2)} Cr` : "₹ 45.00 Cr"),
-            marketValueFormatted: p.marketValueFormatted || (p.marketValue ? `₹${p.marketValue.toLocaleString('en-IN')}` : "₹ 45,00,00,000"),
-            titleVerificationStatus: p.titleVerificationStatus || p.status || "Verified Clear Title",
-            registrationStatus: p.registrationStatus || "Registered & Active",
-            status: p.status || p.titleVerificationStatus || "Verified Clear Title",
-            variant: p.variant || (p.riskScore > 60 ? "danger" : p.riskScore > 35 ? "warning" : "success"),
-            riskScore: p.riskScore ?? 14,
-            riskLevel: p.riskLevel || (p.riskScore > 60 ? "High Risk" : p.riskScore > 35 ? "Moderate Risk" : "Low Risk"),
-            plotArea: p.plotArea || p.area || (p.totalArea ? `${p.totalArea.toLocaleString()} sq ft` : "45,000 sq ft"),
-            builtUpArea: p.builtUpArea || "38,500 sq ft",
-            floors: p.floors || "G + 12 Floors",
-            constructionYear: p.constructionYear || p.builtYear || p.year || 2021,
-            surveyNo: p.surveyNumber || `Sy. No. ${112 + (p.numericId % 50)}/A`,
-            deedNumber: p.deedNumber || `DEED/TS/2021/${4400 + (p.numericId % 50)}`,
-            registrationNumber: p.registrationNumber || `REG/HYD/2021/${8800 + (p.numericId % 50)}`,
-            imageUrl: p.imageUrl || p.image || null,
-            description: p.description || "Grade-A IT/ITES commercial land parcel situated in Financial District with clear 30-year title search.",
+            city: p.address?.city || p.city || "Hyderabad",
+            state: p.address?.state || p.state || "Telangana",
+            pincode: p.address?.postalCode || p.pincode || "500032",
+            latitude: p.address?.latitude || 17.4156,
+            longitude: p.address?.longitude || 78.3421,
+            propertyType: propTypeName,
+            category: propTypeName,
+            owner: p.ownerName || p.owner || "Verified Land Registry Record",
+            ownerName: p.ownerName || p.owner || "Verified Land Registry Record",
+            displayPrice: mv >= 10000000 ? `₹ ${(mv / 10000000).toFixed(2)} Cr` : mv > 0 ? `₹ ${(mv / 100000).toFixed(2)} Lakhs` : "Price on Request",
+            marketValueFormatted: mv ? `₹ ${mv.toLocaleString('en-IN')}` : "Price on Request",
+            titleVerificationStatus: p.status === "VERIFIED" ? "Verified Clear Title" : p.status || "Under Review",
+            registrationStatus: "Registered & Active",
+            status: p.status || "VERIFIED",
+            variant: p.status === "VERIFIED" ? "success" : p.status === "PENDING" ? "warning" : "info",
+            riskScore: p.status === "VERIFIED" ? 14 : 35,
+            riskLevel: p.status === "VERIFIED" ? "Low Risk" : "Moderate Risk",
+            plotArea: p.landArea ? `${p.landArea.toLocaleString()} sq ft` : (p.totalArea ? `${p.totalArea.toLocaleString()} sq ft` : "45,000 sq ft"),
+            builtUpArea: p.totalArea ? `${p.totalArea.toLocaleString()} sq ft` : "38,500 sq ft",
+            floors: "G + 12 Floors",
+            constructionYear: p.builtYear || 2021,
+            surveyNo: `Sy. No. ${112 + (cleanId % 50)}/A`,
+            deedNumber: `DEED/TS/2021/${4400 + (cleanId % 50)}`,
+            registrationNumber: `REG/HYD/2021/${8800 + (cleanId % 50)}`,
+            imageUrl: p.imageUrl || null,
+            description: p.description || "Institutional grade real estate parcel verified with clear sub-registrar deed records.",
           };
 
           setProperty(propObj);
-
-          if (p.ownershipRecords) setOwnershipRecords(p.ownershipRecords);
-          if (p.taxHistory) setTaxHistory(p.taxHistory);
-          if (p.zoningInfo) setZoningInfo(p.zoningInfo);
-          if (p.floodZoneInfo) setFloodInfo(p.floodZoneInfo);
-          if (p.environmentalInfo) setEnvironmentalRecords(Array.isArray(p.environmentalInfo) ? p.environmentalInfo : [p.environmentalInfo]);
-          if (p.permitRecords) setPermitRecords(p.permitRecords);
-          if (p.documents) setDocuments(p.documents);
-          if (p.reportHistory) setReportHistory(p.reportHistory);
+        } else {
+          setNotFound(true);
         }
       })
-      .catch((err) => console.warn("Backend query fallback:", err))
+      .catch((err) => {
+        console.warn("Property fetch error:", err);
+        setNotFound(true);
+      })
       .finally(() => setLoading(false));
 
     // Fetch verification sub-records
     getOwnershipRecords(cleanId).then((res) => {
-      console.log("PROPERTY DETAILS OWNERSHIP API:", res ? res.data : null);
       if (res?.data) {
         const arr = Array.isArray(res.data) ? res.data : [res.data];
         setOwnershipRecords(arr);
-        console.log("PROPERTY DETAILS OWNERSHIP STATE:", arr);
       }
-    }).catch((err) => console.warn("Error fetching ownership details:", err));
+    }).catch(() => {});
     getPropertyTaxHistory(cleanId).then((res) => res?.data && setTaxHistory(Array.isArray(res.data) ? res.data : [res.data])).catch(() => {});
     getRiskAssessmentsByProperty(cleanId).then((res) => {
-      console.log("PROPERTY DETAILS RISK ASSESSMENTS API:", res ? res.data : null);
       if (res?.data) {
         const arr = Array.isArray(res.data) ? res.data : [res.data];
         setRiskAssessments(arr);
       }
-    }).catch((err) => console.warn("Error fetching risk assessments:", err));
+    }).catch(() => {});
     getZoningInformation(cleanId).then((res) => res?.data && setZoningInfo(res.data)).catch(() => {});
     getFloodZoneInformation(cleanId).then((res) => res?.data && setFloodInfo(res.data)).catch(() => {});
     getEnvironmentalRecords(cleanId).then((res) => res?.data && setEnvironmentalRecords(Array.isArray(res.data) ? res.data : [res.data])).catch(() => {});
@@ -186,7 +224,7 @@ function PropertyDetails() {
     getPropertyDocuments(cleanId).then((res) => res?.data && setDocuments(Array.isArray(res.data) ? res.data : [res.data])).catch(() => {});
     getReportsByProperty(cleanId).then((res) => res?.data && setReportHistory(Array.isArray(res.data) ? res.data : [res.data])).catch(() => {});
 
-  }, [targetId]);
+  }, [cleanId]);
 
   // THE 4 REQUIRED BUTTON HANDLERS
   const handleGenerateReport = () => {
@@ -228,22 +266,34 @@ function PropertyDetails() {
     { id: "documents", label: "Documents", icon: FolderOpen },
   ];
 
-  if (!property && !loading) {
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="space-y-6 sm:space-y-8 pb-16 max-w-7xl mx-auto py-8">
+          <Skeleton className="h-16 w-full rounded-3xl" />
+          <Skeleton className="h-44 w-full rounded-3xl" />
+          <Skeleton className="h-80 w-full rounded-3xl" />
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (notFound || !property) {
     return (
       <MainLayout>
         <div className="max-w-4xl mx-auto py-12">
           <EmptyState
-            title="No Property Selected"
-            message="Please select a valid property parcel to view due diligence details."
-            actionLabel="Go to Property Search"
-            onAction={() => (window.location.href = "/property-search")}
+            title="Property not found"
+            message={`No property record could be found for ID #${cleanId || "unknown"}. Please check the property ID or explore our catalog.`}
+            actionLabel="Back to Property Search"
+            onAction={() => navigate("/property-search")}
           />
         </div>
       </MainLayout>
     );
   }
 
-  const p = property || {};
+  const p = property;
   const imgSrc = p.imageUrl || p.image || null;
 
   return (
@@ -252,20 +302,20 @@ function PropertyDetails() {
         {/* Breadcrumb Bar */}
         <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
           <nav className="flex items-center gap-2 text-slate-500 dark:text-[#CBD5E1] font-semibold">
-            <Link to="/agent/dashboard" className="hover:text-blue-600 dark:hover:text-cyan-400 transition-colors">
-              Agent Portal
+            <Link to={dashboardPath} className="hover:text-blue-600 dark:text-cyan-400 transition-colors">
+              {userRole} Workspace
             </Link>
             <ChevronRight size={14} className="text-slate-400" />
-            <Link to="/agent/properties" className="hover:text-blue-600 dark:hover:text-cyan-400 transition-colors">
-              Properties
+            <Link to="/property-search" className="hover:text-blue-600 dark:text-cyan-400 transition-colors">
+              Property Catalog
             </Link>
             <ChevronRight size={14} className="text-slate-400" />
-            <span className="text-slate-900 dark:text-white font-bold">{p.id || "PR-1001"}</span>
+            <span className="text-slate-900 dark:text-white font-bold">{p.id || `PR-${cleanId}`}</span>
           </nav>
         </div>
 
         {/* PROPERTY CONTEXT SWITCHER BAR */}
-        <PropertyContextSwitcher currentPropertyId={targetId} />
+        <PropertyContextSwitcher currentPropertyId={cleanId} />
 
         {/* PROPERTY HEADER & THE 4 REQUIRED ACTION BUTTONS */}
         <div className="white-card rounded-3xl bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs p-6 sm:p-8 space-y-6">
@@ -606,7 +656,7 @@ function PropertyDetails() {
 
           {/* TAB 8: TIMELINE (Reusing PropertyTimeline) */}
           {activeTab === "timeline" && (
-            <PropertyTimeline propertyId={targetId} />
+            <PropertyTimeline propertyId={cleanId} />
           )}
 
           {/* TAB 9: DOCUMENTS */}
@@ -645,7 +695,7 @@ function PropertyDetails() {
         <ReportGeneratorModal
           isOpen={reportModalOpen}
           onClose={() => setReportModalOpen(false)}
-          initialPropertyId={targetId}
+          initialPropertyId={cleanId}
         />
 
         {/* MODAL 2: SHARE REPORT MODAL */}

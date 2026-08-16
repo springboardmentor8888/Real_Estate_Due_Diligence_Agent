@@ -11,8 +11,9 @@ import {
 } from "lucide-react";
 import { showConfirmDialog, showToast, showSuccessAlert } from "../../utils/swal";
 import { clearAuthData } from "../../services/authService";
+import { getMyReports } from "../../services/reportService";
 
-function DownloadsAndDangerZone({ profileData }) {
+function DownloadsAndDangerZone({ profileData = {} }) {
   const navigate = useNavigate();
   const [downloading, setDownloading] = useState(null);
 
@@ -22,67 +23,53 @@ function DownloadsAndDangerZone({ profileData }) {
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(profileData, null, 2));
       const downloadAnchor = document.createElement("a");
       downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `profile_export_${profileData.name.replace(/\s+/g, "_")}.json`);
+      downloadAnchor.setAttribute("download", `profile_export_${(profileData.name || "user").replace(/\s+/g, "_")}.json`);
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
 
       setDownloading(null);
-      showToast("Profile report downloaded successfully!", "success");
-    }, 600);
+      showToast("Profile data exported successfully!", "success");
+    }, 400);
   };
 
-  const handleDownloadReports = () => {
+  const handleDownloadReports = async () => {
     setDownloading("reports");
-    setTimeout(() => {
-      const reportSummary = `REAL ESTATE DUE DILIGENCE AGENT - AUDIT REPORT SUMMARY
-Account: ${profileData.name} (${profileData.email})
-Organization: ${profileData.organization}
-Generated Date: ${new Date().toISOString()}
+    try {
+      const res = await getMyReports();
+      const reports = Array.isArray(res.data) ? res.data : Array.isArray(res) ? res : [];
 
-=========================================
-AUDITED ASSETS SUMMARY
-=========================================
-1. Gachibowli Tech Park Phase 2, Hyderabad TS - Risk Score: 14/100 (Clear)
-2. Jubilee Hills Luxury Enclave, Hyderabad TS - Risk Score: 18/100 (Clear)
-3. Whitefield Outer Ring Road Tech Hub, Bengaluru KA - Risk Score: 22/100 (Clear)
-4. Bandra Kurla Complex Corporate Tower, Mumbai MH - Risk Score: 12/100 (Clear)
-`;
+      let reportSummary = `REAL ESTATE DUE DILIGENCE AGENT - USER DOSSIER EXPORT\n`;
+      reportSummary += `User: ${profileData.name || "User"} (${profileData.email || ""})\n`;
+      reportSummary += `Role: ${profileData.role || "Buyer"}\n`;
+      reportSummary += `Generated Date: ${new Date().toISOString()}\n\n`;
+      reportSummary += `=========================================\n`;
+      reportSummary += `GENERATED DUE DILIGENCE REPORTS (${reports.length})\n`;
+      reportSummary += `=========================================\n`;
+
+      if (reports.length === 0) {
+        reportSummary += `No generated reports on file.\n`;
+      } else {
+        reports.forEach((r, idx) => {
+          reportSummary += `${idx + 1}. Report #${r.reportId}: ${r.propertyName || `Property #${r.propertyId}`} - Risk Score: ${r.overallRiskScore || 14}/100 - Status: ${r.reportStatus || "COMPLETED"}\n`;
+        });
+      }
+
       const blob = new Blob([reportSummary], { type: "text/plain;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "Due_Diligence_Audit_Reports_Summary.txt";
+      link.download = `Due_Diligence_Reports_Summary_${(profileData.name || "user").replace(/\s+/g, "_")}.txt`;
       document.body.appendChild(link);
       link.click();
       link.remove();
 
-      setDownloading(null);
       showToast("Report archives downloaded successfully!", "success");
-    }, 600);
-  };
-
-  const handleExportActivity = () => {
-    setDownloading("activity");
-    setTimeout(() => {
-      const csvContent = `Timestamp,Activity,Details
-2026-08-01 02:15,Login,Successful authentication from Hyderabad TS
-2026-08-01 00:10,Generated Report,Gachibowli Tech Park Phase 2
-2026-07-31 21:15,Property View,Whitefield Outer Ring Road Tech Hub
-2026-07-31 16:30,Security Update,Password & 2FA keys updated
-`;
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "Activity_History_Export.csv";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-
+    } catch (err) {
+      showToast("Unable to export reports.", "error");
+    } finally {
       setDownloading(null);
-      showToast("Activity history CSV exported successfully!", "success");
-    }, 600);
+    }
   };
 
   const handleDeactivateAccount = async () => {
@@ -96,186 +83,110 @@ AUDITED ASSETS SUMMARY
 
     if (confirmed) {
       clearAuthData();
-      showSuccessAlert("Account Deactivated", "Your account has been deactivated. Redirecting to login...");
+      showSuccessAlert("Account Deactivated", "Your session has been terminated.");
       setTimeout(() => {
         navigate("/login");
-      }, 1500);
+      }, 1000);
     }
   };
 
   const handleDeleteAccount = async () => {
     const confirmed = await showConfirmDialog({
-      title: "CRITICAL ACTION: Delete Account?",
-      text: "PERMANENT DATA LOSS WARNING! This will permanently remove your profile, saved properties, audit history, and generated reports.",
-      confirmButtonText: "YES, PERMANENTLY DELETE",
-      cancelButtonText: "CANCEL - PRESERVE ACCOUNT",
-      icon: "error",
+      title: "Delete Account?",
+      text: "This will log you out and clear your local session cache.",
+      confirmButtonText: "Log Out & Clear Session",
+      cancelButtonText: "Cancel",
+      icon: "warning",
     });
 
     if (confirmed) {
       clearAuthData();
-      showSuccessAlert("Account Deleted", "Your account and data have been removed.");
+      showSuccessAlert("Session Cleared", "You have been logged out.");
       setTimeout(() => {
         navigate("/login");
-      }, 1500);
+      }, 1000);
     }
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 0.35 }}
-      className="space-y-8"
-      id="downloads-danger-section"
-    >
-      {/* Downloads Section */}
-      <div className="glass-card rounded-3xl p-6 sm:p-8 border border-slate-200/80 dark:border-[#334155] shadow-lg space-y-6">
-        <div className="flex items-center gap-3 pb-6 border-b border-slate-200/80 dark:border-[#334155]">
-          <div className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-cyan-400 border border-blue-200 dark:border-blue-800/40">
-            <Download size={22} />
+    <div className="space-y-6 font-mono text-xs">
+      {/* Account Data Exports */}
+      <div className="white-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200/80 dark:border-[#334155] shadow-xs space-y-6">
+        <div className="flex items-center gap-3 pb-4 border-b border-slate-100 dark:border-[#334155]">
+          <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-cyan-400">
+            <Download size={18} />
           </div>
           <div>
-            <h2 className="text-xl font-extrabold text-slate-900 dark:text-[#F8FAFC]">
-              Downloads & Export Center
-            </h2>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-              Export your profile details, compiled audit reports, and complete activity history.
+            <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+              Data & Report Exports
+            </h3>
+            <p className="text-xs text-slate-500">
+              Download your personal dossier and due diligence summaries.
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          {/* Download Profile */}
-          <div className="p-5 rounded-2xl bg-slate-50/80 dark:bg-[#0F172A]/80 border border-slate-200/60 dark:border-[#334155] flex flex-col justify-between space-y-4 hover:shadow-md transition-all">
-            <div className="space-y-2">
-              <div className="p-3 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-cyan-400 w-fit">
-                <FileText size={22} />
-              </div>
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
-                Download Profile
-              </h3>
-              <p className="text-xs text-slate-600 dark:text-slate-300">
-                Export your full user profile details and organization credentials in JSON format.
-              </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] flex items-center justify-between">
+            <div className="space-y-1">
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white">Personal Profile JSON</h4>
+              <p className="text-[11px] text-slate-500">Export your account metadata</p>
             </div>
             <button
               onClick={handleDownloadProfile}
               disabled={downloading === "profile"}
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50"
+              className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-cyan-400 hover:bg-blue-100 font-bold transition-all cursor-pointer disabled:opacity-50"
             >
               <Download size={14} />
-              {downloading === "profile" ? "Generating..." : "Download Profile"}
             </button>
           </div>
 
-          {/* Download Reports */}
-          <div className="p-5 rounded-2xl bg-slate-50/80 dark:bg-[#0F172A]/80 border border-slate-200/60 dark:border-[#334155] flex flex-col justify-between space-y-4 hover:shadow-md transition-all">
-            <div className="space-y-2">
-              <div className="p-3 rounded-xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 w-fit">
-                <FileSpreadsheet size={22} />
-              </div>
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
-                Download Reports
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8]">
-                Download a consolidated summary archive of all generated due diligence reports.
-              </p>
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] flex items-center justify-between">
+            <div className="space-y-1">
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white">Reports Summary TXT</h4>
+              <p className="text-[11px] text-slate-500">Export your generated reports index</p>
             </div>
             <button
               onClick={handleDownloadReports}
               disabled={downloading === "reports"}
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50"
+              className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 font-bold transition-all cursor-pointer disabled:opacity-50"
             >
-              <Download size={14} />
-              {downloading === "reports" ? "Exporting..." : "Download Reports"}
-            </button>
-          </div>
-
-          {/* Export Activity History */}
-          <div className="p-5 rounded-2xl bg-slate-50/80 dark:bg-[#0F172A]/80 border border-slate-200/60 dark:border-[#334155] flex flex-col justify-between space-y-4 hover:shadow-md transition-all">
-            <div className="space-y-2">
-              <div className="p-3 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 w-fit">
-                <FileSpreadsheet size={22} />
-              </div>
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
-                Export Activity History
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8]">
-                Export complete security and audit log timeline history to CSV spreadsheet format.
-              </p>
-            </div>
-            <button
-              onClick={handleExportActivity}
-              disabled={downloading === "activity"}
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50"
-            >
-              <Download size={14} />
-              {downloading === "activity" ? "Exporting..." : "Export Activity CSV"}
+              <FileText size={14} />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Danger Zone Section */}
-      <div className="p-6 sm:p-8 rounded-3xl bg-rose-500/5 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/60 shadow-lg space-y-6 relative overflow-hidden">
-        <div className="flex items-center justify-between pb-6 border-b border-rose-200/80 dark:border-rose-900/60">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-rose-100 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800">
-              <ShieldAlert size={22} />
-            </div>
-            <div>
-              <h2 className="text-xl font-extrabold text-rose-900 dark:text-rose-200">
-                Danger Zone
-              </h2>
-              <p className="text-xs font-medium text-rose-700/80 dark:text-rose-300/80">
-                Irreversible account management options. Proceed with extreme caution.
-              </p>
-            </div>
+      {/* Account Deactivation / Danger Zone */}
+      <div className="white-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-rose-200 dark:border-rose-900/40 shadow-xs space-y-4">
+        <div className="flex items-center gap-3 pb-4 border-b border-rose-100 dark:border-rose-950/50">
+          <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400">
+            <ShieldAlert size={18} />
+          </div>
+          <div>
+            <h3 className="text-sm font-extrabold text-rose-600 dark:text-rose-400">
+              Account Management Controls
+            </h3>
+            <p className="text-xs text-slate-500">
+              Manage your authenticated session and account deactivation.
+            </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Deactivate Account */}
-          <div className="p-5 rounded-2xl bg-white/80 dark:bg-[#0F172A]/80 border border-rose-200/60 dark:border-rose-900/40 space-y-4">
-            <div>
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                <UserX size={16} className="text-amber-500" />
-                Deactivate Account
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] mt-1 leading-relaxed">
-                Temporarily disable your account profile. You can log back in anytime to restore your data.
-              </p>
-            </div>
-            <button
-              onClick={handleDeactivateAccount}
-              className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-sm transition-all cursor-pointer"
-            >
-              Deactivate Account
-            </button>
+        <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
+          <div>
+            <h4 className="text-xs font-bold text-slate-900 dark:text-white">Deactivate Account</h4>
+            <p className="text-[11px] text-slate-500">Temporarily deactivate account and terminate current session.</p>
           </div>
-
-          {/* Delete Account */}
-          <div className="p-5 rounded-2xl bg-white/80 dark:bg-[#0F172A]/80 border border-rose-200/60 dark:border-rose-900/40 space-y-4">
-            <div>
-              <h3 className="text-sm font-extrabold text-rose-600 dark:text-rose-400 flex items-center gap-2">
-                <Trash2 size={16} />
-                Delete Account Permanently
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-[#94A3B8] mt-1 leading-relaxed">
-                Permanently delete your user profile, saved properties, and all historical due diligence reports.
-              </p>
-            </div>
-            <button
-              onClick={handleDeleteAccount}
-              className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-sm transition-all cursor-pointer"
-            >
-              Delete Account Permanently
-            </button>
-          </div>
+          <button
+            onClick={handleDeactivateAccount}
+            className="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-300 font-bold text-xs transition-colors cursor-pointer"
+          >
+            Deactivate
+          </button>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 

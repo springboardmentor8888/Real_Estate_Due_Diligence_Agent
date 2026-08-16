@@ -12,12 +12,13 @@ Thumbs.db
 # Environment Files
 .env
 .env.*
+!.env.example
 
 ############################
 # Backend (Spring Boot)
 ############################
 
-backend/target/
+**/target/
 backend/.idea/
 backend/*.iml
 
@@ -52,10 +53,10 @@ backend/*.iml
 # Frontend (React / Next.js)
 ############################
 
-frontend/node_modules/
+**/node_modules/
 frontend/.next/
 frontend/out/
-frontend/dist/
+**/dist/
 
 ############################
 # Coverage

@@ -72,7 +72,7 @@ function Sidebar({ mobileOpen, onCloseMobile, isCollapsed, onToggleCollapse }) {
       const saved = localStorage.getItem("user");
       if (saved) return JSON.parse(saved);
     } catch (e) {}
-    return { name: "Rama Charan", role: "Buyer", email: "ramacharan@gmail.com" };
+    return { name: "User", role: "Buyer", email: "" };
   });
 
   useEffect(() => {
@@ -87,10 +87,10 @@ function Sidebar({ mobileOpen, onCloseMobile, isCollapsed, onToggleCollapse }) {
     return () => window.removeEventListener("user_profile_updated", handleUpdate);
   }, []);
 
-  const userName = userData.name || (userData.firstName ? `${userData.firstName} ${userData.lastName || ""}`.trim() : "Rama Charan");
+  const userName = userData.name || (userData.firstName ? `${userData.firstName} ${userData.lastName || ""}`.trim() : "User");
   const userRole = userData.role || "Buyer";
   const normalized = normalizeRole(userRole);
-  const userInitials = userName.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2);
+  const userInitials = (userName || "U").split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2);
 
   // Role-Specific Navigation Menu Generator according to SRS specifications
   const getRoleMenuSections = () => {
@@ -111,19 +111,7 @@ function Sidebar({ mobileOpen, onCloseMobile, isCollapsed, onToggleCollapse }) {
               { name: "Analytics", path: "/agent/analytics", icon: TrendingUp },
               { name: "Notifications", path: "/notifications", icon: Bell },
               { name: "Documents", path: "/documents", icon: FolderOpen },
-              { name: "Recent Activity", path: "/agent/activity", icon: Activity },
               { name: "My Account", path: "/my-account", icon: User },
-            ],
-          },
-          {
-            title: "AUDIT REGISTRIES",
-            items: [
-              { name: "Property Review", path: "/property-review", icon: FileSearch },
-              { name: "Review Checklist", path: "/review-checklist", icon: FileCheck2 },
-              { name: "Case History", path: "/case-history", icon: History },
-              { name: "Legal Analytics", path: "/analytics", icon: TrendingUp },
-              { name: "Risk Assessment", path: "/risk-assessment", icon: ShieldAlert },
-              { name: "Due Diligence Report", path: "/due-diligence-report", icon: FileSpreadsheet },
             ],
           },
         ];
@@ -138,7 +126,6 @@ function Sidebar({ mobileOpen, onCloseMobile, isCollapsed, onToggleCollapse }) {
               { name: "Property Review", path: "/property-review", icon: FileSearch },
               { name: "Review Checklist", path: "/review-checklist", icon: FileCheck2 },
               { name: "Case History", path: "/case-history", icon: History },
-              { name: "Legal Analytics", path: "/analytics", icon: TrendingUp },
               { name: "Ownership", path: "/ownership", icon: FileCheck },
               { name: "Permits", path: "/permit-records", icon: Map },
               { name: "Documents", path: "/legal/documents", icon: FileText },
@@ -170,8 +157,6 @@ function Sidebar({ mobileOpen, onCloseMobile, isCollapsed, onToggleCollapse }) {
               { name: "Loan Review", path: "/loan-review", icon: FileCheck },
               { name: "Notifications Center", path: "/notifications", icon: Bell },
               { name: "Financial Analytics", path: "/financial-analytics", icon: BarChart3 },
-              { name: "Recent Activity", path: "/recent-activity", icon: Activity },
-              { name: "Help & Support", path: "/help-support", icon: HelpCircle },
               { name: "My Account", path: "/my-account", icon: User },
             ],
           },
@@ -179,7 +164,6 @@ function Sidebar({ mobileOpen, onCloseMobile, isCollapsed, onToggleCollapse }) {
             title: "COLLATERAL AUDIT",
             items: [
               { name: "Property Valuation", path: "/property-valuation", icon: DollarSign },
-              { name: "Investment Analysis", path: "/investment-analysis", icon: TrendingUp },
               { name: "Comparable Properties", path: "/comparable-properties", icon: ArrowRightLeft },
               { name: "Due Diligence Report", path: "/due-diligence-report", icon: FileText },
             ],
@@ -202,8 +186,6 @@ function Sidebar({ mobileOpen, onCloseMobile, isCollapsed, onToggleCollapse }) {
               { name: "System Monitoring", path: "/system-monitoring", icon: Sliders },
               { name: "Security Center", path: "/security-center", icon: ShieldAlert },
               { name: "Data Management", path: "/data-management", icon: Database },
-              { name: "Platform Settings", path: "/my-account?tab=preferences", icon: Sliders },
-              { name: "Help & Support", path: "/help-support", icon: HelpCircle },
               { name: "My Account", path: "/my-account", icon: User },
             ],
           },
@@ -216,21 +198,14 @@ function Sidebar({ mobileOpen, onCloseMobile, isCollapsed, onToggleCollapse }) {
             title: "BUYER WORKSPACE",
             items: [
               { name: "Dashboard", path: "/buyer/dashboard", icon: LayoutDashboard },
-              { name: "Property Search", path: "/property-search", icon: Search },
-              { name: "Saved Properties", path: "/saved-properties", icon: Star },
-              { name: "Property Watchlist", path: "/watchlist", icon: Eye },
-              { name: "Reports", path: "/report-history", icon: FileText },
-              { name: "Compare Properties", path: "/comparable-properties", icon: TrendingUp },
-              { name: "My Account", path: "/my-account", icon: User },
-            ],
-          },
-          {
-            title: "RECORD REGISTRIES",
-            items: [
-              { name: "Risk Assessment", path: "/risk-assessment", icon: ShieldAlert },
-              { name: "Ownership & Title", path: "/ownership", icon: FileCheck },
-              { name: "Tax History", path: "/tax-history", icon: ClipboardList },
-              { name: "Permit Records", path: "/permit-records", icon: Map },
+              { name: "Explore Properties", path: "/property-search", icon: Search },
+              { name: "My Watchlist", path: "/watchlist", icon: Eye },
+              { name: "Compare Properties", path: "/comparable-properties", icon: ArrowRightLeft },
+              { name: "Due Diligence", path: "/due-diligence-report", icon: ShieldCheck },
+              { name: "Risk Assessment", path: "/risk-assessment", icon: Scale },
+              { name: "My Reports", path: "/report-history", icon: FileText },
+              { name: "Notifications", path: "/notifications", icon: Bell },
+              { name: "Profile", path: "/my-account", icon: User },
             ],
           },
         ];

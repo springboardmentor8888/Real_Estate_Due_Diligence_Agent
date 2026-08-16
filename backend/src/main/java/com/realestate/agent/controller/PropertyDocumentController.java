@@ -49,6 +49,14 @@ public class PropertyDocumentController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+    @GetMapping
+    @Operation(summary = "Get all property documents", description = "Retrieves a list of all registered property supporting documents in the vault.")
+    @ApiResponse(responseCode = "200", description = "Documents list retrieved")
+    public ResponseEntity<List<PropertyDocumentResponse>> getAllDocuments() {
+        List<PropertyDocumentResponse> response = reportService.getAllDocuments();
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Get document by ID", description = "Retrieves details of a specific property document by ID.")
     @ApiResponses(value = {

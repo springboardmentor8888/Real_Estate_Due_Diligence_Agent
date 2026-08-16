@@ -14,13 +14,22 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
 @Transactional
 public class DueDiligenceReportServiceImpl implements DueDiligenceReportService {
 
     private final DueDiligenceReportRepository reportRepository;
     private final PropertyRepository propertyRepository;
     private final DueDiligenceReportMapper reportMapper;
+
+    public DueDiligenceReportServiceImpl(
+            DueDiligenceReportRepository reportRepository,
+            PropertyRepository propertyRepository,
+            DueDiligenceReportMapper reportMapper
+    ) {
+        this.reportRepository = reportRepository;
+        this.propertyRepository = propertyRepository;
+        this.reportMapper = reportMapper;
+    }
 
     @Override
     public DueDiligenceReportResponse generateReport(

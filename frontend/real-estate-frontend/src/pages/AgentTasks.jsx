@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ClipboardList,
@@ -10,706 +10,987 @@ import {
   ChevronRight,
   Filter,
   Search,
-  Calendar as CalendarIcon,
-  List as ListIcon,
-  PlusCircle,
   Building2,
-  Users,
   FileText,
-  FileCheck,
-  CheckSquare,
-  Square,
-  X,
-  Edit3,
-  Trash2,
-  ChevronLeft,
-  MapPin,
-  Send,
   Eye,
-  Sliders,
-  Sparkles,
+  RefreshCw,
+  AlertCircle,
+  Bell,
+  CheckCheck,
+  Calendar,
+  ExternalLink,
+  ShieldCheck,
+  Briefcase,
+  Plus,
+  X,
+  Edit2,
+  Trash2,
+  User,
+  Users,
+  MapPin,
+  CheckSquare,
 } from "lucide-react";
 import MainLayout from "../components/layout/MainLayout";
 import Button from "../components/common/Button";
 import Badge from "../components/common/Badge";
 import EmptyState from "../components/common/EmptyState";
+import { Skeleton } from "../components/common/Skeleton";
 import { showToast, showConfirmDialog, showSuccessAlert } from "../utils/swal";
+import {
+  getMyNotifications,
+  markNotificationAsRead,
+} from "../services/notificationService";
+import { getMyReports } from "../services/reportService";
+import { getMyProperties, getAllProperties } from "../services/propertyService";
 
-// Master Initial Tasks Mock Dataset covering all 5 requested Task Types
-const INITIAL_TASKS = [
-  {
-    id: "TSK-101",
-    title: "Gachibowli Tech Park Parcel Inspection & Boundary Audit",
-    taskType: "Property Visit",
-    client: "Adani Realty Institutional Fund",
-    property: "Gachibowli Tech Park Phase 2 (PR-1001)",
-    timeSlot: "09:30 AM",
-    dueDate: "Today",
-    priority: "HIGH",
-    status: "In Progress",
-    notes: "Conduct GPS survey and verify physical boundaries with Sub-Registrar map.",
-  },
-  {
-    id: "TSK-102",
-    title: "Portfolio Due Diligence Strategy Review Call",
-    taskType: "Client Meeting",
-    client: "DLF Cybercity Portfolio",
-    property: "Jubilee Hills Commercial Plot 36 (PR-1002)",
-    timeSlot: "11:30 AM",
-    dueDate: "Today",
-    priority: "HIGH",
-    status: "Pending",
-    notes: "Review encumbrance alert and present remediation options to DLF VP.",
-  },
-  {
-    id: "TSK-103",
-    title: "Sub-Registrar 30-Year Title Deed Chain Search",
-    taskType: "Document Review",
-    client: "GMR Logistics Infrastructure",
-    property: "Whitefield Horizon Tech Campus (PR-1003)",
-    timeSlot: "02:00 PM",
-    dueDate: "Today",
-    priority: "MEDIUM",
-    status: "Completed",
-    notes: "Title search clean. All encumbrance certificates verified clear.",
-  },
-  {
-    id: "TSK-104",
-    title: "Dispatch Level 4 Institutional Audit Report PDF",
-    taskType: "Report Submission",
-    client: "Prestige Capital Partners",
-    property: "Financial District Commercial Plot (PR-1004)",
-    timeSlot: "04:30 PM",
-    dueDate: "Today",
-    priority: "HIGH",
-    status: "Pending",
-    notes: "Finalize PDF certificate and dispatch to Prestige investment committee.",
-  },
-  {
-    id: "TSK-105",
-    title: "HMDA Zoning & Environmental NOC On-Site Inspection",
-    taskType: "Inspection",
-    client: "Sobha Real Estate Fund",
-    property: "BKC Prime Commercial Hub (PR-1005)",
-    timeSlot: "05:30 PM",
-    dueDate: "Today",
-    priority: "LOW",
-    status: "Pending",
-    notes: "Verify setback compliance and Master Plan FAR alignment.",
-  },
-  {
-    id: "TSK-106",
-    title: "Site Survey & Soil Test Inspection Visit",
-    taskType: "Property Visit",
-    client: "Mahindra Lifespaces Ltd",
-    property: "Kokapet SEZ Commercial Land (PR-1006)",
-    timeSlot: "06:00 PM",
-    dueDate: "Tomorrow",
-    priority: "MEDIUM",
-    status: "In Progress",
-    notes: "Site visit for soil testing report validation.",
-  },
-];
+const STORAGE_KEY = "agent_scheduled_tasks";
 
 function AgentTasks() {
   const navigate = useNavigate();
-  const [tasks, setTasks] = useState(INITIAL_TASKS);
 
-  // View Mode: 'list' or 'calendar'
-  const [viewMode, setViewMode] = useState("list");
+  // State Management
+  const [activities, setActivities] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [reports, setReports] = useState([]);
+  const [properties, setProperties] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [lastSyncTime, setLastSyncTime] = useState(null);
 
-  // Search & Filters
+  // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState("ALL");
-  const [statusFilter, setStatusFilter] = useState("ALL");
-  const [priorityFilter, setPriorityFilter] = useState("ALL");
+  const [filterType, setFilterType] = useState("ALL");
+  const [sortBy, setSortBy] = useState("DATE_DESC");
 
-  // Modals
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [editModalTask, setEditModalTask] = useState(null);
-  const [viewModalTask, setViewModalTask] = useState(null);
-
-  // Form State
+  // Add / Edit Task Modal State
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
   const [taskForm, setTaskForm] = useState({
-    id: "",
     title: "",
-    taskType: "Property Visit",
-    client: "Adani Realty Institutional Fund",
-    property: "Gachibowli Tech Park Phase 2 (PR-1001)",
-    timeSlot: "10:00 AM",
-    dueDate: "Today",
+    type: "PROPERTY_VISIT",
+    propertyId: "",
+    clientName: "",
+    dueDate: new Date().toISOString().slice(0, 10),
+    dueTime: "10:00 AM",
     priority: "HIGH",
-    status: "Pending",
+    status: "PENDING",
     notes: "",
   });
 
-  // Task Completion Checkbox Toggle
-  const handleToggleTaskStatus = (id) => {
-    setTasks((prev) =>
-      prev.map((t) => {
-        if (t.id === id) {
-          const nextStatus = t.status === "Completed" ? "Pending" : "Completed";
-          showToast(`Task marked as ${nextStatus}`, "info");
-          return { ...t, status: nextStatus };
-        }
-        return t;
-      })
-    );
+  // Load custom tasks from local store
+  const loadUserTasks = () => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn("Failed to parse user tasks:", e);
+    }
+    return [];
   };
 
-  // Filtered Tasks
-  const filteredTasks = useMemo(() => {
-    return tasks.filter((t) => {
-      const matchSearch =
-        t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.property.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.id.toLowerCase().includes(searchQuery.toLowerCase());
-
-      const matchType = typeFilter === "ALL" || t.taskType === typeFilter;
-      const matchStatus = statusFilter === "ALL" || t.status === statusFilter;
-      const matchPriority = priorityFilter === "ALL" || t.priority === priorityFilter;
-
-      return matchSearch && matchType && matchStatus && matchPriority;
-    });
-  }, [tasks, searchQuery, typeFilter, statusFilter, priorityFilter]);
-
-  // Priority Color Helper
-  const getPriorityStyle = (priority) => {
-    switch (priority) {
-      case "HIGH":
-        return {
-          border: "border-l-rose-500",
-          badge: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/80 dark:text-rose-300 dark:border-rose-800",
-          text: "text-rose-600 dark:text-rose-400",
-        };
-      case "MEDIUM":
-        return {
-          border: "border-l-amber-500",
-          badge: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-800",
-          text: "text-amber-600 dark:text-amber-400",
-        };
-      default:
-        return {
-          border: "border-l-blue-500",
-          badge: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/80 dark:text-blue-300 dark:border-blue-800",
-          text: "text-blue-600 dark:text-cyan-400",
-        };
+  // Save custom tasks to local store
+  const saveUserTasks = (updatedTasks) => {
+    setTasks(updatedTasks);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedTasks));
+    } catch (e) {
+      console.warn("Failed to persist user tasks:", e);
     }
   };
 
-  // Task Status Badge Renderer
-  const renderStatusBadge = (status) => {
-    switch (status) {
-      case "Completed":
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-800 text-[10px] font-mono font-bold">
-            <CheckCircle2 size={11} /> Completed
-          </span>
-        );
-      case "In Progress":
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/80 dark:text-cyan-300 dark:border-blue-800 text-[10px] font-mono font-bold">
-            <Clock size={11} className="animate-spin-slow" /> In Progress
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-800 text-[10px] font-mono font-bold">
-            <Clock size={11} /> Pending
-          </span>
-        );
+  // Fetch real authenticated agent workflow activities from PostgreSQL
+  const fetchAgentActivity = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Parallel fetch from genuine backend endpoints
+      const [notifRes, repRes, propRes] = await Promise.allSettled([
+        getMyNotifications(),
+        getMyReports(),
+        getMyProperties(0, 50),
+      ]);
+
+      const notifsList =
+        notifRes.status === "fulfilled"
+          ? Array.isArray(notifRes.value.data)
+            ? notifRes.value.data
+            : Array.isArray(notifRes.value)
+            ? notifRes.value
+            : []
+          : [];
+
+      const reportsList =
+        repRes.status === "fulfilled"
+          ? Array.isArray(repRes.value.data)
+            ? repRes.value.data
+            : Array.isArray(repRes.value)
+            ? repRes.value
+            : []
+          : [];
+
+      const propsList =
+        propRes.status === "fulfilled"
+          ? propRes.value?.data?.content ||
+            (Array.isArray(propRes.value?.data) ? propRes.value.data : [])
+          : [];
+
+      setNotifications(notifsList);
+      setReports(reportsList);
+      setProperties(propsList);
+
+      const userSavedTasks = loadUserTasks();
+      setTasks(userSavedTasks);
+
+      // Combine real PostgreSQL events + Agent Scheduled Tasks into unified chronological feed
+      const combined = [];
+
+      // 1. Map Agent Scheduled Tasks
+      userSavedTasks.forEach((t) => {
+        const pMatch = propsList.find((p) => String(p.propertyId || p.id) === String(t.propertyId));
+        combined.push({
+          id: t.id,
+          rawId: t.id,
+          type: "SCHEDULED_TASK",
+          taskType: t.type || "PROPERTY_VISIT",
+          category: t.type ? t.type.replace(/_/g, " ") : "Scheduled Task",
+          title: t.title,
+          description: t.notes || `Scheduled ${t.type ? t.type.replace(/_/g, " ") : "task"} with ${t.clientName || "Client"}.`,
+          status: t.status || "PENDING",
+          priority: t.priority || "HIGH",
+          clientName: t.clientName,
+          dueDate: t.dueDate,
+          dueTime: t.dueTime,
+          timestamp: new Date(t.createdAt || t.dueDate || Date.now()),
+          propertyId: t.propertyId || pMatch?.propertyId,
+          propertyName: pMatch?.propertyName || t.propertyName,
+          isUserTask: true,
+          taskData: t,
+        });
+      });
+
+      // 2. Map Real Notifications
+      notifsList.forEach((n) => {
+        combined.push({
+          id: `NOTIF-${n.notificationId}`,
+          rawId: n.notificationId,
+          type: "NOTIFICATION",
+          category: n.notificationType || "SYSTEM_ALERT",
+          title: n.title || "System Notification",
+          description: n.message || "Notification received from system.",
+          isRead: Boolean(n.isRead),
+          timestamp: n.sentAt ? new Date(n.sentAt) : new Date(),
+          propertyId: n.property?.propertyId,
+          propertyName: n.property?.propertyName,
+          reportId: n.report?.reportId,
+        });
+      });
+
+      // 3. Map Real Reports Generated
+      reportsList.forEach((r) => {
+        combined.push({
+          id: `REP-${r.reportId}`,
+          rawId: r.reportId,
+          type: "AUDIT_REPORT",
+          category: "DUE_DILIGENCE",
+          title: r.reportName || `Due Diligence Dossier #${r.reportId}`,
+          description: r.executiveSummary
+            ? r.executiveSummary.substring(0, 160) + "..."
+            : "Comprehensive due diligence report compiled and registered.",
+          status: r.reportStatus || "GENERATED",
+          timestamp: r.createdAt ? new Date(r.createdAt) : new Date(),
+          propertyId: r.property?.propertyId,
+          propertyName: r.property?.propertyName || `Property #${r.property?.propertyId}`,
+          riskScore: r.riskScore,
+        });
+      });
+
+      // 4. Map Real Properties Managed
+      propsList.forEach((p) => {
+        const pId = p.propertyId || p.id;
+        combined.push({
+          id: `PROP-${pId}`,
+          rawId: pId,
+          type: "PROPERTY_ASSET",
+          category: "PORTFOLIO",
+          title: `Managed Property: ${p.propertyName}`,
+          description: `${p.city || "Urban Region"}, ${p.state || "India"} • Valuation: ₹ ${(
+            Number(p.marketValue || 0) / 10000000
+          ).toFixed(2)} Cr`,
+          status: p.status || "ACTIVE",
+          timestamp: p.createdAt ? new Date(p.createdAt) : new Date(Date.now() - 86400000),
+          propertyId: pId,
+          propertyName: p.propertyName,
+        });
+      });
+
+      setActivities(combined);
+      setLastSyncTime(new Date());
+    } catch (err) {
+      console.error("Failed to load agent activity & schedule:", err);
+      setError("Unable to load your schedule from backend server. Please verify Spring Boot is running.");
+      setActivities([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Task Type Icon Renderer
-  const renderTaskTypeIcon = (type) => {
-    switch (type) {
-      case "Property Visit":
-        return <Home size={15} className="text-blue-500" />;
-      case "Client Meeting":
-        return <Users size={15} className="text-purple-500" />;
-      case "Document Review":
-        return <FileText size={15} className="text-amber-500" />;
-      case "Report Submission":
-        return <Send size={15} className="text-emerald-500" />;
-      case "Inspection":
-        return <Search size={15} className="text-cyan-500" />;
-      default:
-        return <ClipboardList size={15} className="text-blue-500" />;
-    }
-  };
+  useEffect(() => {
+    fetchAgentActivity();
+  }, []);
 
-  // Handlers
-  const handleOpenCreateModal = () => {
+  // Open Create Task Dialog
+  const handleOpenCreateTaskModal = () => {
+    setEditingTask(null);
     setTaskForm({
-      id: `TSK-10${tasks.length + 1}`,
       title: "",
-      taskType: "Property Visit",
-      client: "Adani Realty Institutional Fund",
-      property: "Gachibowli Tech Park Phase 2 (PR-1001)",
-      timeSlot: "10:00 AM",
-      dueDate: "Today",
+      type: "PROPERTY_VISIT",
+      propertyId: properties.length > 0 ? String(properties[0].propertyId || properties[0].id) : "",
+      clientName: "",
+      dueDate: new Date().toISOString().slice(0, 10),
+      dueTime: "10:00 AM",
       priority: "HIGH",
-      status: "Pending",
+      status: "PENDING",
       notes: "",
     });
-    setCreateModalOpen(true);
+    setTaskModalOpen(true);
   };
 
-  const handleSaveCreateTask = (e) => {
+  // Open Edit Task Dialog
+  const handleOpenEditTaskModal = (task) => {
+    setEditingTask(task);
+    setTaskForm({
+      title: task.title,
+      type: task.type || task.taskType || "PROPERTY_VISIT",
+      propertyId: String(task.propertyId || ""),
+      clientName: task.clientName || "",
+      dueDate: task.dueDate || new Date().toISOString().slice(0, 10),
+      dueTime: task.dueTime || "10:00 AM",
+      priority: task.priority || "HIGH",
+      status: task.status || "PENDING",
+      notes: task.notes || task.description || "",
+    });
+    setTaskModalOpen(true);
+  };
+
+  // Save Task Form Submission
+  const handleSaveTask = (e) => {
     e.preventDefault();
-    if (!taskForm.title) {
-      showToast("Please enter task title", "error");
+    if (!taskForm.title.trim()) {
+      showToast("Please enter a task title.", "warning");
       return;
     }
-    setTasks((prev) => [taskForm, ...prev]);
-    showSuccessAlert("Task Created", `Added task "${taskForm.title}" to today's agenda.`);
-    setCreateModalOpen(false);
+
+    const matchedProp = properties.find((p) => String(p.propertyId || p.id) === String(taskForm.propertyId));
+
+    if (editingTask) {
+      // Update existing task
+      const updated = tasks.map((t) =>
+        t.id === editingTask.id
+          ? {
+              ...t,
+              ...taskForm,
+              propertyName: matchedProp?.propertyName || t.propertyName,
+              updatedAt: new Date().toISOString(),
+            }
+          : t
+      );
+      saveUserTasks(updated);
+      showSuccessAlert("Task Updated", `"${taskForm.title}" has been updated successfully.`);
+    } else {
+      // Create new task
+      const newTask = {
+        id: `TASK-${Date.now()}`,
+        ...taskForm,
+        propertyName: matchedProp?.propertyName || "",
+        createdAt: new Date().toISOString(),
+      };
+      const updated = [newTask, ...tasks];
+      saveUserTasks(updated);
+      showSuccessAlert("Task Scheduled", `"${taskForm.title}" has been added to your work schedule.`);
+    }
+
+    setTaskModalOpen(false);
+    fetchAgentActivity();
   };
 
-  const handleOpenEditModal = (task) => {
-    setTaskForm({ ...task });
-    setEditModalTask(task);
-  };
-
-  const handleSaveEditTask = (e) => {
-    e.preventDefault();
-    setTasks((prev) => prev.map((t) => (t.id === taskForm.id ? { ...t, ...taskForm } : t)));
-    showToast(`Updated task "${taskForm.title}"`, "success");
-    setEditModalTask(null);
-  };
-
-  const handleDeleteTask = async (task) => {
+  // Delete Task
+  const handleDeleteTask = async (taskId) => {
     const confirmed = await showConfirmDialog({
-      title: `Delete Task "${task.title}"?`,
-      text: "This action will remove the task assignment from today's schedule.",
-      confirmButtonText: "Yes, Delete Task",
-      cancelButtonText: "Keep Task",
+      title: "Delete Scheduled Task",
+      text: "Are you sure you want to remove this task from your work schedule?",
+      confirmButtonText: "Yes, Delete",
+      cancelButtonText: "Cancel",
       icon: "warning",
     });
 
     if (confirmed) {
-      setTasks((prev) => prev.filter((t) => t.id !== task.id));
-      showToast(`Removed task "${task.title}"`, "info");
+      const updated = tasks.filter((t) => t.id !== taskId);
+      saveUserTasks(updated);
+      fetchAgentActivity();
+      showToast("Task removed from schedule.", "info");
     }
   };
 
+  // Toggle Task Completion
+  const handleToggleTaskStatus = (taskId) => {
+    const updated = tasks.map((t) => {
+      if (t.id === taskId) {
+        const nextStatus = t.status === "COMPLETED" ? "PENDING" : "COMPLETED";
+        return { ...t, status: nextStatus };
+      }
+      return t;
+    });
+    saveUserTasks(updated);
+    fetchAgentActivity();
+    showToast("Task status updated.", "success");
+  };
+
+  // Handle Mark Notification as Read
+  const handleMarkAsRead = async (notifId) => {
+    try {
+      await markNotificationAsRead(notifId);
+      setActivities((prev) =>
+        prev.map((item) =>
+          item.type === "NOTIFICATION" && item.rawId === notifId ? { ...item, isRead: true } : item
+        )
+      );
+      showToast("Notification marked as read.", "success");
+    } catch (err) {
+      console.error("Failed to mark notification as read:", err);
+    }
+  };
+
+  // Filter Logic
+  const filteredActivities = useMemo(() => {
+    return activities.filter((item) => {
+      const matchType = filterType === "ALL" || item.type === filterType;
+
+      const q = searchQuery.toLowerCase().trim();
+      const matchSearch =
+        !q ||
+        item.title.toLowerCase().includes(q) ||
+        item.description.toLowerCase().includes(q) ||
+        (item.propertyName && item.propertyName.toLowerCase().includes(q)) ||
+        (item.clientName && item.clientName.toLowerCase().includes(q)) ||
+        item.category.toLowerCase().includes(q);
+
+      return matchType && matchSearch;
+    });
+  }, [activities, filterType, searchQuery]);
+
+  // Sort Logic
+  const sortedActivities = useMemo(() => {
+    const list = [...filteredActivities];
+    if (sortBy === "DATE_DESC") {
+      list.sort((a, b) => b.timestamp - a.timestamp);
+    } else if (sortBy === "DATE_ASC") {
+      list.sort((a, b) => a.timestamp - b.timestamp);
+    } else if (sortBy === "TITLE_ASC") {
+      list.sort((a, b) => a.title.localeCompare(b.title));
+    }
+    return list;
+  }, [filteredActivities, sortBy]);
+
   return (
     <MainLayout>
-      <div className="space-y-8 pb-16 max-w-7xl mx-auto">
-        {/* Breadcrumb Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-medium text-slate-500 dark:text-[#CBD5E1]">
-          <div className="flex items-center gap-2">
-            <Home size={14} className="text-blue-500 dark:text-cyan-400" />
-            <span>/</span>
+      <div className="space-y-8 pb-16 max-w-7xl mx-auto font-mono text-xs">
+        {/* BREADCRUMB HEADER */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-slate-500 dark:text-[#CBD5E1]">
+          <nav className="flex items-center gap-2">
+            <Link to="/agent/dashboard" className="hover:text-blue-600 dark:text-cyan-400 transition-colors flex items-center gap-1.5">
+              <Home size={14} /> Agent Workspace
+            </Link>
+            <ChevronRight size={14} className="text-slate-400" />
             <span className="text-slate-900 dark:text-[#F8FAFC] font-extrabold">
-              Today's Agenda & Tasks
+              Activity & Work Schedule
             </span>
-          </div>
+          </nav>
 
-          <span className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-cyan-300 font-mono font-bold text-xs border border-blue-200 dark:border-blue-800">
-            AGENDA • {tasks.filter((t) => t.status === "Completed").length} / {tasks.length} COMPLETED
-          </span>
-        </div>
-
-        {/* HERO BANNER */}
-        <div className="glass-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-cyan-300 border border-blue-200 dark:border-blue-800 text-xs font-mono font-bold mb-2">
-              <ClipboardList size={14} /> Agent Daily Operations Agenda
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-[#F8FAFC] tracking-tight flex items-center gap-2">
-              📅 Today's Tasks & Schedule
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-[#CBD5E1] mt-1 max-w-2xl">
-              Manage property visits, client meetings, document reviews, report submissions, and on-site inspections.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            <Button onClick={handleOpenCreateModal} variant="primary" size="sm" icon={PlusCircle}>
-              Add New Task
+          <div className="flex items-center gap-3">
+            {lastSyncTime && (
+              <span className="text-[11px] text-slate-400">
+                Synced {lastSyncTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            )}
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={fetchAgentActivity}
+              loading={loading}
+              icon={RefreshCw}
+            >
+              Sync
             </Button>
           </div>
         </div>
 
-        {/* SEARCH, FILTER & VIEW MODE CONTROLS */}
-        <div className="white-card rounded-3xl p-5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          {/* Search Box */}
-          <div className="relative flex-1">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search tasks by Title, Client Name, Property or ID..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-xs font-bold text-slate-900 dark:text-slate-100 pl-10 pr-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+        {/* ERROR STATE BANNER */}
+        {error && (
+          <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <AlertCircle size={20} className="shrink-0" />
+              <div>
+                <p className="font-bold">Unable to load your schedule</p>
+                <p className="text-[11px] text-rose-600 dark:text-rose-400 mt-0.5">{error}</p>
+              </div>
+            </div>
+            <Button variant="danger" size="xs" onClick={fetchAgentActivity}>
+              Retry
+            </Button>
+          </div>
+        )}
+
+        {/* HERO BANNER */}
+        <div className="glass-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-cyan-300 border border-blue-200 dark:border-blue-800 text-xs font-bold">
+              <ClipboardList size={13} /> Live Work Pipeline & Activity Feed
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-[#F8FAFC] tracking-tight">
+              📅 Activity & Work Schedule
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-[#CBD5E1] max-w-2xl">
+              Manage property visits, client meetings, document follow-ups, inspections, and due diligence tasks.
+            </p>
           </div>
 
-          {/* Filters & View Switcher */}
-          <div className="flex flex-wrap items-center gap-3 text-xs font-mono">
-            {/* Filter by Task Type */}
-            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] px-3 py-1.5 rounded-xl">
-              <Filter size={14} className="text-purple-500" />
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="bg-transparent text-slate-900 dark:text-slate-100 font-bold focus:outline-none cursor-pointer"
-              >
-                <option value="ALL">All Task Types</option>
-                <option value="Property Visit">Property Visit</option>
-                <option value="Client Meeting">Client Meeting</option>
-                <option value="Document Review">Document Review</option>
-                <option value="Report Submission">Report Submission</option>
-                <option value="Inspection">Inspection</option>
-              </select>
-            </div>
+          <div className="flex items-center gap-3 shrink-0">
+            {/* REQUIRED ADD TASK BUTTON */}
+            <Button
+              onClick={handleOpenCreateTaskModal}
+              variant="primary"
+              size="sm"
+              icon={Plus}
+            >
+              Add Task
+            </Button>
+          </div>
+        </div>
 
-            {/* Filter by Status */}
-            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] px-3 py-1.5 rounded-xl">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="bg-transparent text-slate-900 dark:text-slate-100 font-bold focus:outline-none cursor-pointer"
-              >
-                <option value="ALL">All Statuses</option>
-                <option value="Pending">Pending</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Completed">Completed</option>
-              </select>
+        {/* SUMMARY CARDS */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="white-card rounded-3xl p-5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs">
+            <span className="text-slate-400 uppercase text-[10px] font-bold block">Managed Parcels</span>
+            <div className="flex items-center justify-between mt-2">
+              <strong className="text-2xl font-black text-slate-900 dark:text-white">
+                {loading ? "..." : properties.length}
+              </strong>
+              <div className="p-2.5 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-cyan-400">
+                <Building2 size={18} />
+              </div>
             </div>
+          </div>
 
-            {/* View Mode Switcher: List vs Calendar */}
-            <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-[#0F172A] rounded-xl border border-slate-200 dark:border-[#334155]">
-              <button
-                onClick={() => setViewMode("list")}
-                className={`p-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer ${
-                  viewMode === "list"
-                    ? "bg-white dark:bg-[#1E293B] text-blue-600 dark:text-cyan-400 shadow-xs"
-                    : "text-slate-400"
-                }`}
-                title="List View"
-              >
-                <ListIcon size={15} />
-              </button>
-              <button
-                onClick={() => setViewMode("calendar")}
-                className={`p-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer ${
-                  viewMode === "calendar"
-                    ? "bg-white dark:bg-[#1E293B] text-blue-600 dark:text-cyan-400 shadow-xs"
-                    : "text-slate-400"
-                }`}
-                title="Calendar View"
-              >
-                <CalendarIcon size={15} />
-              </button>
+          <div className="white-card rounded-3xl p-5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs">
+            <span className="text-slate-400 uppercase text-[10px] font-bold block">Scheduled Tasks</span>
+            <div className="flex items-center justify-between mt-2">
+              <strong className="text-2xl font-black text-amber-600 dark:text-amber-400">
+                {loading ? "..." : tasks.length}
+              </strong>
+              <div className="p-2.5 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
+                <Calendar size={18} />
+              </div>
+            </div>
+          </div>
+
+          <div className="white-card rounded-3xl p-5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs">
+            <span className="text-slate-400 uppercase text-[10px] font-bold block">Generated Reports</span>
+            <div className="flex items-center justify-between mt-2">
+              <strong className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                {loading ? "..." : reports.length}
+              </strong>
+              <div className="p-2.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                <FileText size={18} />
+              </div>
+            </div>
+          </div>
+
+          <div className="white-card rounded-3xl p-5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs">
+            <span className="text-slate-400 uppercase text-[10px] font-bold block">Alerts & Notifs</span>
+            <div className="flex items-center justify-between mt-2">
+              <strong className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
+                {loading ? "..." : notifications.length}
+              </strong>
+              <div className="p-2.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
+                <Bell size={18} />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* LIST VIEW vs CALENDAR VIEW */}
-        {filteredTasks.length === 0 ? (
-          <EmptyState title="No tasks found" message="No task matches your search query or filter selection." />
-        ) : viewMode === "list" ? (
-          /* LIST VIEW MODE WITH PRIORITY COLORS & INTERACTIVE CHECKBOXES */
+        {/* SEARCH & FILTERS BAR */}
+        <div className="white-card rounded-3xl p-4 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="relative flex-1">
+            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search tasks, visits, clients, properties..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-xs font-bold text-slate-900 dark:text-slate-100 pl-10 pr-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Filter by Category */}
+            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] px-3 py-1.5 rounded-xl">
+              <Filter size={12} className="text-slate-400" />
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="bg-transparent text-slate-900 dark:text-slate-100 font-bold focus:outline-none cursor-pointer text-xs"
+              >
+                <option value="ALL">All Schedule ({activities.length})</option>
+                <option value="SCHEDULED_TASK">Scheduled Tasks ({tasks.length})</option>
+                <option value="AUDIT_REPORT">Due Diligence Reports ({reports.length})</option>
+                <option value="NOTIFICATION">Notifications & Alerts ({notifications.length})</option>
+                <option value="PROPERTY_ASSET">Managed Properties ({properties.length})</option>
+              </select>
+            </div>
+
+            {/* Sort */}
+            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] px-3 py-1.5 rounded-xl">
+              <Clock size={12} className="text-slate-400" />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="bg-transparent text-slate-900 dark:text-slate-100 font-bold focus:outline-none cursor-pointer text-xs"
+              >
+                <option value="DATE_DESC">Newest First</option>
+                <option value="DATE_ASC">Oldest First</option>
+                <option value="TITLE_ASC">Title (A-Z)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* LOADING SKELETON */}
+        {loading && (
           <div className="space-y-4">
-            {filteredTasks.map((task) => {
-              const priorityStyle = getPriorityStyle(task.priority);
-              const isDone = task.status === "Completed";
+            <Skeleton className="h-24 w-full rounded-3xl" />
+            <Skeleton className="h-24 w-full rounded-3xl" />
+            <Skeleton className="h-24 w-full rounded-3xl" />
+          </div>
+        )}
+
+        {/* EMPTY STATE */}
+        {!loading && !error && activities.length === 0 && (
+          <div className="py-12">
+            <EmptyState
+              title="No Tasks or Activity Yet"
+              message="Schedule your first property visit or due diligence task."
+              actionLabel="Add Task"
+              onAction={handleOpenCreateTaskModal}
+            />
+          </div>
+        )}
+
+        {/* SEARCH EMPTY STATE */}
+        {!loading && !error && activities.length > 0 && sortedActivities.length === 0 && (
+          <div className="py-8">
+            <EmptyState
+              title="No matching activities"
+              message={`No task or event matched "${searchQuery}".`}
+              actionLabel="Clear Filters"
+              onAction={() => {
+                setSearchQuery("");
+                setFilterType("ALL");
+              }}
+            />
+          </div>
+        )}
+
+        {/* ACTIVITY & SCHEDULE TIMELINE FEED */}
+        {!loading && !error && sortedActivities.length > 0 && (
+          <div className="space-y-4">
+            {sortedActivities.map((act) => {
+              const isTask = act.type === "SCHEDULED_TASK";
+              const isReport = act.type === "AUDIT_REPORT";
+              const isNotif = act.type === "NOTIFICATION";
+              const isProp = act.type === "PROPERTY_ASSET";
 
               return (
-                <motion.div
-                  key={task.id}
-                  whileHover={{ y: -2 }}
-                  className={`white-card rounded-3xl p-5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] border-l-4 ${
-                    priorityStyle.border
-                  } shadow-xs hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${
-                    isDone ? "opacity-75 bg-slate-50/50 dark:bg-[#0F172A]/50" : ""
+                <div
+                  key={act.id}
+                  className={`glass-card rounded-3xl p-6 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6 transition-colors ${
+                    isTask
+                      ? act.status === "COMPLETED"
+                        ? "opacity-75 bg-slate-50/50 dark:bg-[#1E293B]/50"
+                        : "border-amber-200 dark:border-amber-800 hover:border-amber-400"
+                      : isNotif && !act.isRead
+                      ? "border-blue-300 dark:border-blue-700 bg-blue-50/20"
+                      : "hover:border-blue-400 dark:hover:border-cyan-500"
                   }`}
                 >
-                  <div className="flex items-start gap-4 min-w-0 flex-1">
-                    {/* Interactive Completion Checkbox */}
-                    <button
-                      onClick={() => handleToggleTaskStatus(task.id)}
-                      className="mt-1 shrink-0 text-blue-600 dark:text-cyan-400 cursor-pointer"
-                      title={isDone ? "Mark as Pending" : "Mark as Completed"}
+                  <div className="flex items-start gap-4 flex-1">
+                    <div
+                      className={`p-3 rounded-2xl shrink-0 ${
+                        isTask
+                          ? act.status === "COMPLETED"
+                            ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400"
+                            : "bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400"
+                          : isReport
+                          ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400"
+                          : isNotif
+                          ? "bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400"
+                          : "bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-cyan-400"
+                      }`}
                     >
-                      {isDone ? <CheckSquare size={20} /> : <Square size={20} className="text-slate-400 hover:text-blue-500" />}
-                    </button>
+                      {isTask ? (
+                        act.status === "COMPLETED" ? <CheckCircle2 size={20} /> : <Calendar size={20} />
+                      ) : isReport ? (
+                        <FileText size={20} />
+                      ) : isNotif ? (
+                        <Bell size={20} />
+                      ) : (
+                        <Building2 size={20} />
+                      )}
+                    </div>
 
-                    <div className="space-y-1.5 min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono font-bold">
-                        <span className="text-purple-600 dark:text-purple-400 flex items-center gap-1">
-                          {renderTaskTypeIcon(task.taskType)} {task.taskType}
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[10px] font-mono font-bold text-blue-600 dark:text-cyan-400">
+                          {act.id}
                         </span>
-                        <span>•</span>
-                        <span className="text-slate-500 dark:text-slate-400">{task.client}</span>
-                        <span>•</span>
-                        <span className="text-slate-400 flex items-center gap-1">
-                          <Clock size={11} /> {task.timeSlot} ({task.dueDate})
+
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-[#0F172A] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-[#334155]">
+                          {act.category.replace(/_/g, " ")}
+                        </span>
+
+                        {isTask && (
+                          <>
+                            <Badge variant={act.priority === "HIGH" ? "danger" : act.priority === "MEDIUM" ? "warning" : "info"}>
+                              {act.priority} PRIORITY
+                            </Badge>
+                            <Badge variant={act.status === "COMPLETED" ? "success" : "warning"}>
+                              {act.status}
+                            </Badge>
+                          </>
+                        )}
+
+                        {isNotif && !act.isRead && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500 text-white">
+                            NEW
+                          </span>
+                        )}
+
+                        <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                          <Clock size={11} />
+                          {act.dueDate ? `${act.dueDate} • ${act.dueTime || "10:00 AM"}` : (
+                            <>
+                              {act.timestamp.toLocaleDateString([], {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric",
+                              })}{" "}
+                              •{" "}
+                              {act.timestamp.toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </>
+                          )}
                         </span>
                       </div>
 
                       <h3
-                        className={`text-sm sm:text-base font-extrabold text-slate-900 dark:text-white leading-tight ${
-                          isDone ? "line-through text-slate-400 dark:text-slate-500" : ""
+                        className={`font-extrabold text-sm ${
+                          isTask && act.status === "COMPLETED"
+                            ? "line-through text-slate-400"
+                            : "text-slate-900 dark:text-white"
                         }`}
                       >
-                        {task.title}
+                        {act.title}
                       </h3>
 
-                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate flex items-center gap-1">
-                        <Building2 size={13} className="text-slate-400 shrink-0" />
-                        <span>{task.property}</span>
+                      <p className="text-xs text-slate-500 max-w-2xl leading-relaxed">
+                        {act.description}
                       </p>
+
+                      <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] text-slate-400 font-bold">
+                        {act.propertyName && (
+                          <span className="flex items-center gap-1">
+                            <Building2 size={11} className="text-blue-500" />
+                            <span>Property: {act.propertyName}</span>
+                          </span>
+                        )}
+                        {act.clientName && (
+                          <span className="flex items-center gap-1">
+                            <User size={11} className="text-indigo-500" />
+                            <span>Client: {act.clientName}</span>
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Priority Pill & Action Buttons */}
-                  <div className="flex items-center gap-3 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-[#334155]">
-                    {/* Priority Badge */}
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold border ${priorityStyle.badge}`}>
-                      {task.priority} PRIORITY
-                    </span>
+                  {/* Action Buttons */}
+                  <div className="flex flex-wrap items-center gap-2 shrink-0 self-end md:self-center">
+                    {/* User Task Actions */}
+                    {isTask && (
+                      <>
+                        <Button
+                          onClick={() => handleToggleTaskStatus(act.rawId)}
+                          variant={act.status === "COMPLETED" ? "outline" : "success"}
+                          size="xs"
+                          icon={CheckSquare}
+                        >
+                          {act.status === "COMPLETED" ? "Reopen" : "Done"}
+                        </Button>
+                        <Button
+                          onClick={() => handleOpenEditTaskModal(act.taskData || act)}
+                          variant="secondary"
+                          size="xs"
+                          icon={Edit2}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          onClick={() => handleDeleteTask(act.rawId)}
+                          variant="danger"
+                          size="xs"
+                          icon={Trash2}
+                        />
+                      </>
+                    )}
 
-                    {/* Status Badge */}
-                    {renderStatusBadge(task.status)}
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => setViewModalTask(task)}
-                        className="p-1.5 rounded-lg bg-slate-100 dark:bg-[#0F172A] hover:bg-slate-200 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
-                        title="View Task Details"
+                    {act.propertyId && (
+                      <Button
+                        onClick={() => navigate(`/property-details?id=${act.propertyId}`)}
+                        variant="outline"
+                        size="xs"
+                        icon={Eye}
                       >
-                        <Eye size={14} />
-                      </button>
+                        Inspect
+                      </Button>
+                    )}
 
-                      <button
-                        onClick={() => handleOpenEditModal(task)}
-                        className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/80 hover:bg-blue-100 text-blue-700 dark:text-cyan-300 transition-colors cursor-pointer"
-                        title="Edit Task"
+                    {isReport && (
+                      <Button
+                        onClick={() => navigate(`/due-diligence-report?id=${act.propertyId || 1}`)}
+                        variant="primary"
+                        size="xs"
+                        icon={ShieldCheck}
                       >
-                        <Edit3 size={14} />
-                      </button>
+                        View Dossier
+                      </Button>
+                    )}
 
-                      <button
-                        onClick={() => handleDeleteTask(task)}
-                        className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/80 hover:bg-rose-600 text-rose-600 dark:text-rose-300 hover:text-white transition-colors cursor-pointer"
-                        title="Delete Task"
+                    {isNotif && !act.isRead && (
+                      <Button
+                        onClick={() => handleMarkAsRead(act.rawId)}
+                        variant="secondary"
+                        size="xs"
+                        icon={CheckCheck}
                       >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
+                        Mark Read
+                      </Button>
+                    )}
                   </div>
-                </motion.div>
+                </div>
               );
             })}
           </div>
-        ) : (
-          /* CALENDAR VIEW MODE WITH HOURLY SCHEDULE TIMELINE */
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Calendar Mini Month Widget (4 Cols) */}
-            <div className="lg:col-span-4 white-card rounded-3xl p-6 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-mono font-bold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                  <CalendarIcon size={14} className="text-blue-500" /> August 2026
-                </h3>
-                <span className="text-[10px] font-mono font-bold text-blue-600 dark:text-cyan-400">
-                  TODAY: AUG 06
-                </span>
-              </div>
-
-              <div className="grid grid-cols-7 gap-1 text-center font-mono text-xs">
-                {["S", "M", "T", "W", "T", "F", "S"].map((d, idx) => (
-                  <span key={idx} className="text-[10px] font-bold text-slate-400 p-1">
-                    {d}
-                  </span>
-                ))}
-
-                {Array.from({ length: 31 }).map((_, i) => {
-                  const day = i + 1;
-                  const isToday = day === 6;
-                  const hasTasks = day === 6 || day === 7 || day === 12 || day === 14;
-
-                  return (
-                    <div
-                      key={day}
-                      className={`p-2 rounded-xl text-xs font-bold transition-colors cursor-pointer flex flex-col items-center justify-center relative ${
-                        isToday
-                          ? "bg-blue-600 text-white shadow-md"
-                          : hasTasks
-                          ? "bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 font-extrabold"
-                          : "hover:bg-slate-100 dark:hover:bg-[#0F172A] text-slate-700 dark:text-slate-300"
-                      }`}
-                    >
-                      <span>{day}</span>
-                      {hasTasks && !isToday && <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-0.5" />}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Daily Hourly Timeline Schedule (8 Cols) */}
-            <div className="lg:col-span-8 white-card rounded-3xl p-6 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-5">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-[#334155]">
-                <h3 className="font-extrabold text-slate-900 dark:text-white text-base flex items-center gap-2">
-                  <Clock size={16} className="text-blue-600 dark:text-cyan-400" /> Today's Time Slot Schedule
-                </h3>
-                <span className="text-xs font-mono text-slate-400 font-bold">
-                  6 Scheduled Operations
-                </span>
-              </div>
-
-              <div className="space-y-4">
-                {filteredTasks.map((task) => {
-                  const priorityStyle = getPriorityStyle(task.priority);
-
-                  return (
-                    <div
-                      key={task.id}
-                      className={`p-4 rounded-2xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] border-l-4 ${
-                        priorityStyle.border
-                      } space-y-2 hover:border-blue-400 transition-colors`}
-                    >
-                      <div className="flex items-center justify-between gap-2 text-xs font-mono">
-                        <span className="font-bold text-blue-600 dark:text-cyan-400 flex items-center gap-1">
-                          <Clock size={12} /> {task.timeSlot} • {task.taskType}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${priorityStyle.badge}`}>
-                            {task.priority}
-                          </span>
-                          {renderStatusBadge(task.status)}
-                        </div>
-                      </div>
-
-                      <h4 className="font-extrabold text-slate-900 dark:text-white text-sm">{task.title}</h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 font-mono">
-                        <Building2 size={12} className="text-purple-500 shrink-0" />
-                        <span className="truncate">{task.property} ({task.client})</span>
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
         )}
 
-        {/* MODAL 1: VIEW TASK DETAILS MODAL */}
+        {/* ADD / EDIT TASK DIALOG MODAL */}
         <AnimatePresence>
-          {viewModalTask && (
+          {taskModalOpen && (
             <>
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setViewModalTask(null)} className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md" />
-              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="fixed inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 z-50 bg-white dark:bg-[#1E293B] rounded-3xl shadow-2xl border border-slate-200 dark:border-[#334155] p-6 sm:p-8 max-w-lg w-full space-y-6">
-                <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-[#334155]">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setTaskModalOpen(false)}
+                className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm"
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1 }}
+                className="fixed inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 z-50 bg-white dark:bg-[#1E293B] rounded-3xl shadow-2xl border border-slate-200 dark:border-[#334155] p-6 max-w-lg w-full space-y-4 max-h-[90vh] overflow-y-auto"
+              >
+                <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-[#334155]">
                   <div>
-                    <span className="text-xs font-mono font-bold text-blue-600 dark:text-cyan-400">{viewModalTask.id} • {viewModalTask.taskType}</span>
-                    <h2 className="text-lg font-extrabold text-slate-900 dark:text-white leading-tight">{viewModalTask.title}</h2>
+                    <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                      <Calendar size={18} className="text-blue-600 dark:text-cyan-400" />
+                      {editingTask ? "Edit Scheduled Task" : "Schedule New Agent Task"}
+                    </h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Add a site inspection, client consultation, or due diligence milestone.
+                    </p>
                   </div>
-                  <button onClick={() => setViewModalTask(null)} className="p-2 text-slate-400 hover:text-white cursor-pointer"><X size={18} /></button>
+                  <button
+                    onClick={() => setTaskModalOpen(false)}
+                    className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                  >
+                    <X size={18} />
+                  </button>
                 </div>
 
-                <div className="space-y-4 text-xs font-mono">
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] space-y-2">
-                    <p className="text-slate-400 uppercase font-bold text-[10px]">Client & Target Property</p>
-                    <p className="text-slate-900 dark:text-white font-extrabold text-sm">{viewModalTask.client}</p>
-                    <p className="text-slate-500 dark:text-slate-400 font-semibold">{viewModalTask.property}</p>
+                <form onSubmit={handleSaveTask} className="space-y-4 font-mono text-xs">
+                  {/* Task Title */}
+                  <div className="space-y-1">
+                    <label className="block text-[10px] uppercase font-bold text-slate-400">
+                      Task Title *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Gachibowli Villa Due Diligence & Site Verification"
+                      value={taskForm.title}
+                      onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
+                      className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-white font-bold"
+                    />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800">
-                    <div>
-                      <span className="text-slate-400 uppercase block text-[10px]">Scheduled Time Slot</span>
-                      <strong className="text-blue-600 dark:text-cyan-400 font-extrabold text-sm block mt-1">{viewModalTask.timeSlot} ({viewModalTask.dueDate})</strong>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 uppercase block text-[10px]">Status Badge</span>
-                      <div className="mt-1">{renderStatusBadge(viewModalTask.status)}</div>
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] space-y-1">
-                    <p className="text-slate-400 uppercase font-bold text-[10px]">Task Notes & Instructions</p>
-                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed font-semibold">{viewModalTask.notes}</p>
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-slate-200 dark:border-[#334155] flex justify-end gap-3">
-                  <Button onClick={() => setViewModalTask(null)} variant="secondary" size="sm">Close</Button>
-                  <Button onClick={() => { handleToggleTaskStatus(viewModalTask.id); setViewModalTask(null); }} variant="primary" size="sm">Toggle Status</Button>
-                </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
-
-        {/* MODAL 2 & 3: CREATE / EDIT TASK MODAL */}
-        <AnimatePresence>
-          {(createModalOpen || editModalTask) && (
-            <>
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { setCreateModalOpen(false); setEditModalTask(null); }} className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md" />
-              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="fixed inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 z-50 bg-white dark:bg-[#1E293B] rounded-3xl shadow-2xl border border-slate-200 dark:border-[#334155] p-6 sm:p-8 max-w-md w-full space-y-6">
-                <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-[#334155]">
-                  <h2 className="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                    <PlusCircle size={20} className="text-blue-500" /> {editModalTask ? "Edit Agent Task" : "Add New Task"}
-                  </h2>
-                  <button onClick={() => { setCreateModalOpen(false); setEditModalTask(null); }} className="p-2 text-slate-400 hover:text-white cursor-pointer"><X size={18} /></button>
-                </div>
-
-                <form onSubmit={editModalTask ? handleSaveEditTask : handleSaveCreateTask} className="space-y-4 text-xs font-mono">
-                  <div>
-                    <label className="block text-slate-400 uppercase font-bold mb-1">Task Title *</label>
-                    <input type="text" value={taskForm.title} onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })} placeholder="E.g. Site Visit & Boundary Audit" required className="w-full p-3 rounded-xl bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-white font-bold" />
-                  </div>
-
+                  {/* Task Type & Priority */}
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-slate-400 uppercase font-bold mb-1">Task Type</label>
-                      <select value={taskForm.taskType} onChange={(e) => setTaskForm({ ...taskForm, taskType: e.target.value })} className="w-full p-3 rounded-xl bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-white font-bold focus:outline-none">
-                        <option value="Property Visit">Property Visit</option>
-                        <option value="Client Meeting">Client Meeting</option>
-                        <option value="Document Review">Document Review</option>
-                        <option value="Report Submission">Report Submission</option>
-                        <option value="Inspection">Inspection</option>
+                    <div className="space-y-1">
+                      <label className="block text-[10px] uppercase font-bold text-slate-400">
+                        Task Type
+                      </label>
+                      <select
+                        value={taskForm.type}
+                        onChange={(e) => setTaskForm({ ...taskForm, type: e.target.value })}
+                        className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-white font-bold"
+                      >
+                        <option value="PROPERTY_VISIT">Property Visit</option>
+                        <option value="CLIENT_MEETING">Client Meeting</option>
+                        <option value="DOCUMENT_FOLLOWUP">Document Follow-up</option>
+                        <option value="DUE_DILIGENCE_REVIEW">Due Diligence Review</option>
+                        <option value="INSPECTION">Site Inspection</option>
                       </select>
                     </div>
 
-                    <div>
-                      <label className="block text-slate-400 uppercase font-bold mb-1">Priority</label>
-                      <select value={taskForm.priority} onChange={(e) => setTaskForm({ ...taskForm, priority: e.target.value })} className="w-full p-3 rounded-xl bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-white font-bold focus:outline-none">
-                        <option value="HIGH">HIGH</option>
-                        <option value="MEDIUM">MEDIUM</option>
-                        <option value="LOW">LOW</option>
+                    <div className="space-y-1">
+                      <label className="block text-[10px] uppercase font-bold text-slate-400">
+                        Priority Level
+                      </label>
+                      <select
+                        value={taskForm.priority}
+                        onChange={(e) => setTaskForm({ ...taskForm, priority: e.target.value })}
+                        className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-white font-bold"
+                      >
+                        <option value="HIGH">High Priority</option>
+                        <option value="MEDIUM">Medium Priority</option>
+                        <option value="LOW">Low Priority</option>
                       </select>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-slate-400 uppercase font-bold mb-1">Status</label>
-                    <select value={taskForm.status} onChange={(e) => setTaskForm({ ...taskForm, status: e.target.value })} className="w-full p-3 rounded-xl bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-white font-bold focus:outline-none">
-                      <option value="Pending">Pending</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Completed">Completed</option>
+                  {/* Property Association from Real Catalog */}
+                  <div className="space-y-1">
+                    <label className="block text-[10px] uppercase font-bold text-slate-400">
+                      Associated Property
+                    </label>
+                    <select
+                      value={taskForm.propertyId}
+                      onChange={(e) => setTaskForm({ ...taskForm, propertyId: e.target.value })}
+                      className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-white font-bold"
+                    >
+                      <option value="">-- No Property Link --</option>
+                      {properties.map((p) => {
+                        const id = p.propertyId || p.id;
+                        return (
+                          <option key={id} value={String(id)}>
+                            {p.propertyName} ({p.propertyCode || `PR-${id}`})
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-slate-400 uppercase font-bold mb-1">Time Slot / Schedule</label>
-                    <input type="text" value={taskForm.timeSlot} onChange={(e) => setTaskForm({ ...taskForm, timeSlot: e.target.value })} placeholder="E.g. 11:30 AM" className="w-full p-3 rounded-xl bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-white font-bold" />
+                  {/* Client / Contact Name */}
+                  <div className="space-y-1">
+                    <label className="block text-[10px] uppercase font-bold text-slate-400">
+                      Client / Stakeholder Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Ramesh Reddy (Prospective Buyer)"
+                      value={taskForm.clientName}
+                      onChange={(e) => setTaskForm({ ...taskForm, clientName: e.target.value })}
+                      className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-white font-bold"
+                    />
                   </div>
 
-                  <div>
-                    <label className="block text-slate-400 uppercase font-bold mb-1">Task Notes</label>
-                    <textarea rows={3} value={taskForm.notes} onChange={(e) => setTaskForm({ ...taskForm, notes: e.target.value })} placeholder="Add audit notes or meeting location..." className="w-full p-3 rounded-xl bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-white font-bold" />
+                  {/* Date & Time */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="block text-[10px] uppercase font-bold text-slate-400">
+                        Schedule Date
+                      </label>
+                      <input
+                        type="date"
+                        value={taskForm.dueDate}
+                        onChange={(e) => setTaskForm({ ...taskForm, dueDate: e.target.value })}
+                        className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-white font-bold"
+                      >
+                      </input>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-[10px] uppercase font-bold text-slate-400">
+                        Schedule Time
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 10:30 AM"
+                        value={taskForm.dueTime}
+                        onChange={(e) => setTaskForm({ ...taskForm, dueTime: e.target.value })}
+                        className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-white font-bold"
+                      />
+                    </div>
                   </div>
 
-                  <div className="pt-4 border-t border-slate-200 dark:border-[#334155] flex justify-end gap-3">
-                    <Button onClick={() => { setCreateModalOpen(false); setEditModalTask(null); }} variant="secondary" size="sm">Cancel</Button>
-                    <Button type="submit" variant="primary" size="sm">{editModalTask ? "Save Task" : "Create Task"}</Button>
+                  {/* Task Status */}
+                  <div className="space-y-1">
+                    <label className="block text-[10px] uppercase font-bold text-slate-400">
+                      Initial Status
+                    </label>
+                    <select
+                      value={taskForm.status}
+                      onChange={(e) => setTaskForm({ ...taskForm, status: e.target.value })}
+                      className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-white font-bold"
+                    >
+                      <option value="PENDING">Pending</option>
+                      <option value="IN_PROGRESS">In Progress</option>
+                      <option value="COMPLETED">Completed</option>
+                    </select>
+                  </div>
+
+                  {/* Notes / Details */}
+                  <div className="space-y-1">
+                    <label className="block text-[10px] uppercase font-bold text-slate-400">
+                      Task Notes & Instructions
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder="e.g. Verify boundary coordinates with sub-registrar survey maps..."
+                      value={taskForm.notes}
+                      onChange={(e) => setTaskForm({ ...taskForm, notes: e.target.value })}
+                      className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-white font-bold"
+                    />
+                  </div>
+
+                  {/* Form Footer Actions */}
+                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-[#334155]">
+                    <Button
+                      type="button"
+                      onClick={() => setTaskModalOpen(false)}
+                      variant="secondary"
+                      size="xs"
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit" variant="primary" size="xs" icon={Plus}>
+                      {editingTask ? "Save Changes" : "Schedule Task"}
+                    </Button>
                   </div>
                 </form>
               </motion.div>

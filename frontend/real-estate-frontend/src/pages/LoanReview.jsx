@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import MainLayout from "../components/layout/MainLayout";
@@ -6,6 +6,7 @@ import Badge from "../components/common/Badge";
 import Button from "../components/common/Button";
 import PropertyContextSwitcher from "../components/common/PropertyContextSwitcher";
 import { getLiveActiveProperty } from "../services/liveStore";
+import { getPropertyDetails } from "../services/propertyService";
 import {
   Landmark,
   User,
@@ -40,10 +41,48 @@ import { showSuccessAlert, showConfirmAlert, showToast } from "../utils/swal";
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80";
 
-// Master Loan Application Dossier Dataset indexed by Property Numeric ID
-const LOAN_REVIEW_DOSSIER_BY_PARCEL = {
-  "1001": {
-    loanId: "LN-HYD-2026-101",
+function LoanReview() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const propertyIdParam = searchParams.get("id") || searchParams.get("propertyId") || localStorage.getItem("active_property_id") || "1";
+  const numericId = propertyIdParam.toString().replace(/\D/g, "") || "1";
+
+  const [property, setProperty] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [loanStatus, setLoanStatus] = useState("Under Review");
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState("Incomplete Collateral Documentation");
+  const [docsModalOpen, setDocsModalOpen] = useState(false);
+  const [requestedDocsList, setRequestedDocsList] = useState(["Latest Certified Audited Balance Sheet", "Environmental Impact Assessment NOC"]);
+  const [previewDoc, setPreviewDoc] = useState(null);
+
+  useEffect(() => {
+    const fetchDossier = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await getPropertyDetails(numericId);
+        setProperty(res);
+      } catch (err) {
+        console.error("Failed to load loan dossier:", err);
+        setError("Unable to load loan dossier. Please verify backend is running on port 8081.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDossier();
+  }, [numericId]);
+
+  const pName = property?.propertyName || property?.title || `Property Parcel PR-${numericId}`;
+  const pCode = property?.propertyCode || `PR-${numericId}`;
+  const mv = Number(property?.marketValue || 450000000);
+  const crVal = mv >= 10000000 ? `₹ ${(mv / 10000000).toFixed(2)} Cr` : `₹ ${(mv / 100000).toFixed(2)} Lakhs`;
+  const sanction = mv * 0.7;
+  const sanctionVal = sanction >= 10000000 ? `₹ ${(sanction / 10000000).toFixed(2)} Cr` : `₹ ${(sanction / 100000).toFixed(2)} Lakhs`;
+
+  const loanData = {
+    loanId: `LN-HYD-2026-${String(numericId).padStart(3, "0")}`,
     applicant: {
       name: "Adani Realty Institutional Fund",
       entityType: "Private Limited Corporation",
@@ -56,19 +95,19 @@ const LOAN_REVIEW_DOSSIER_BY_PARCEL = {
       phone: "+91 98200 11223",
     },
     property: {
-      name: "Gachibowli Tech Park Phase 2",
-      apn: "APN-HYD-500032-1001",
-      address: "Plot 45, Sy. No. 112/A, Financial District, Hyderabad",
-      city: "Hyderabad",
-      propertyType: "Commercial Office (Grade A)",
+      name: pName,
+      apn: `APN-${pCode}`,
+      address: property?.address?.city ? `${property.address.addressLine1 || ""}, ${property.address.city}, ${property.address.state || ""}` : (property?.address || "Financial District, Hyderabad"),
+      city: property?.address?.city || "Hyderabad",
+      propertyType: property?.propertyType || "Commercial Office",
       builtArea: "45,000 sq ft",
-      titleStatus: "Verified Clear Title",
-      imgUrl: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80",
+      titleStatus: property?.status === "VERIFIED" ? "Verified Clear Title" : "Pending Title Verification",
+      imgUrl: property?.imageUrl || FALLBACK_IMAGE,
     },
     requestedAmount: {
-      sanctionAmount: "₹ 25.00 Cr",
-      ltvRatio: "69.2%",
-      ltvPercent: 69.2,
+      sanctionAmount: sanctionVal,
+      ltvRatio: "70.0%",
+      ltvPercent: 70.0,
       interestRate: "9.25% p.a. (Floating)",
       tenor: "15 Years (180 Months)",
       monthlyEmi: "₹ 25.60 Lakhs / month",
@@ -81,22 +120,22 @@ const LOAN_REVIEW_DOSSIER_BY_PARCEL = {
       repaymentHistory: "100% On-Time (Zero Default)",
     },
     riskScore: {
-      scoreNum: 14,
-      scoreText: "14/100 (Low Risk)",
-      level: "Low Risk",
+      scoreNum: property?.status === "VERIFIED" ? 14 : 35,
+      scoreText: property?.status === "VERIFIED" ? "14/100 (Low Risk)" : "35/100 (Moderate Risk)",
+      level: property?.status === "VERIFIED" ? "Low Risk" : "Moderate Risk",
       verdict: "Sanction Highly Recommended",
       badges: ["Low Default Risk", "High Collateral Coverage", "Prime Financial Location"],
     },
     propertyValuation: {
-      marketValue: "₹ 45.00 Cr",
-      govtValue: "₹ 32.50 Cr",
-      ltvBuffer: "30.8% Equity Margin",
+      marketValue: crVal,
+      govtValue: `₹ ${(mv * 0.75 / 10000000).toFixed(2)} Cr`,
+      ltvBuffer: "30.0% Equity Margin",
       appraiser: "Knight Frank Institutional Valuation",
     },
     taxVerification: {
       clearanceStatus: "Zero Dues Verified",
       outstandingDues: "₹ 0.00",
-      ptinNumber: "PTIN-HYD-2026-881",
+      ptinNumber: `PTIN-HYD-2026-${numericId}`,
       lastPaidDate: "15 Mar 2026",
     },
     documents: [
@@ -105,95 +144,7 @@ const LOAN_REVIEW_DOSSIER_BY_PARCEL = {
       { id: "DOC-103", title: "5-Year Municipal Tax Clearance Cert", type: "PDF", size: "1.8 MB", status: "Verified", date: "22 Apr 2026" },
       { id: "DOC-104", title: "Independent Collateral Valuation Dossier", type: "PDF", size: "4.5 MB", status: "Verified", date: "28 Apr 2026" },
     ],
-  },
-
-  "1002": {
-    loanId: "LN-HYD-2026-102",
-    applicant: {
-      name: "DLF Cybercity Developers Ltd",
-      entityType: "Public Limited Corporation",
-      panGstin: "36AAACD5678G2Z1",
-      creditScore: 680,
-      maxCreditScore: 900,
-      creditRatingLabel: "Commercial CIBIL Moderate",
-      netWorth: "₹ 210.00 Cr",
-      email: "finance@dlf.in",
-      phone: "+91 98111 44556",
-    },
-    property: {
-      name: "Jubilee Hills Commercial Plot 36",
-      apn: "APN-HYD-500033-1002",
-      address: "Road No. 36, Jubilee Hills, Hyderabad",
-      city: "Hyderabad",
-      propertyType: "High-Street Retail Land",
-      builtArea: "28,000 sq ft",
-      titleStatus: "Encumbrance Review Pending",
-      imgUrl: "https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&w=800&q=80",
-    },
-    requestedAmount: {
-      sanctionAmount: "₹ 18.50 Cr",
-      ltvRatio: "74.0%",
-      ltvPercent: 74.0,
-      interestRate: "10.50% p.a. (Fixed)",
-      tenor: "12 Years (144 Months)",
-      monthlyEmi: "₹ 21.20 Lakhs / month",
-    },
-    creditSummary: {
-      cibilScore: "680 (Moderate)",
-      dscrRatio: "1.25x Coverage",
-      dscrValue: 1.25,
-      existingDebt: "₹ 28.00 Cr",
-      repaymentHistory: "1 Restructured Loan (2023)",
-    },
-    riskScore: {
-      scoreNum: 68,
-      scoreText: "68/100 (High Risk)",
-      level: "High Risk",
-      verdict: "Requires Enhanced Escrow Reserve",
-      badges: ["Lien Review Needed", "Moderate DSCR", "High Debt Load"],
-    },
-    propertyValuation: {
-      marketValue: "₹ 38.00 Cr",
-      govtValue: "₹ 26.80 Cr",
-      ltvBuffer: "26.0% Equity Margin",
-      appraiser: "JLL Commercial Valuation Audit",
-    },
-    taxVerification: {
-      clearanceStatus: "Audit Flagged (₹ 1.25 L Lien)",
-      outstandingDues: "₹ 1,25,000.00",
-      ptinNumber: "PTIN-HYD-2026-902",
-      lastPaidDate: "10 Oct 2025",
-    },
-    documents: [
-      { id: "DOC-201", title: "Sub-Registrar Title Conveyance Deed", type: "PDF", size: "3.1 MB", status: "Under Review", date: "10 Mar 2026" },
-      { id: "DOC-202", title: "Zoning NOC & Municipal Clearance", type: "PDF", size: "1.9 MB", status: "Verified", date: "15 Mar 2026" },
-      { id: "DOC-203", title: "Municipal Tax Ledger Receipt", type: "PDF", size: "1.2 MB", status: "Flagged", date: "20 Mar 2026" },
-      { id: "DOC-204", title: "Property Valuation Dossier", type: "PDF", size: "3.8 MB", status: "Verified", date: "25 Mar 2026" },
-    ],
-  },
-};
-
-function LoanReview() {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-
-  const propertyIdParam = searchParams.get("id") || searchParams.get("propertyId") || localStorage.getItem("active_property_id") || "1001";
-  const numericId = propertyIdParam.toString().replace(/\D/g, "") || "1001";
-
-  const activeProp = getLiveActiveProperty(numericId);
-  const loanData = LOAN_REVIEW_DOSSIER_BY_PARCEL[numericId] || LOAN_REVIEW_DOSSIER_BY_PARCEL["1001"];
-
-  // Loan Application Approval Status
-  const [loanStatus, setLoanStatus] = useState("Under Review");
-
-  // Modals
-  const [rejectModalOpen, setRejectModalOpen] = useState(false);
-  const [rejectReason, setRejectReason] = useState("Incomplete Collateral Documentation");
-  const [docsModalOpen, setDocsModalOpen] = useState(false);
-  const [requestedDocsList, setRequestedDocsList] = useState(["Latest Certified Audited Balance Sheet", "Environmental Impact Assessment NOC"]);
-
-  // Document Preview Modal
-  const [previewDoc, setPreviewDoc] = useState(null);
+  };
 
   // THE 4 REQUIRED BUTTON HANDLERS
   // 1. Approve Loan

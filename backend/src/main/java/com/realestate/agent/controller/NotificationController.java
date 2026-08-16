@@ -96,6 +96,14 @@ public class NotificationController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/read")
+    @Operation(summary = "Clear all read notifications", description = "Deletes all read notifications of the currently logged-in user.")
+    @ApiResponse(responseCode = "204", description = "All read notifications deleted successfully")
+    public ResponseEntity<Void> clearReadNotifications(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        notificationService.clearReadNotifications(userDetails.getUsername());
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete notification", description = "Deletes a notification by its ID.")
     @ApiResponses(value = {

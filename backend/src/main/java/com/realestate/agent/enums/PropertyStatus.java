@@ -5,5 +5,6 @@ public enum PropertyStatus {
     VERIFIED,
     REJECTED,
     SOLD,
-    AVAILABLE
+    AVAILABLE,
+    PENDING
 }

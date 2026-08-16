@@ -10,6 +10,11 @@ export const getRiskAssessmentsByProperty = async (propertyId) => {
   return apiClient.get(`/api/risk-assessments/property/${propertyId}`);
 };
 
+// Get Risk Assessments Conducted by Authenticated User
+export const getMyAssessments = async () => {
+  return apiClient.get("/api/risk-assessments/my");
+};
+
 // Create Risk Assessment (Only for explicit user-initiated actions)
 export const createRiskAssessment = async (riskData) => {
   return apiClient.post("/api/risk-assessments", riskData);

@@ -1,42 +1,4 @@
 import apiClient from "./apiClient";
-import {
-  INDIAN_PROPERTIES,
-  getMockOwnershipRecords,
-  getMockTaxRecords,
-  getMockPermitRecords,
-  getMockEnvironmentalRecords,
-  getMockFloodZoneRecords,
-  getMockZoningRecords,
-  getMockUtilityRecords,
-  getMockDocuments,
-  getMockPropertyReportHistory,
-  getMockRiskAssessment,
-  getMockComparableProperties,
-  getMockDueDiligenceReports,
-  getMockNotifications,
-  getMockAuditLogs,
-  getMockDashboardStats,
-  getMockUserProfile,
-} from "./mockData";
-
-// Helper: Ensure non-empty response by injecting mock fallback if backend returns empty or fails
-const withFallback = async (apiCall, fallbackData) => {
-  try {
-    const res = await apiCall();
-    if (res && res.data) {
-      const items = res.data.content || res.data;
-      if (Array.isArray(items) && items.length > 0) {
-        return res;
-      }
-      if (typeof items === "object" && items !== null && Object.keys(items).length > 0) {
-        return res;
-      }
-    }
-  } catch (err) {
-    console.warn("Backend API query fallback to realistic Indian dataset:", err?.message || err);
-  }
-  return { data: fallbackData };
-};
 
 // Search Properties by Criteria (city, state, postalCode, propertyType, status, etc.)
 export const searchProperties = async (criteria = {}) => {
@@ -53,73 +15,60 @@ export const searchProperty = async (searchParam) => {
 
 // Get All Properties with Pagination
 export const getAllProperties = async (page = 0, size = 50) => {
-  const start = page * size;
-  const sliced = INDIAN_PROPERTIES.slice(start, start + size);
-  return withFallback(
-    () => apiClient.get("/api/properties", { params: { page, size } }),
-    { content: sliced.length > 0 ? sliced : INDIAN_PROPERTIES, totalElements: INDIAN_PROPERTIES.length }
-  );
+  return apiClient.get("/api/properties", { params: { page, size } });
+};
+
+// Get Properties Created/Managed by Authenticated User
+export const getMyProperties = async (page = 0, size = 50) => {
+  return apiClient.get("/api/properties/my", { params: { page, size } });
 };
 
 // Get Property Details by ID
 export const getPropertyDetails = async (id) => {
-  const numericId = parseInt(id.toString().replace(/\D/g, "") || "1001", 10);
-  const found = INDIAN_PROPERTIES.find((p) => p.numericId === numericId || p.propertyId === numericId) || INDIAN_PROPERTIES[0];
-
-  return withFallback(
-    () => apiClient.get(`/api/properties/${id}`),
-    found
-  );
+  const cleanId = typeof id === "number" ? id : parseInt((id || "1").toString().replace(/\D/g, "") || "1", 10);
+  return apiClient.get(`/api/properties/${cleanId}`);
 };
+
+export const getPropertyById = getPropertyDetails;
 
 // Create New Property
 export const createProperty = async (propertyData) => {
-  try {
-    const res = await apiClient.post("/api/properties", propertyData);
-    return res;
-  } catch (err) {
-    const newProp = {
-      propertyId: 1000 + INDIAN_PROPERTIES.length + 1,
-      id: `PR-${1000 + INDIAN_PROPERTIES.length + 1}`,
-      numericId: 1000 + INDIAN_PROPERTIES.length + 1,
-      propertyName: propertyData.propertyName || "New Property Parcel",
-      title: propertyData.propertyName || "New Property Parcel",
-      ownerName: propertyData.ownerName || "Rajesh Sharma",
-      owner: propertyData.ownerName || "Rajesh Sharma",
-      address: {
-        addressLine1: propertyData.addressLine1 || "Financial District",
-        city: propertyData.city || "Hyderabad",
-        state: propertyData.state || "Telangana",
-        postalCode: "500032",
-        country: "India",
-      },
-      city: propertyData.city || "Hyderabad",
-      state: propertyData.state || "Telangana",
-      landType: propertyData.propertyType || "Commercial",
-      type: propertyData.propertyType || "Commercial",
-      marketValue: propertyData.marketValue || 150000000,
-      status: "Verified Clear Title",
-      riskScore: 18,
-      riskLevel: "Low Risk",
-      description: propertyData.description || "Newly added property parcel.",
-    };
-    INDIAN_PROPERTIES.unshift(newProp);
-    return { data: newProp };
-  }
+  return apiClient.post("/api/properties", propertyData);
 };
 
 // Validate Address
 export const validateAddress = async (addressId) => {
-  return withFallback(
-    () => apiClient.post(`/api/addresses/${addressId}/validate`),
-    { status: "VALIDATED", message: "Municipal address verified with GIS postal map." }
-  );
+  return apiClient.post(`/api/addresses/${addressId}/validate`);
 };
 
 // Get Ownership Records for a Property
 export const getOwnershipRecords = async (propertyId) => {
   const cleanId = typeof propertyId === "number" ? propertyId : parseInt((propertyId || "1").toString().replace(/\D/g, "") || "1", 10);
   return apiClient.get(`/api/ownership-records/property/${cleanId}`);
+};
+
+// Owner / Client Entity Management APIs (PostgreSQL backed)
+export const getAllOwners = async () => {
+  return apiClient.get("/api/owners");
+};
+
+export const getOwnerById = async (id) => {
+  const cleanId = typeof id === "number" ? id : parseInt((id || "1").toString().replace(/\D/g, "") || "1", 10);
+  return apiClient.get(`/api/owners/${cleanId}`);
+};
+
+export const createOwner = async (ownerData) => {
+  return apiClient.post("/api/owners", ownerData);
+};
+
+export const updateOwner = async (id, ownerData) => {
+  const cleanId = typeof id === "number" ? id : parseInt((id || "1").toString().replace(/\D/g, "") || "1", 10);
+  return apiClient.put(`/api/owners/${cleanId}`, ownerData);
+};
+
+export const deleteOwner = async (id) => {
+  const cleanId = typeof id === "number" ? id : parseInt((id || "1").toString().replace(/\D/g, "") || "1", 10);
+  return apiClient.delete(`/api/owners/${cleanId}`);
 };
 
 // Get Property Tax History for a Property
@@ -131,46 +80,31 @@ export const getPropertyTaxHistory = async (propertyId) => {
 // Get Zoning Information for a Property
 export const getZoningInformation = async (propertyId) => {
   const cleanId = typeof propertyId === "number" ? propertyId : parseInt((propertyId || "1").toString().replace(/\D/g, "") || "1", 10);
-  return withFallback(
-    () => apiClient.get(`/api/verification/zoning/property/${cleanId}`),
-    getMockZoningRecords(cleanId)
-  );
+  return apiClient.get(`/api/verification/zoning/property/${cleanId}`);
 };
 
 // Get Flood Zone Information for a Property
 export const getFloodZoneInformation = async (propertyId) => {
   const cleanId = typeof propertyId === "number" ? propertyId : parseInt((propertyId || "1").toString().replace(/\D/g, "") || "1", 10);
-  return withFallback(
-    () => apiClient.get(`/api/verification/flood/property/${cleanId}`),
-    getMockFloodZoneRecords(cleanId)
-  );
+  return apiClient.get(`/api/verification/flood/property/${cleanId}`);
 };
 
 // Get Environmental Records for a Property
 export const getEnvironmentalRecords = async (propertyId) => {
   const cleanId = typeof propertyId === "number" ? propertyId : parseInt((propertyId || "1").toString().replace(/\D/g, "") || "1", 10);
-  return withFallback(
-    () => apiClient.get(`/api/verification/environmental/property/${cleanId}`),
-    getMockEnvironmentalRecords(cleanId)
-  );
+  return apiClient.get(`/api/verification/environmental/property/${cleanId}`);
 };
 
 // Get Building Permit Records for a Property
 export const getPermitRecords = async (propertyId) => {
   const cleanId = typeof propertyId === "number" ? propertyId : parseInt((propertyId || "1").toString().replace(/\D/g, "") || "1", 10);
-  return withFallback(
-    () => apiClient.get(`/api/verification/permits/property/${cleanId}`),
-    getMockPermitRecords(cleanId)
-  );
+  return apiClient.get(`/api/verification/permits/property/${cleanId}`);
 };
 
 // Get Utilities Infrastructure Records for a Property
 export const getUtilitiesInformation = async (propertyId) => {
   const cleanId = typeof propertyId === "number" ? propertyId : parseInt((propertyId || "1").toString().replace(/\D/g, "") || "1", 10);
-  return withFallback(
-    () => apiClient.get(`/api/verification/utilities/property/${cleanId}`),
-    getMockUtilityRecords(cleanId)
-  );
+  return apiClient.get(`/api/verification/utilities/property/${cleanId}`);
 };
 
 // Record New Property Inspection Notification to Local Storage
@@ -212,31 +146,23 @@ export const recordInspectionNotification = (property) => {
 
 // Get User Notifications
 export const getMyNotifications = async () => {
-  const localNotifs = JSON.parse(localStorage.getItem("user_notifications") || "[]");
-  const defaultNotifs = getMockNotifications();
-  const combined = [...localNotifs, ...defaultNotifs];
-
-  return withFallback(
-    () => apiClient.get("/api/notifications"),
-    combined
-  );
+  return apiClient.get("/api/notifications");
 };
 
 // Get User Unread Notifications Count
 export const getUnreadNotificationsCount = async () => {
-  return withFallback(
-    () => apiClient.get("/api/notifications/unread-count"),
-    { count: 2 }
-  );
+  return apiClient.get("/api/notifications/unread-count");
+};
+
+// Get All Documents from Vault
+export const getAllDocuments = async () => {
+  return apiClient.get("/api/documents");
 };
 
 // Get Documents for Property
 export const getPropertyDocuments = async (propertyId) => {
   const cleanId = typeof propertyId === "number" ? propertyId : parseInt((propertyId || "1").toString().replace(/\D/g, "") || "1", 10);
-  return withFallback(
-    () => apiClient.get(`/api/documents/property/${cleanId}`),
-    getMockDocuments(cleanId)
-  );
+  return apiClient.get(`/api/documents/property/${cleanId}`);
 };
 
 // Get Reports for Property
@@ -250,10 +176,20 @@ export const getAllReports = async () => {
   return apiClient.get("/api/reports");
 };
 
+// Get Reports Generated by Authenticated User
+export const getMyReports = async () => {
+  return apiClient.get("/api/reports/my");
+};
+
 // Get Risk Assessments for Property
 export const getRiskAssessmentsByProperty = async (propertyId) => {
   const cleanId = typeof propertyId === "number" ? propertyId : parseInt((propertyId || "1").toString().replace(/\D/g, "") || "1", 10);
   return apiClient.get(`/api/risk-assessments/property/${cleanId}`);
+};
+
+// Get Risk Assessments Conducted by Authenticated User
+export const getMyAssessments = async () => {
+  return apiClient.get("/api/risk-assessments/my");
 };
 
 // Get Comparable Properties for Property
@@ -274,8 +210,41 @@ export const getDashboardStats = async () => {
 
 // Get User Profile
 export const getUserProfile = async () => {
-  return withFallback(
-    () => apiClient.get("/api/user/profile"),
-    getMockUserProfile()
-  );
+  return apiClient.get("/api/user/profile");
+};
+
+// Verification APIs
+export const getPropertyOwnership = async (propertyId) => {
+  const cleanId = typeof propertyId === "number" ? propertyId : parseInt((propertyId || "1").toString().replace(/\D/g, "") || "1", 10);
+  return apiClient.get(`/api/ownership-records/property/${cleanId}`);
+};
+
+export const getPropertyTaxes = async (propertyId) => {
+  const cleanId = typeof propertyId === "number" ? propertyId : parseInt((propertyId || "1").toString().replace(/\D/g, "") || "1", 10);
+  return apiClient.get(`/api/verification/taxes/property/${cleanId}`);
+};
+
+export const getPropertyZoning = async (propertyId) => {
+  const cleanId = typeof propertyId === "number" ? propertyId : parseInt((propertyId || "1").toString().replace(/\D/g, "") || "1", 10);
+  return apiClient.get(`/api/verification/zoning/property/${cleanId}`);
+};
+
+export const getPropertyPermits = async (propertyId) => {
+  const cleanId = typeof propertyId === "number" ? propertyId : parseInt((propertyId || "1").toString().replace(/\D/g, "") || "1", 10);
+  return apiClient.get(`/api/verification/permits/property/${cleanId}`);
+};
+
+export const getPropertyFlood = async (propertyId) => {
+  const cleanId = typeof propertyId === "number" ? propertyId : parseInt((propertyId || "1").toString().replace(/\D/g, "") || "1", 10);
+  return apiClient.get(`/api/verification/flood/property/${cleanId}`);
+};
+
+export const getPropertyEnvironmental = async (propertyId) => {
+  const cleanId = typeof propertyId === "number" ? propertyId : parseInt((propertyId || "1").toString().replace(/\D/g, "") || "1", 10);
+  return apiClient.get(`/api/verification/environmental/property/${cleanId}`);
+};
+
+export const getPropertyUtilities = async (propertyId) => {
+  const cleanId = typeof propertyId === "number" ? propertyId : parseInt((propertyId || "1").toString().replace(/\D/g, "") || "1", 10);
+  return apiClient.get(`/api/verification/utilities/property/${cleanId}`);
 };

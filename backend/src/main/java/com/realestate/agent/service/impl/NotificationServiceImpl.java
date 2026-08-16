@@ -135,4 +135,14 @@ public class NotificationServiceImpl implements NotificationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Notification not found with ID: " + id));
         notificationRepository.delete(notification);
     }
+
+    @Override
+    @Transactional
+    public void clearReadNotifications(String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + userEmail));
+        List<Notification> all = notificationRepository.findByUserUserIdOrderBySentAtDesc(user.getUserId());
+        List<Notification> read = all.stream().filter(n -> Boolean.TRUE.equals(n.getIsRead())).collect(Collectors.toList());
+        notificationRepository.deleteAll(read);
+    }
 }

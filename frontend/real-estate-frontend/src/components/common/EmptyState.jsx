@@ -1,5 +1,5 @@
 import React from "react";
-import { FolderSearch, SearchX, AlertCircle } from "lucide-react";
+import { FolderSearch, RotateCcw } from "lucide-react";
 import Button from "./Button";
 
 function EmptyState({
@@ -8,23 +8,33 @@ function EmptyState({
   icon: CustomIcon,
   actionLabel,
   onAction,
+  onRetry,
+  retryLabel = "Retry Connection",
+  className = "",
 }) {
   const Icon = CustomIcon || FolderSearch;
 
   return (
-    <div className="flex flex-col items-center justify-center text-center py-14 px-6 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 my-4">
-      <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-xs mb-4">
-        <Icon size={32} />
+    <div className={`flex flex-col items-center justify-center text-center py-12 px-6 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 my-4 ${className}`}>
+      <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-cyan-400 border border-blue-100 dark:border-blue-900/50 flex items-center justify-center shadow-xs mb-3.5">
+        <Icon size={26} />
       </div>
 
-      <h3 className="text-lg font-bold text-slate-800">{title}</h3>
-      <p className="text-sm text-slate-500 max-w-md mt-1.5 leading-relaxed">{message}</p>
+      <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">{title}</h3>
+      <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mt-1 leading-relaxed">{message}</p>
 
-      {actionLabel && onAction && (
-        <Button onClick={onAction} variant="outline" size="sm" className="mt-5">
-          {actionLabel}
-        </Button>
-      )}
+      <div className="flex items-center gap-3 mt-4">
+        {onRetry && (
+          <Button onClick={onRetry} variant="secondary" size="sm" icon={RotateCcw}>
+            {retryLabel}
+          </Button>
+        )}
+        {actionLabel && onAction && (
+          <Button onClick={onAction} variant="primary" size="sm">
+            {actionLabel}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

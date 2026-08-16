@@ -30,7 +30,12 @@ export const sendNotification = async (notificationData) => {
   return apiClient.post("/api/notifications", notificationData);
 };
 
-// Delete Notification
+// Delete single notification by ID
 export const deleteNotification = async (id) => {
   return apiClient.delete(`/api/notifications/${id}`);
+};
+
+// Clear all read notifications
+export const clearReadNotifications = async () => {
+  return apiClient.delete("/api/notifications/read");
 };

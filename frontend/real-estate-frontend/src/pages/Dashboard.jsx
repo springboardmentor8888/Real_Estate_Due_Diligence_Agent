@@ -20,8 +20,8 @@ function Dashboard() {
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
   const userName = storedUser.firstName
     ? `${storedUser.firstName} ${storedUser.lastName || ""}`.trim()
-    : storedUser.name || "Rama Charan";
-  const userRole = storedUser.role || "Senior Diligence Architect";
+    : storedUser.name || (storedUser.email ? storedUser.email.split("@")[0] : "User");
+  const userRole = storedUser.role || "Buyer";
 
   return (
     <MainLayout>
@@ -70,7 +70,7 @@ function Dashboard() {
             <SavedPropertiesGrid />
 
             {/* Preserved Quick Actions Section for Complete Backwards Compatibility */}
-            <DashboardQuickActions />
+            <DashboardQuickActions role={userRole} />
           </div>
 
           {/* Right Sidebar Widgets Column (4 Cols) */}

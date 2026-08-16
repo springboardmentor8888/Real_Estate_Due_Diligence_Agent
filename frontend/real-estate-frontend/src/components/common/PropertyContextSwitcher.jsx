@@ -1,24 +1,40 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Building2, MapPin } from "lucide-react";
-import { getLiveProperties, getLiveActiveProperty, setLiveActiveProperty } from "../../services/liveStore";
+import { setLiveActiveProperty } from "../../services/liveStore";
+import { getAllProperties } from "../../services/propertyService";
 import { showToast } from "../../utils/swal";
 
 function PropertyContextSwitcher({ currentPropertyId, onPropertyChange }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const allProperties = getLiveProperties() || [];
   
-  const rawActive = getLiveActiveProperty(currentPropertyId);
-  const activeProperty = rawActive || allProperties[0] || {
-    numericId: 1,
-    propertyId: 1,
-    id: "PROP-HYD-001",
-    propertyName: "Gachibowli Luxury Villa",
-    title: "Gachibowli Luxury Villa",
-    address: "Plot 45, Sy. No. 112/A, Financial District, Hyderabad",
-    city: "Hyderabad",
-  };
+  const [propertiesList, setPropertiesList] = useState([]);
+  const [activeProperty, setActiveProperty] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    getAllProperties()
+      .then((res) => {
+        if (!isMounted) return;
+        if (res && res.data) {
+          const items = res.data.content || (Array.isArray(res.data) ? res.data : []);
+          setPropertiesList(items);
+
+          const rawId = currentPropertyId || (items.length > 0 ? items[0].propertyId : null);
+          const cleanId = typeof rawId === "number" ? rawId : parseInt((rawId || "1").toString().replace(/\D/g, "") || "1", 10);
+          const found = items.find((p) => p.propertyId === cleanId);
+          setActiveProperty(found || items[0] || null);
+        }
+      })
+      .catch((err) => {
+        console.warn("Property context switcher API error:", err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentPropertyId]);
 
   const handleSelectProperty = (e) => {
     const newId = e.target.value;
@@ -28,21 +44,20 @@ function PropertyContextSwitcher({ currentPropertyId, onPropertyChange }) {
       onPropertyChange(newId);
     }
 
-    // Always update URL search param so all pages re-render reactively
     navigate(`${location.pathname}?id=${newId}`, { replace: true });
     showToast(`Switched active parcel to property #${newId}`, "info");
   };
 
-  const activeNumId = (activeProperty.propertyId || activeProperty.numericId || activeProperty.id || "1")
+  const activeNumId = (activeProperty?.propertyId || activeProperty?.numericId || currentPropertyId || "1")
     .toString()
     .replace(/\D/g, "") || "1";
 
-  const propName = activeProperty.propertyName || activeProperty.title || "Commercial Property Parcel";
-  const addressText = typeof activeProperty.address === "string"
+  const propName = activeProperty?.propertyName || activeProperty?.title || `Property Parcel PR-${activeNumId}`;
+  const addressText = typeof activeProperty?.address === "string"
     ? activeProperty.address
-    : typeof activeProperty.address === "object" && activeProperty.address !== null
+    : typeof activeProperty?.address === "object" && activeProperty.address !== null
     ? `${activeProperty.address.addressLine1 || ""}, ${activeProperty.address.city || "Hyderabad"}`
-    : `${propName}, ${activeProperty.city || "Hyderabad"}`;
+    : `${propName}, ${activeProperty?.city || "Hyderabad"}`;
 
   return (
     <div className="glass-card rounded-2xl p-4 border border-slate-200 dark:border-[#334155] shadow-xs">
@@ -69,24 +84,26 @@ function PropertyContextSwitcher({ currentPropertyId, onPropertyChange }) {
         </div>
 
         {/* Property Selector Dropdown */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-mono font-bold text-slate-500 shrink-0">Switch Parcel:</span>
-          <select
-            value={activeNumId}
-            onChange={handleSelectProperty}
-            className="bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-xs font-bold text-slate-900 dark:text-slate-100 px-3 py-2 rounded-xl focus:outline-none cursor-pointer w-full md:w-64 truncate"
-          >
-            {allProperties.map((p, idx) => {
-              const numId = (p.numericId || p.propertyId || p.id || idx + 1001).toString().replace(/\D/g, "") || `${idx + 1001}`;
-              const titleStr = p.propertyName || p.title || `Parcel #${numId}`;
-              return (
-                <option key={numId} value={numId}>
-                  PR-{numId} • {titleStr} ({p.city || "Hyderabad"})
-                </option>
-              );
-            })}
-          </select>
-        </div>
+        {propertiesList.length > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono font-bold text-slate-500 shrink-0">Switch Parcel:</span>
+            <select
+              value={activeNumId}
+              onChange={handleSelectProperty}
+              className="bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-xs font-bold text-slate-900 dark:text-slate-100 px-3 py-2 rounded-xl focus:outline-none cursor-pointer w-full md:w-64 truncate"
+            >
+              {propertiesList.map((p, idx) => {
+                const numId = (p.propertyId || p.numericId || p.id || idx + 1).toString().replace(/\D/g, "") || `${idx + 1}`;
+                const titleStr = p.propertyName || p.title || `Parcel #${numId}`;
+                return (
+                  <option key={numId} value={numId}>
+                    PR-{numId} • {titleStr} ({p.city || "Hyderabad"})
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        )}
       </div>
     </div>
   );

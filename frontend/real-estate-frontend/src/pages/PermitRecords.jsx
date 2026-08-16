@@ -5,6 +5,7 @@ import MainLayout from "../components/layout/MainLayout";
 import Badge from "../components/common/Badge";
 import Button from "../components/common/Button";
 import EmptyState from "../components/common/EmptyState";
+import { Skeleton } from "../components/common/Skeleton";
 import {
   Map,
   FileCheck,
@@ -26,175 +27,160 @@ import {
   AlertTriangle,
   Send,
   User,
+  RefreshCw,
+  AlertCircle,
 } from "lucide-react";
 import { showSuccessAlert, showToast } from "../utils/swal";
 import PropertyContextSwitcher from "../components/common/PropertyContextSwitcher";
-import { getLiveActiveProperty } from "../services/liveStore";
-import { getPermitRecords } from "../services/propertyService";
-
-// Master Initial Permit Records Covering All 4 Categories & 4 Statuses
-const MASTER_PERMIT_RECORDS = [
-  // 1. Building Permit
-  {
-    id: "PRM-101",
-    permitNumber: "GHMC/2023/PERM-8891",
-    permitType: "Building Permit",
-    category: "Building Permit",
-    authority: "GHMC Municipal Building Inspectorate",
-    status: "Verified",
-    issueDate: "15 Jan 2023",
-    expiryDate: "15 Jan 2028",
-    farSanctioned: "3.5 FAR Commercial",
-    engineer: "Er. K. V. Sharma (Structural Lead)",
-    notes: "Municipal building plan sanction approved with 3.5 FAR.",
-  },
-  // 2. Construction Approval
-  {
-    id: "PRM-102",
-    permitNumber: "HMDA/2022/CONST-4401",
-    permitType: "Construction Approval",
-    category: "Construction Approval",
-    authority: "HMDA Master Plan Development Authority",
-    status: "Verified",
-    issueDate: "10 Aug 2022",
-    expiryDate: "10 Aug 2027",
-    farSanctioned: "4.0 FAR High-Rise",
-    engineer: "Chief Town Planner HMDA",
-    notes: "High-rise commercial construction layout approval granted.",
-  },
-  // 3. Occupancy Certificate
-  {
-    id: "PRM-103",
-    permitNumber: "GHMC/2024/OC-9912",
-    permitType: "Occupancy Certificate",
-    category: "Occupancy Certificate",
-    authority: "GHMC Town Planning Department",
-    status: "Pending",
-    issueDate: "01 May 2024",
-    expiryDate: "Permanent Clearance",
-    farSanctioned: "Full Structure Occupancy",
-    engineer: "Municipal Building Inspector",
-    notes: "Occupancy certificate final site inspection in progress.",
-  },
-  // 4. Renovation Permit
-  {
-    id: "PRM-104",
-    permitNumber: "GHMC/2025/REN-1204",
-    permitType: "Renovation Permit",
-    category: "Renovation Permit",
-    authority: "GHMC Urban Renovation Division",
-    status: "Expired",
-    issueDate: "12 Feb 2023",
-    expiryDate: "12 Feb 2025",
-    farSanctioned: "Facade Modification",
-    engineer: "Er. Suresh Rao",
-    notes: "Facade modification permit expired in Feb 2025. Renewal pending.",
-  },
-  // 5. Missing Permit Example
-  {
-    id: "PRM-105",
-    permitNumber: "PCB/2026/EIA-MISSING",
-    permitType: "Environmental PCB NOC",
-    category: "Construction Approval",
-    authority: "State Environment Impact Assessment Authority",
-    status: "Missing",
-    issueDate: "Not Issued",
-    expiryDate: "N/A",
-    farSanctioned: "N/A",
-    engineer: "Pollution Control Board Inspector",
-    notes: "Environmental clearance NOC missing from municipal submission packet.",
-  },
-];
+import { getPropertyDetails, getPermitRecords } from "../services/propertyService";
+import { getCurrentUser } from "../services/authService";
+import { exportToPdf } from "../utils/exportUtils";
 
 function PermitRecords() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const activeProp = getLiveActiveProperty(searchParams.get("propertyId") || searchParams.get("id"));
-  const propertyIdParam = activeProp ? (activeProp.propertyId || activeProp.numericId || "1").toString() : "1";
-  const numericId = propertyIdParam.replace(/\D/g, "") || "1";
+  const rawId = searchParams.get("propertyId") || searchParams.get("id") || "1";
+  const numericId = parseInt(rawId.toString().replace(/\D/g, "") || "1", 10);
 
-  const [permits, setPermits] = useState(MASTER_PERMIT_RECORDS);
+  // Authenticated Legal Reviewer from Session
+  const storedUser = getCurrentUser() || {};
+  const reviewerName = storedUser.firstName
+    ? `${storedUser.firstName} ${storedUser.lastName || ""}`.trim()
+    : storedUser.name || (storedUser.email ? storedUser.email.split("@")[0] : "Legal Reviewer");
+
+  const [property, setProperty] = useState(null);
+  const [permits, setPermits] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
-
-  useEffect(() => {
-    if (!numericId) return;
-    getPermitRecords(numericId)
-      .then((res) => {
-        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-          const mapped = res.data.map((p, idx) => ({
-            id: p.permitId || `PRM-${idx + 101}`,
-            permitNumber: p.permitNumber || `GHMC/2023/PERM-${8890 + idx}`,
-            permitType: p.permitType || p.permitCategory || "Building Permit",
-            category: p.permitCategory || p.permitType || "Building Permit",
-            authority: p.issuingAuthority || "GHMC Municipal Inspectorate",
-            status: p.verificationStatus || p.status || "Verified",
-            issueDate: p.issueDate || "15 Jan 2023",
-            expiryDate: p.expiryDate || "15 Jan 2028",
-            farSanctioned: p.sanctionedFar ? `${p.sanctionedFar} FAR` : "3.5 FAR Commercial",
-            engineer: p.inspectingOfficer || "Er. K. V. Sharma (Structural Lead)",
-            notes: p.remarks || "Municipal building plan sanction approved.",
-          }));
-          setPermits(mapped);
-        }
-      })
-      .catch((err) => console.warn("Permit records backend query error:", err));
-  }, [numericId]);
 
   // Modals state
   const [viewPermitModal, setViewPermitModal] = useState(null);
   const [flagIssueModal, setFlagIssueModal] = useState(null);
   const [flagReason, setFlagReason] = useState("");
 
+  const fetchPermitData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const [propRes, permitRes] = await Promise.allSettled([
+        getPropertyDetails(numericId),
+        getPermitRecords(numericId),
+      ]);
+
+      if (propRes.status === "fulfilled" && propRes.value) {
+        setProperty(propRes.value);
+      } else {
+        setProperty(null);
+      }
+
+      if (permitRes.status === "fulfilled" && permitRes.value) {
+        const payload = permitRes.value?.data || permitRes.value;
+        const list = Array.isArray(payload) ? payload : (payload?.content || []);
+        
+        const mapped = list.map((p, idx) => {
+          const pType = p.permitType || "Building Permit";
+          const authorityDisplay = p.issuingAuthority || (property?.city ? `${property.city} Municipal Corporation` : "Municipal Authority");
+          const issueStr = p.issueDate ? new Date(p.issueDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "Not available in records";
+          const expiryStr = p.expiryDate ? new Date(p.expiryDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "Not available in records";
+
+          return {
+            id: p.permitId ? `PRM-${p.permitId}` : `PRM-${idx + 101}`,
+            permitId: p.permitId,
+            permitNumber: p.permitNumber || "Not available in records",
+            permitType: pType,
+            category: pType,
+            authority: authorityDisplay,
+            status: p.verificationStatus || p.status || "Verified",
+            issueDate: issueStr,
+            expiryDate: expiryStr,
+            documentUrl: p.documentUrl || null,
+            rawRecord: p,
+          };
+        });
+        setPermits(mapped);
+      } else {
+        setPermits([]);
+      }
+    } catch (err) {
+      console.error("Permit records backend query error:", err);
+      setError("Unable to load permit records from PostgreSQL. Please verify backend connection.");
+      setPermits([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPermitData();
+  }, [numericId]);
+
   // Filtered Permits
   const filteredPermits = useMemo(() => {
     return permits.filter((p) => {
-      const matchCategory = categoryFilter === "ALL" || p.category === categoryFilter;
+      let matchCategory = true;
+      if (categoryFilter === "Building Permit") {
+        matchCategory = p.permitType.toLowerCase().includes("building");
+      } else if (categoryFilter === "Construction Approval") {
+        matchCategory = p.permitType.toLowerCase().includes("construction");
+      } else if (categoryFilter === "Occupancy Certificate") {
+        matchCategory = p.permitType.toLowerCase().includes("occupancy");
+      } else if (categoryFilter === "Renovation Permit") {
+        matchCategory = p.permitType.toLowerCase().includes("renovation");
+      }
+
+      const q = searchQuery.toLowerCase().trim();
       const matchSearch =
-        p.permitNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.permitType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.authority.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.status.toLowerCase().includes(searchQuery.toLowerCase());
+        !q ||
+        p.permitNumber.toLowerCase().includes(q) ||
+        p.permitType.toLowerCase().includes(q) ||
+        p.authority.toLowerCase().includes(q) ||
+        p.status.toLowerCase().includes(q) ||
+        p.id.toLowerCase().includes(q);
 
       return matchCategory && matchSearch;
     });
   }, [permits, categoryFilter, searchQuery]);
 
-  // STATUS BADGE RENDERER FOR ALL 4 REQUIRED STATUSES
+  // STATUS BADGE RENDERER FOR LIVE STATUSES
   const renderPermitStatusBadge = (status) => {
-    switch (status) {
-      case "Verified":
-        return <Badge variant="success">Verified</Badge>;
-      case "Pending":
-        return <Badge variant="warning">Pending</Badge>;
-      case "Missing":
-        return <Badge variant="danger">Missing</Badge>;
-      case "Expired":
-        return <Badge variant="purple">Expired</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
+    const s = (status || "").toUpperCase();
+    if (s.includes("VERIF") || s.includes("APPROV") || s === "ACTIVE") {
+      return <Badge variant="success">{status || "Verified"}</Badge>;
     }
+    if (s.includes("PEND")) {
+      return <Badge variant="warning">{status || "Pending"}</Badge>;
+    }
+    if (s.includes("MISS") || s.includes("REJECT") || s.includes("FLAG")) {
+      return <Badge variant="danger">{status || "Missing"}</Badge>;
+    }
+    if (s.includes("EXPIR")) {
+      return <Badge variant="purple">{status || "Expired"}</Badge>;
+    }
+    return <Badge variant="secondary">{status || "Unknown"}</Badge>;
   };
 
-  // HANDLERS FOR THE 4 REQUIRED ACTION BUTTONS
+  // HANDLERS FOR THE ACTION BUTTONS
   const handleVerifyPermit = (p) => {
     setPermits((prev) =>
       prev.map((item) => (item.id === p.id ? { ...item, status: "Verified" } : item))
     );
-    showSuccessAlert("Permit Verified", `Permit ${p.permitNumber} verified with municipal registry.`);
+    showSuccessAlert("Permit Verified", `Permit ${p.permitNumber} verified with ${p.authority} by ${reviewerName}.`);
   };
 
   const handleApprovePermit = (p) => {
     setPermits((prev) =>
-      prev.map((item) => (item.id === p.id ? { ...item, status: "Verified" } : item))
+      prev.map((item) => (item.id === p.id ? { ...item, status: "Approved" } : item))
     );
-    showSuccessAlert("Permit Approved", `Approved legal clearance for ${p.permitType}.`);
+    showSuccessAlert("Permit Approved", `Approved legal compliance for ${p.permitType}.`);
   };
 
   const handleFlagIssueModalOpen = (p) => {
     setFlagIssueModal(p);
-    setFlagReason("FAR height sanction mismatch against master zoning plan.");
+    setFlagReason("Sanctioned setback or FAR discrepancy flagged during legal audit.");
   };
 
   const handleConfirmFlagSubmit = (e) => {
@@ -202,7 +188,7 @@ function PermitRecords() {
     if (!flagIssueModal) return;
 
     setPermits((prev) =>
-      prev.map((item) => (item.id === flagIssueModal.id ? { ...item, status: "Missing" } : item))
+      prev.map((item) => (item.id === flagIssueModal.id ? { ...item, status: "Flagged" } : item))
     );
 
     showSuccessAlert(
@@ -218,7 +204,7 @@ function PermitRecords() {
 
   return (
     <MainLayout>
-      <div className="space-y-8 max-w-7xl mx-auto pb-16">
+      <div className="space-y-8 max-w-7xl mx-auto pb-16 font-mono text-xs">
         {/* Breadcrumb Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-medium text-slate-500 dark:text-[#CBD5E1]">
           <div className="flex items-center gap-2">
@@ -229,9 +215,21 @@ function PermitRecords() {
             </span>
           </div>
 
-          <span className="px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-mono font-bold text-xs border border-emerald-200 dark:border-emerald-800">
-            PR-{numericId} • {permits.length} PERMITS RECORDED
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-mono font-bold text-xs border border-emerald-200 dark:border-emerald-800">
+              PR-{numericId} • {permits.length} PERMITS RECORDED
+            </span>
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={fetchPermitData}
+              disabled={loading}
+              className="flex items-center gap-1"
+            >
+              <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+              Sync
+            </Button>
+          </div>
         </div>
 
         {/* PROPERTY CONTEXT SWITCHER BAR */}
@@ -244,13 +242,26 @@ function PermitRecords() {
               <Building2 size={14} /> Municipal Approvals & Clearances
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-[#F8FAFC] tracking-tight flex items-center gap-2">
-              🚧 Permit Verification Workstation
+              🚧 Permit Verification — {property?.propertyName || `Parcel PR-${numericId}`}
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-[#CBD5E1] mt-1 max-w-2xl">
-              Audit Municipal Building Permits, Construction Approvals, Occupancy Certificates, and Renovation Permits across Verified, Pending, Missing, and Expired statuses.
+              Audit Municipal Building Permits, Construction Approvals, Occupancy Certificates, and Renovation Permits from PostgreSQL database for {property?.city || "Municipal"} jurisdiction.
             </p>
           </div>
         </div>
+
+        {/* ERROR BANNER */}
+        {error && (
+          <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <AlertCircle size={20} className="shrink-0" />
+              <p className="text-xs font-bold">{error}</p>
+            </div>
+            <Button variant="danger" size="xs" onClick={fetchPermitData}>
+              Retry Connection
+            </Button>
+          </div>
+        )}
 
         {/* CONTROLS BAR: SEARCH & PERMIT CATEGORY FILTERS */}
         <div className="white-card rounded-3xl p-5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4 font-mono text-xs">
@@ -266,7 +277,7 @@ function PermitRecords() {
             />
           </div>
 
-          {/* Permit Category Pills (The 4 Required Categories) */}
+          {/* Permit Category Pills */}
           <div className="flex flex-wrap items-center gap-1.5">
             {[
               { id: "ALL", label: "All Permits" },
@@ -294,8 +305,16 @@ function PermitRecords() {
         </div>
 
         {/* PERMIT RECORDS CARDS GRID */}
-        {filteredPermits.length === 0 ? (
-          <EmptyState title="No permit records found" message="No municipal permit matches your search query or selected category filter." />
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Skeleton className="h-64 w-full rounded-3xl" />
+            <Skeleton className="h-64 w-full rounded-3xl" />
+          </div>
+        ) : filteredPermits.length === 0 ? (
+          <EmptyState
+            title={categoryFilter === "ALL" ? "No permit records found for this property" : `No ${categoryFilter} records found for this property`}
+            message={categoryFilter === "ALL" ? "No municipal permits recorded for this property parcel in the PostgreSQL database." : "No permits under this category exist in the database for the active parcel."}
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {filteredPermits.map((p) => (
@@ -333,9 +352,9 @@ function PermitRecords() {
                     </div>
 
                     <div>
-                      <span className="text-slate-400 text-[10px] uppercase font-bold">Sanctioned FAR</span>
-                      <strong className="text-emerald-600 dark:text-emerald-400 font-extrabold text-xs block">
-                        📐 {p.farSanctioned}
+                      <span className="text-slate-400 text-[10px] uppercase font-bold">Property Parcel</span>
+                      <strong className="text-emerald-600 dark:text-emerald-400 font-extrabold text-xs block truncate">
+                        🏢 PR-{numericId} ({property?.propertyName || "Parcel"})
                       </strong>
                     </div>
 
@@ -349,19 +368,15 @@ function PermitRecords() {
                       <strong className="text-slate-900 dark:text-white font-bold block">{p.expiryDate}</strong>
                     </div>
                   </div>
-
-                  <p className="text-slate-500 text-[11px] leading-relaxed">
-                    📝 {p.notes}
-                  </p>
                 </div>
 
-                {/* THE 4 REQUIRED ACTION BUTTONS PER CARD */}
+                {/* THE 4 ACTION BUTTONS PER CARD */}
                 <div className="pt-4 border-t border-slate-100 dark:border-[#334155] grid grid-cols-4 gap-2 text-xs">
                   {/* 1. Verify */}
                   <button
                     onClick={() => handleVerifyPermit(p)}
                     className="px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/80 hover:bg-blue-100 text-blue-700 dark:text-cyan-300 font-bold transition-all flex items-center justify-center gap-1 border border-blue-200 dark:border-blue-800 cursor-pointer"
-                    title="1. Verify Permit with Municipal Registry"
+                    title="Verify Permit with Municipal Registry"
                   >
                     <ShieldCheck size={13} />
                     <span>Verify</span>
@@ -371,7 +386,7 @@ function PermitRecords() {
                   <button
                     onClick={() => handleApprovePermit(p)}
                     className="px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/80 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 font-bold transition-all flex items-center justify-center gap-1 border border-emerald-200 dark:border-emerald-800 cursor-pointer"
-                    title="2. Approve Permit Clearance"
+                    title="Approve Permit Clearance"
                   >
                     <CheckCircle2 size={13} />
                     <span>Approve</span>
@@ -381,7 +396,7 @@ function PermitRecords() {
                   <button
                     onClick={() => handleFlagIssueModalOpen(p)}
                     className="px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/80 hover:bg-rose-100 text-rose-700 dark:text-rose-300 font-bold transition-all flex items-center justify-center gap-1 border border-rose-200 dark:border-rose-800 cursor-pointer"
-                    title="3. Flag Permit Violation / Issue"
+                    title="Flag Permit Violation / Issue"
                   >
                     <Flag size={13} />
                     <span>Flag Issue</span>
@@ -391,7 +406,7 @@ function PermitRecords() {
                   <button
                     onClick={() => handleViewPermitDoc(p)}
                     className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-[#0F172A] hover:bg-slate-200 dark:hover:bg-[#334155] text-slate-800 dark:text-slate-200 font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
-                    title="4. View Permit Document"
+                    title="View Permit Document"
                   >
                     <Eye size={13} />
                     <span>View Doc</span>
@@ -419,14 +434,24 @@ function PermitRecords() {
                 <div className="space-y-4 font-mono text-xs">
                   <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] space-y-2">
                     <p className="text-slate-500">🏛️ Authority: <strong className="text-slate-900 dark:text-white">{viewPermitModal.authority}</strong></p>
-                    <p className="text-slate-500">📐 Sanctioned FAR: <strong className="text-emerald-600 dark:text-emerald-400">{viewPermitModal.farSanctioned}</strong></p>
-                    <p className="text-slate-500">👤 Structural Lead: <strong className="text-slate-900 dark:text-white">{viewPermitModal.engineer}</strong></p>
+                    <p className="text-slate-500">🏢 Property: <strong className="text-slate-900 dark:text-white">PR-{numericId} ({property?.propertyName || "Parcel"})</strong></p>
                     <p className="text-slate-500">📅 Valid Window: <strong className="text-slate-900 dark:text-white">{viewPermitModal.issueDate} to {viewPermitModal.expiryDate}</strong></p>
-                    <p className="text-slate-500">📝 Inspection Notes: <strong className="text-slate-900 dark:text-white">{viewPermitModal.notes}</strong></p>
+                    <p className="text-slate-500">🛡️ Status: <strong className="text-emerald-600 dark:text-emerald-400">{viewPermitModal.status}</strong></p>
                   </div>
 
-                  <div className="pt-4 border-t border-slate-200 dark:border-[#334155] flex justify-end">
+                  <div className="pt-4 border-t border-slate-200 dark:border-[#334155] flex justify-end gap-3">
                     <Button onClick={() => setViewPermitModal(null)} variant="secondary" size="sm">Close Preview</Button>
+                    <Button
+                      onClick={() => {
+                        setViewPermitModal(null);
+                        exportToPdf(`Permit_${viewPermitModal.permitNumber}`, viewPermitModal);
+                      }}
+                      variant="primary"
+                      size="sm"
+                      icon={FileDown}
+                    >
+                      Export PDF
+                    </Button>
                   </div>
                 </div>
               </motion.div>

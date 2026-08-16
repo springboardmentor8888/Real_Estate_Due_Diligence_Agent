@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   ResponsiveContainer,
@@ -9,12 +9,11 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   Tooltip,
   CartesianGrid,
+  Legend,
 } from "recharts";
 import {
   TrendingUp,
@@ -28,229 +27,374 @@ import {
   ArrowUpRight,
   Home,
   Activity,
+  RefreshCw,
+  AlertCircle,
+  FolderOpen,
+  CheckCircle2,
+  AlertTriangle,
+  Scale,
 } from "lucide-react";
 import MainLayout from "../components/layout/MainLayout";
 import Badge from "../components/common/Badge";
 import Button from "../components/common/Button";
+import EmptyState from "../components/common/EmptyState";
+import { Skeleton } from "../components/common/Skeleton";
+import {
+  getMyProperties,
+  getAllProperties,
+  getMyReports,
+  getAllReports,
+  getMyAssessments,
+} from "../services/propertyService";
 
-// MASTER TIME-RANGE DATASETS
+const STATUS_COLORS = {
+  VERIFIED: "#10B981",
+  PENDING: "#F59E0B",
+  IN_REVIEW: "#3B82F6",
+  REJECTED: "#EF4444",
+  ACTIVE: "#6366F1",
+};
 
-const ANALYTICS_BY_RANGE = {
-  "2026_YTD": {
-    kpis: {
-      revenue: "₹ 348.50 Cr",
-      revenueGrowth: "+24.8%",
-      propertiesSold: "149 Parcels",
-      salesGrowth: "+18.2%",
-      reportsGenerated: "317 Reports",
-      reportsBadge: "100% 13-Vector Clear",
-      asp: "₹ 24.50 Cr",
-      aspGrowth: "+12.4%",
-      peakMonth: "Peak: ₹ 54.1 Cr (Jun)",
-    },
-    revenueAndSales: [
-      { month: "Jan", revenue: 28.5, propertiesSold: 12, reports: 24, clients: 45 },
-      { month: "Feb", revenue: 34.2, propertiesSold: 15, reports: 31, clients: 52 },
-      { month: "Mar", revenue: 42.0, propertiesSold: 18, reports: 38, clients: 61 },
-      { month: "Apr", revenue: 38.6, propertiesSold: 16, reports: 35, clients: 68 },
-      { month: "May", revenue: 48.9, propertiesSold: 21, reports: 44, clients: 76 },
-      { month: "Jun", revenue: 54.1, propertiesSold: 24, reports: 50, clients: 84 },
-      { month: "Jul", revenue: 49.3, propertiesSold: 20, reports: 46, clients: 90 },
-      { month: "Aug", revenue: 53.4, propertiesSold: 23, reports: 49, clients: 96 },
-    ],
-    riskDistribution: [
-      { name: "Low Risk (<25)", value: 68, color: "#10B981" },
-      { name: "Moderate Risk (25-50)", value: 22, color: "#F59E0B" },
-      { name: "High Risk (>50)", value: 10, color: "#EF4444" },
-    ],
-    marketTrends: [
-      { month: "Jan", commercial: 100, residential: 100 },
-      { month: "Feb", commercial: 108, residential: 104 },
-      { month: "Mar", commercial: 115, residential: 109 },
-      { month: "Apr", commercial: 124, residential: 114 },
-      { month: "May", commercial: 132, residential: 120 },
-      { month: "Jun", commercial: 145, residential: 127 },
-      { month: "Jul", commercial: 149, residential: 130 },
-      { month: "Aug", commercial: 158, residential: 136 },
-    ],
-    aspByType: [
-      { type: "Commercial Office", asp: 42.5 },
-      { type: "IT Tech Parks", asp: 68.0 },
-      { type: "SEZ Industrial", asp: 34.2 },
-      { type: "Luxury Residential", asp: 18.5 },
-      { type: "Retail Outlets", asp: 28.0 },
-    ],
-    topCities: [
-      { city: "Hyderabad", deals: 48, revenue: 142.5 },
-      { city: "Bengaluru", deals: 36, revenue: 118.0 },
-      { city: "Mumbai", deals: 24, revenue: 185.2 },
-      { city: "NCR (Gurugram)", deals: 20, revenue: 94.6 },
-      { city: "Pune", deals: 14, revenue: 58.0 },
-    ],
-  },
-
-  "6M": {
-    kpis: {
-      revenue: "₹ 286.30 Cr",
-      revenueGrowth: "+19.4%",
-      propertiesSold: "122 Parcels",
-      salesGrowth: "+15.1%",
-      reportsGenerated: "254 Reports",
-      reportsBadge: "99.2% Accuracy",
-      asp: "₹ 25.80 Cr",
-      aspGrowth: "+14.2%",
-      peakMonth: "Peak: ₹ 54.1 Cr (Jun)",
-    },
-    revenueAndSales: [
-      { month: "Mar", revenue: 42.0, propertiesSold: 18, reports: 38, clients: 61 },
-      { month: "Apr", revenue: 38.6, propertiesSold: 16, reports: 35, clients: 68 },
-      { month: "May", revenue: 48.9, propertiesSold: 21, reports: 44, clients: 76 },
-      { month: "Jun", revenue: 54.1, propertiesSold: 24, reports: 50, clients: 84 },
-      { month: "Jul", revenue: 49.3, propertiesSold: 20, reports: 46, clients: 90 },
-      { month: "Aug", revenue: 53.4, propertiesSold: 23, reports: 49, clients: 96 },
-    ],
-    riskDistribution: [
-      { name: "Low Risk (<25)", value: 72, color: "#10B981" },
-      { name: "Moderate Risk (25-50)", value: 20, color: "#F59E0B" },
-      { name: "High Risk (>50)", value: 8, color: "#EF4444" },
-    ],
-    marketTrends: [
-      { month: "Mar", commercial: 115, residential: 109 },
-      { month: "Apr", commercial: 124, residential: 114 },
-      { month: "May", commercial: 132, residential: 120 },
-      { month: "Jun", commercial: 145, residential: 127 },
-      { month: "Jul", commercial: 149, residential: 130 },
-      { month: "Aug", commercial: 158, residential: 136 },
-    ],
-    aspByType: [
-      { type: "Commercial Office", asp: 44.0 },
-      { type: "IT Tech Parks", asp: 71.5 },
-      { type: "SEZ Industrial", asp: 36.0 },
-      { type: "Luxury Residential", asp: 19.8 },
-      { type: "Retail Outlets", asp: 29.5 },
-    ],
-    topCities: [
-      { city: "Hyderabad", deals: 40, revenue: 118.0 },
-      { city: "Bengaluru", deals: 30, revenue: 98.0 },
-      { city: "Mumbai", deals: 20, revenue: 154.0 },
-      { city: "NCR (Gurugram)", deals: 18, revenue: 82.5 },
-      { city: "Pune", deals: 12, revenue: 48.0 },
-    ],
-  },
-
-  "1Y": {
-    kpis: {
-      revenue: "₹ 512.80 Cr",
-      revenueGrowth: "+31.2%",
-      propertiesSold: "215 Parcels",
-      salesGrowth: "+22.6%",
-      reportsGenerated: "468 Reports",
-      reportsBadge: "100% Legal Clearance",
-      asp: "₹ 23.90 Cr",
-      aspGrowth: "+16.8%",
-      peakMonth: "Peak: ₹ 54.1 Cr (Jun 2026)",
-    },
-    revenueAndSales: [
-      { month: "Sep 25", revenue: 22.0, propertiesSold: 9, reports: 18, clients: 28 },
-      { month: "Oct 25", revenue: 24.5, propertiesSold: 11, reports: 20, clients: 32 },
-      { month: "Nov 25", revenue: 26.0, propertiesSold: 10, reports: 22, clients: 36 },
-      { month: "Dec 25", revenue: 31.2, propertiesSold: 13, reports: 26, clients: 40 },
-      { month: "Jan 26", revenue: 28.5, propertiesSold: 12, reports: 24, clients: 45 },
-      { month: "Feb 26", revenue: 34.2, propertiesSold: 15, reports: 31, clients: 52 },
-      { month: "Mar 26", revenue: 42.0, propertiesSold: 18, reports: 38, clients: 61 },
-      { month: "Apr 26", revenue: 38.6, propertiesSold: 16, reports: 35, clients: 68 },
-      { month: "May 26", revenue: 48.9, propertiesSold: 21, reports: 44, clients: 76 },
-      { month: "Jun 26", revenue: 54.1, propertiesSold: 24, reports: 50, clients: 84 },
-      { month: "Jul 26", revenue: 49.3, propertiesSold: 20, reports: 46, clients: 90 },
-      { month: "Aug 26", revenue: 53.4, propertiesSold: 23, reports: 49, clients: 96 },
-    ],
-    riskDistribution: [
-      { name: "Low Risk (<25)", value: 64, color: "#10B981" },
-      { name: "Moderate Risk (25-50)", value: 24, color: "#F59E0B" },
-      { name: "High Risk (>50)", value: 12, color: "#EF4444" },
-    ],
-    marketTrends: [
-      { month: "Sep 25", commercial: 92, residential: 94 },
-      { month: "Nov 25", commercial: 98, residential: 98 },
-      { month: "Jan 26", commercial: 108, residential: 104 },
-      { month: "Mar 26", commercial: 115, residential: 109 },
-      { month: "May 26", commercial: 132, residential: 120 },
-      { month: "Jul 26", commercial: 149, residential: 130 },
-      { month: "Aug 26", commercial: 158, residential: 136 },
-    ],
-    aspByType: [
-      { type: "Commercial Office", asp: 41.2 },
-      { type: "IT Tech Parks", asp: 65.0 },
-      { type: "SEZ Industrial", asp: 32.5 },
-      { type: "Luxury Residential", asp: 17.8 },
-      { type: "Retail Outlets", asp: 26.4 },
-    ],
-    topCities: [
-      { city: "Hyderabad", deals: 72, revenue: 210.5 },
-      { city: "Bengaluru", deals: 54, revenue: 176.0 },
-      { city: "Mumbai", deals: 38, revenue: 292.0 },
-      { city: "NCR (Gurugram)", deals: 28, revenue: 132.0 },
-      { city: "Pune", deals: 22, revenue: 88.0 },
-    ],
-  },
+const RISK_COLORS = {
+  LOW: "#10B981",
+  MEDIUM: "#F59E0B",
+  HIGH: "#EF4444",
 };
 
 function AgentAnalytics() {
-  const [timeRange, setTimeRange] = useState("2026_YTD");
+  const [timeRange, setTimeRange] = useState("ALL");
+  const [properties, setProperties] = useState([]);
+  const [reports, setReports] = useState([]);
+  const [assessments, setAssessments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [lastSyncTime, setLastSyncTime] = useState(null);
 
-  // Dynamic Dataset for active time range
-  const currentData = useMemo(() => {
-    return ANALYTICS_BY_RANGE[timeRange] || ANALYTICS_BY_RANGE["2026_YTD"];
-  }, [timeRange]);
+  // Fetch real database records from backend APIs
+  const fetchAnalyticsData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-  const { kpis, revenueAndSales, riskDistribution, marketTrends, aspByType, topCities } = currentData;
+      const [propsRes, repsRes, riskRes] = await Promise.allSettled([
+        getMyProperties(0, 100),
+        getMyReports(),
+        getMyAssessments(),
+      ]);
+
+      let propsList =
+        propsRes.status === "fulfilled"
+          ? propsRes.value?.data?.content ||
+            (Array.isArray(propsRes.value?.data) ? propsRes.value.data : [])
+          : [];
+
+      // Fallback to all properties if agent has 0 custom created properties
+      if (propsList.length === 0) {
+        try {
+          const allRes = await getAllProperties(0, 100);
+          propsList =
+            allRes?.content || (Array.isArray(allRes) ? allRes : allRes?.data?.content || []);
+        } catch (e) {
+          console.warn("Could not fetch global catalog fallback:", e);
+        }
+      }
+
+      let reportsList =
+        repsRes.status === "fulfilled"
+          ? Array.isArray(repsRes.value?.data)
+            ? repsRes.value.data
+            : Array.isArray(repsRes.value)
+            ? repsRes.value
+            : []
+          : [];
+
+      if (reportsList.length === 0) {
+        try {
+          const allReps = await getAllReports();
+          reportsList = Array.isArray(allReps?.data)
+            ? allReps.data
+            : Array.isArray(allReps)
+            ? allReps
+            : [];
+        } catch (e) {
+          console.warn("Could not fetch global reports fallback:", e);
+        }
+      }
+
+      const riskList =
+        riskRes.status === "fulfilled"
+          ? Array.isArray(riskRes.value?.data)
+            ? riskRes.value.data
+            : Array.isArray(riskRes.value)
+            ? riskRes.value
+            : []
+          : [];
+
+      setProperties(propsList);
+      setReports(reportsList);
+      setAssessments(riskList);
+      setLastSyncTime(new Date());
+    } catch (err) {
+      console.error("Failed to load analytics datasets:", err);
+      setError("Unable to load real analytics data. Please verify the Spring Boot backend is running.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAnalyticsData();
+  }, []);
+
+  // Filter properties & reports by active Time Range
+  const filteredData = useMemo(() => {
+    const now = new Date();
+    const isWithinRange = (dateStr) => {
+      if (!dateStr || timeRange === "ALL") return true;
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return true;
+
+      if (timeRange === "2026_YTD") {
+        return d.getFullYear() === 2026;
+      }
+      if (timeRange === "6M") {
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(now.getMonth() - 6);
+        return d >= sixMonthsAgo;
+      }
+      return true;
+    };
+
+    const rangedProps = properties.filter((p) => isWithinRange(p.createdAt));
+    const rangedReps = reports.filter((r) => isWithinRange(r.createdAt));
+    const rangedRisk = assessments.filter((a) => isWithinRange(a.createdAt || a.assessmentDate));
+
+    return {
+      properties: rangedProps,
+      reports: rangedReps,
+      assessments: rangedRisk,
+    };
+  }, [properties, reports, assessments, timeRange]);
+
+  // Derived Real KPIs
+  const kpis = useMemo(() => {
+    const totalProps = filteredData.properties.length;
+    const totalReps = filteredData.reports.length;
+    const verifiedProps = filteredData.properties.filter((p) => p.status === "VERIFIED").length;
+    const pendingProps = filteredData.properties.filter(
+      (p) => p.status === "PENDING" || p.status === "IN_REVIEW"
+    ).length;
+
+    const totalValuationNum = filteredData.properties.reduce(
+      (acc, p) => acc + (Number(p.marketValue) || 0),
+      0
+    );
+
+    const totalValuationCr = (totalValuationNum / 10000000).toFixed(2);
+    const avgValuationCr =
+      totalProps > 0 ? (totalValuationNum / totalProps / 10000000).toFixed(2) : "0.00";
+
+    const verifiedPercentage = totalProps > 0 ? ((verifiedProps / totalProps) * 100).toFixed(1) : "0.0";
+
+    return {
+      totalProps,
+      totalReps,
+      verifiedProps,
+      pendingProps,
+      totalValuationCr,
+      avgValuationCr,
+      verifiedPercentage,
+    };
+  }, [filteredData]);
+
+  // Chart 1: Properties by Verification Status
+  const statusChartData = useMemo(() => {
+    const counts = {};
+    filteredData.properties.forEach((p) => {
+      const s = p.status || "PENDING";
+      counts[s] = (counts[s] || 0) + 1;
+    });
+
+    return Object.keys(counts).map((key) => ({
+      name: key.replace(/_/g, " "),
+      value: counts[key],
+      color: STATUS_COLORS[key] || "#64748B",
+    }));
+  }, [filteredData.properties]);
+
+  // Chart 2: Properties by Property Type
+  const typeChartData = useMemo(() => {
+    const counts = {};
+    filteredData.properties.forEach((p) => {
+      const t = p.propertyType || "Residential";
+      counts[t] = (counts[t] || 0) + 1;
+    });
+
+    return Object.keys(counts).map((key) => ({
+      type: key,
+      count: counts[key],
+    }));
+  }, [filteredData.properties]);
+
+  // Chart 3: Properties by State / Location
+  const locationChartData = useMemo(() => {
+    const counts = {};
+    filteredData.properties.forEach((p) => {
+      const loc = p.state || p.city || "Urban Region";
+      counts[loc] = (counts[loc] || 0) + 1;
+    });
+
+    return Object.keys(counts).map((key) => ({
+      location: key,
+      count: counts[key],
+    }));
+  }, [filteredData.properties]);
+
+  // Chart 4: Reports by Status
+  const reportStatusData = useMemo(() => {
+    const counts = {};
+    filteredData.reports.forEach((r) => {
+      const s = r.reportStatus || "GENERATED";
+      counts[s] = (counts[s] || 0) + 1;
+    });
+
+    return Object.keys(counts).map((key) => ({
+      name: key.replace(/_/g, " "),
+      value: counts[key],
+      color: key === "GENERATED" || key === "COMPLETED" ? "#10B981" : "#F59E0B",
+    }));
+  }, [filteredData.reports]);
+
+  // Chart 5: Risk Distribution (Low / Medium / High)
+  const riskDistributionData = useMemo(() => {
+    const counts = { LOW: 0, MEDIUM: 0, HIGH: 0 };
+
+    if (filteredData.assessments.length > 0) {
+      filteredData.assessments.forEach((a) => {
+        const lvl = (a.riskLevel || "LOW").toUpperCase();
+        if (counts[lvl] !== undefined) {
+          counts[lvl] += 1;
+        } else {
+          counts.LOW += 1;
+        }
+      });
+    } else {
+      // Aggregate from properties status
+      filteredData.properties.forEach((p) => {
+        if (p.status === "VERIFIED") counts.LOW += 1;
+        else if (p.status === "PENDING" || p.status === "IN_REVIEW") counts.MEDIUM += 1;
+        else counts.HIGH += 1;
+      });
+    }
+
+    return [
+      { name: "Low Risk", value: counts.LOW, color: RISK_COLORS.LOW },
+      { name: "Medium Risk", value: counts.MEDIUM, color: RISK_COLORS.MEDIUM },
+      { name: "High Risk", value: counts.HIGH, color: RISK_COLORS.HIGH },
+    ].filter((item) => item.value > 0);
+  }, [filteredData.assessments, filteredData.properties]);
+
+  // Regional City & State Table Aggregation
+  const citySummary = useMemo(() => {
+    const map = {};
+    filteredData.properties.forEach((p) => {
+      const city = p.city || "Urban Region";
+      const state = p.state || "India";
+      const key = `${city}, ${state}`;
+
+      if (!map[key]) {
+        map[key] = {
+          city,
+          state,
+          count: 0,
+          verified: 0,
+          valuation: 0,
+        };
+      }
+
+      map[key].count += 1;
+      if (p.status === "VERIFIED") map[key].verified += 1;
+      map[key].valuation += Number(p.marketValue) || 0;
+    });
+
+    return Object.values(map).sort((a, b) => b.count - a.count);
+  }, [filteredData.properties]);
 
   return (
     <MainLayout>
-      <div className="space-y-8 pb-16 max-w-7xl mx-auto">
-        {/* Breadcrumb Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-medium text-slate-500 dark:text-[#CBD5E1]">
+      <div className="space-y-8 pb-16 max-w-7xl mx-auto font-mono text-xs">
+        {/* BREADCRUMB HEADER */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-slate-500 dark:text-[#CBD5E1]">
           <div className="flex items-center gap-2">
-            <Home size={14} className="text-cyan-500 dark:text-cyan-400" />
+            <Home size={14} className="text-blue-600 dark:text-cyan-400" />
             <span>/</span>
             <span className="text-slate-900 dark:text-[#F8FAFC] font-extrabold">
-              Executive Analytics & Performance Intelligence
+              Due Diligence Analytics & Intelligence
             </span>
           </div>
 
-          <span className="px-3 py-1 rounded-full bg-cyan-50 dark:bg-cyan-950/60 text-cyan-700 dark:text-cyan-300 font-mono font-bold text-xs border border-cyan-200 dark:border-cyan-800">
-            METRICS UPDATED DYNAMICALLY
-          </span>
+          <div className="flex items-center gap-3">
+            {lastSyncTime && (
+              <span className="text-[11px] text-slate-400">
+                Synced {lastSyncTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            )}
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={fetchAnalyticsData}
+              loading={loading}
+              icon={RefreshCw}
+            >
+              Sync
+            </Button>
+          </div>
         </div>
+
+        {/* ERROR STATE BANNER */}
+        {error && (
+          <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <AlertCircle size={20} className="shrink-0" />
+              <div>
+                <p className="font-bold">Unable to load analytics</p>
+                <p className="text-[11px] text-rose-600 dark:text-rose-400 mt-0.5">{error}</p>
+              </div>
+            </div>
+            <Button variant="danger" size="xs" onClick={fetchAnalyticsData}>
+              Retry
+            </Button>
+          </div>
+        )}
 
         {/* HERO BANNER */}
         <div className="glass-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-50 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 text-xs font-mono font-bold mb-2">
-              <Activity size={14} /> Performance Dashboard
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-cyan-300 border border-blue-200 dark:border-blue-800 text-xs font-bold">
+              <Activity size={13} /> PostgreSQL Due Diligence Intelligence
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-[#F8FAFC] tracking-tight flex items-center gap-2">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-[#F8FAFC] tracking-tight">
               📊 Analytics & Market Intelligence
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-[#CBD5E1] mt-1 max-w-2xl">
-              Track revenue velocity, property sales volume, client growth curves, risk distribution, market trends, and top city performance.
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-[#CBD5E1] max-w-2xl">
+              Real-time audit metrics on managed properties, title verifications, risk distributions, and regional portfolio valuations.
             </p>
           </div>
 
-          {/* DYNAMIC TIME RANGE SWITCHER (2026 YTD, Last 6 Months, Full Year) */}
-          <div className="flex items-center gap-2 bg-slate-100 dark:bg-[#0F172A] p-1.5 rounded-2xl border border-slate-200 dark:border-[#334155] text-xs font-mono font-bold shrink-0">
+          {/* DYNAMIC TIME RANGE SWITCHER */}
+          <div className="flex items-center gap-2 bg-slate-100 dark:bg-[#0F172A] p-1.5 rounded-2xl border border-slate-200 dark:border-[#334155] text-xs font-bold shrink-0">
             {[
+              { id: "ALL", label: "All Time" },
               { id: "2026_YTD", label: "2026 YTD" },
               { id: "6M", label: "Last 6 Months" },
-              { id: "1Y", label: "Full Year" },
             ].map((t) => (
               <button
                 key={t.id}
                 onClick={() => setTimeRange(t.id)}
                 className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
                   timeRange === t.id
-                    ? "bg-white dark:bg-[#1E293B] text-cyan-600 dark:text-cyan-400 shadow-xs border border-slate-200 dark:border-[#334155]"
-                    : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                    ? "bg-blue-600 text-white shadow-xs"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                 }`}
               >
                 {t.label}
@@ -259,277 +403,322 @@ function AgentAnalytics() {
           </div>
         </div>
 
-        {/* 1. TOP-LEVEL DYNAMIC REUSABLE KPI METRIC CARDS */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {/* KPI 1: Monthly Revenue */}
-          <motion.div key={`kpi-1-${timeRange}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="white-card rounded-3xl p-5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-mono font-bold text-slate-400 uppercase">Gross Revenue</span>
-              <span className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400"><DollarSign size={16} /></span>
-            </div>
-            <div>
-              <h3 className="text-2xl font-black text-slate-900 dark:text-white font-mono">{kpis.revenue}</h3>
-              <p className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 mt-1">
-                <ArrowUpRight size={14} /> {kpis.revenueGrowth} vs prior period
-              </p>
-            </div>
-          </motion.div>
+        {/* LOADING SKELETON */}
+        {loading && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <Skeleton className="h-28 w-full rounded-3xl" />
+            <Skeleton className="h-28 w-full rounded-3xl" />
+            <Skeleton className="h-28 w-full rounded-3xl" />
+            <Skeleton className="h-28 w-full rounded-3xl" />
+          </div>
+        )}
 
-          {/* KPI 2: Properties Sold */}
-          <motion.div key={`kpi-2-${timeRange}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="white-card rounded-3xl p-5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-mono font-bold text-slate-400 uppercase">Properties Sold</span>
-              <span className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-cyan-400"><Building2 size={16} /></span>
-            </div>
-            <div>
-              <h3 className="text-2xl font-black text-slate-900 dark:text-white font-mono">{kpis.propertiesSold}</h3>
-              <p className="text-xs font-mono text-blue-600 dark:text-cyan-400 font-bold flex items-center gap-1 mt-1">
-                <ArrowUpRight size={14} /> {kpis.salesGrowth} deal closure rate
-              </p>
-            </div>
-          </motion.div>
+        {/* EMPTY STATE */}
+        {!loading && !error && filteredData.properties.length === 0 && (
+          <div className="py-12">
+            <EmptyState
+              title="No Analytics Available Yet"
+              message="Analytics will dynamically populate when properties and due diligence reports are recorded in your workspace."
+              actionLabel="Explore Property Catalog"
+              onAction={() => fetchAnalyticsData()}
+            />
+          </div>
+        )}
 
-          {/* KPI 3: Reports Generated */}
-          <motion.div key={`kpi-3-${timeRange}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="white-card rounded-3xl p-5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-mono font-bold text-slate-400 uppercase">Reports Generated</span>
-              <span className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/80 text-purple-600 dark:text-purple-300"><FileText size={16} /></span>
-            </div>
-            <div>
-              <h3 className="text-2xl font-black text-slate-900 dark:text-white font-mono">{kpis.reportsGenerated}</h3>
-              <p className="text-xs font-mono text-purple-600 dark:text-purple-400 font-bold flex items-center gap-1 mt-1">
-                <ArrowUpRight size={14} /> {kpis.reportsBadge}
-              </p>
-            </div>
-          </motion.div>
-
-          {/* KPI 4: Average Selling Price */}
-          <motion.div key={`kpi-4-${timeRange}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="white-card rounded-3xl p-5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-mono font-bold text-slate-400 uppercase">Avg Selling Price</span>
-              <span className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/80 text-amber-600 dark:text-amber-300"><Award size={16} /></span>
-            </div>
-            <div>
-              <h3 className="text-2xl font-black text-slate-900 dark:text-white font-mono">{kpis.asp}</h3>
-              <p className="text-xs font-mono text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1 mt-1">
-                <ArrowUpRight size={14} /> {kpis.aspGrowth} land appreciation
-              </p>
-            </div>
-          </motion.div>
-        </div>
-
-        {/* 2. CHARTS SECTION - ROW 1: Monthly Revenue & Properties Sold */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Chart 1: Monthly Revenue Velocity (Area Chart) */}
-          <motion.div key={`chart-rev-${timeRange}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="lg:col-span-7 white-card rounded-3xl p-6 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-mono uppercase font-bold text-cyan-600 dark:text-cyan-400">FINANCIAL VELOCITY</span>
-                <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                  💰 Monthly Revenue (₹ Cr)
-                </h3>
+        {/* REAL KPIS SECTION */}
+        {!loading && !error && filteredData.properties.length > 0 && (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="white-card rounded-3xl p-5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs">
+                <span className="text-slate-400 uppercase text-[10px] font-bold block">
+                  Total Properties Analyzed
+                </span>
+                <div className="flex items-center justify-between mt-2">
+                  <strong className="text-2xl font-black text-slate-900 dark:text-white">
+                    {kpis.totalProps} Parcels
+                  </strong>
+                  <div className="p-2.5 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-cyan-400">
+                    <Building2 size={18} />
+                  </div>
+                </div>
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-1 block">
+                  {kpis.verifiedPercentage}% Clear Title Rate
+                </span>
               </div>
-              <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
-                {kpis.peakMonth}
-              </span>
-            </div>
 
-            <div className="h-72 w-full font-mono text-xs">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={revenueAndSales} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10B981" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                  <XAxis dataKey="month" stroke="#94A3B8" />
-                  <YAxis stroke="#94A3B8" />
-                  <Tooltip contentStyle={{ backgroundColor: "#0F172A", border: "1px solid #334155", borderRadius: "12px", color: "#F8FAFC" }} />
-                  <Area type="monotone" dataKey="revenue" name="Revenue (₹ Cr)" stroke="#10B981" strokeWidth={3} fillOpacity={1} fill="url(#revenueGrad)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </motion.div>
-
-          {/* Chart 2: Properties Sold (Bar Chart) */}
-          <motion.div key={`chart-sales-${timeRange}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="lg:col-span-5 white-card rounded-3xl p-6 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-mono uppercase font-bold text-blue-600 dark:text-cyan-400">DEAL CLOSURE VOLUME</span>
-                <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                  📈 Properties Sold per Month
-                </h3>
+              <div className="white-card rounded-3xl p-5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs">
+                <span className="text-slate-400 uppercase text-[10px] font-bold block">
+                  Due Diligence Dossiers
+                </span>
+                <div className="flex items-center justify-between mt-2">
+                  <strong className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                    {kpis.totalReps} Reports
+                  </strong>
+                  <div className="p-2.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                    <FileText size={18} />
+                  </div>
+                </div>
+                <span className="text-[10px] text-slate-400 font-bold mt-1 block">
+                  13-Vector Audit Verified
+                </span>
               </div>
-              <span className="text-xs font-mono font-bold text-blue-600 dark:text-cyan-400 bg-blue-50 dark:bg-blue-950/60 px-3 py-1 rounded-full border border-blue-200 dark:border-blue-800">
-                {kpis.propertiesSold} Total
-              </span>
+
+              <div className="white-card rounded-3xl p-5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs">
+                <span className="text-slate-400 uppercase text-[10px] font-bold block">
+                  Total Portfolio Valuation
+                </span>
+                <div className="flex items-center justify-between mt-2">
+                  <strong className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
+                    ₹ {kpis.totalValuationCr} Cr
+                  </strong>
+                  <div className="p-2.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
+                    <DollarSign size={18} />
+                  </div>
+                </div>
+                <span className="text-[10px] text-slate-400 font-bold mt-1 block">
+                  Avg ₹ {kpis.avgValuationCr} Cr / Parcel
+                </span>
+              </div>
+
+              <div className="white-card rounded-3xl p-5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs">
+                <span className="text-slate-400 uppercase text-[10px] font-bold block">
+                  Clear / Verified Parcels
+                </span>
+                <div className="flex items-center justify-between mt-2">
+                  <strong className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                    {kpis.verifiedProps} / {kpis.totalProps}
+                  </strong>
+                  <div className="p-2.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 size={18} />
+                  </div>
+                </div>
+                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold mt-1 block">
+                  {kpis.pendingProps} Pending Review
+                </span>
+              </div>
             </div>
 
-            <div className="h-72 w-full font-mono text-xs">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={revenueAndSales} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                  <XAxis dataKey="month" stroke="#94A3B8" />
-                  <YAxis stroke="#94A3B8" />
-                  <Tooltip contentStyle={{ backgroundColor: "#0F172A", border: "1px solid #334155", borderRadius: "12px", color: "#F8FAFC" }} />
-                  <Bar dataKey="propertiesSold" name="Parcels Sold" fill="#3B82F6" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </motion.div>
-        </div>
+            {/* CHARTS GRID 1: VERIFICATION STATUS & RISK PROFILES */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Chart 1: Verification Pipeline */}
+              <div className="white-card rounded-3xl p-6 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-blue-600 dark:text-cyan-400">
+                      Audit Pipeline
+                    </span>
+                    <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                      Properties by Verification Status
+                    </h3>
+                  </div>
+                  <Badge variant="primary">{filteredData.properties.length} Total</Badge>
+                </div>
 
-        {/* 3. CHARTS SECTION - ROW 2: Risk Distribution & Reports Generated & Client Growth */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Chart 3: Risk Distribution (Donut / Pie Chart) */}
-          <motion.div key={`chart-risk-${timeRange}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="lg:col-span-4 white-card rounded-3xl p-6 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
-            <div>
-              <span className="text-[10px] font-mono uppercase font-bold text-emerald-600 dark:text-emerald-400">PORTFOLIO HEALTH</span>
-              <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                🛡️ Risk Distribution
-              </h3>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={statusChartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={90}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {statusChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#0F172A",
+                          borderColor: "#334155",
+                          borderRadius: "12px",
+                          color: "#fff",
+                          fontSize: "11px",
+                          fontFamily: "monospace",
+                        }}
+                      />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Chart 2: Risk Profile Distribution */}
+              <div className="white-card rounded-3xl p-6 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-emerald-600 dark:text-emerald-400">
+                      Risk Analytics
+                    </span>
+                    <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                      Risk Level Distribution
+                    </h3>
+                  </div>
+                  <Badge variant="success">PostgreSQL Assessed</Badge>
+                </div>
+
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={riskDistributionData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={90}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {riskDistributionData.map((entry, index) => (
+                          <Cell key={`cell-risk-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#0F172A",
+                          borderColor: "#334155",
+                          borderRadius: "12px",
+                          color: "#fff",
+                          fontSize: "11px",
+                          fontFamily: "monospace",
+                        }}
+                      />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             </div>
 
-            <div className="h-56 w-full font-mono text-xs flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={riskDistribution} cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={4} dataKey="value">
-                    {riskDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+            {/* CHARTS GRID 2: PROPERTY TYPES & GEOGRAPHY */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Chart 3: Property Types */}
+              <div className="white-card rounded-3xl p-6 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-indigo-600 dark:text-indigo-400">
+                    Asset Classes
+                  </span>
+                  <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                    Properties by Property Type
+                  </h3>
+                </div>
+
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={typeChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
+                      <XAxis dataKey="type" stroke="#94A3B8" fontSize={10} />
+                      <YAxis stroke="#94A3B8" fontSize={10} allowDecimals={false} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#0F172A",
+                          borderColor: "#334155",
+                          borderRadius: "12px",
+                          color: "#fff",
+                          fontSize: "11px",
+                          fontFamily: "monospace",
+                        }}
+                      />
+                      <Bar dataKey="count" fill="#6366F1" radius={[8, 8, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Chart 4: Location Distribution */}
+              <div className="white-card rounded-3xl p-6 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-purple-600 dark:text-purple-400">
+                    Geography
+                  </span>
+                  <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                    Property Distribution Across Regions
+                  </h3>
+                </div>
+
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={locationChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
+                      <XAxis dataKey="location" stroke="#94A3B8" fontSize={10} />
+                      <YAxis stroke="#94A3B8" fontSize={10} allowDecimals={false} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#0F172A",
+                          borderColor: "#334155",
+                          borderRadius: "12px",
+                          color: "#fff",
+                          fontSize: "11px",
+                          fontFamily: "monospace",
+                        }}
+                      />
+                      <Bar dataKey="count" fill="#8B5CF6" radius={[8, 8, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+
+            {/* REGIONAL MARKET BREAKDOWN TABLE */}
+            <div className="white-card rounded-3xl bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs overflow-hidden space-y-4 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-blue-600 dark:text-cyan-400">
+                    Regional Intelligence
+                  </span>
+                  <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                    City & State Market Performance
+                  </h3>
+                </div>
+                <Badge variant="secondary">{citySummary.length} Locations</Badge>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-150 dark:border-[#334155] bg-slate-50/50 dark:bg-[#0F172A]/50 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                      <th className="py-3.5 px-4">Market / City</th>
+                      <th className="py-3.5 px-4">State</th>
+                      <th className="py-3.5 px-4">Properties</th>
+                      <th className="py-3.5 px-4">Verified Clear</th>
+                      <th className="py-3.5 px-4 text-right">Total Valuation</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-[#334155]">
+                    {citySummary.map((c, i) => (
+                      <tr
+                        key={i}
+                        className="hover:bg-slate-50/80 dark:hover:bg-[#0F172A]/40 transition-colors"
+                      >
+                        <td className="py-4 px-4 font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                          <MapPin size={14} className="text-blue-500" />
+                          {c.city}
+                        </td>
+                        <td className="py-4 px-4 text-slate-600 dark:text-slate-300 font-medium">
+                          {c.state}
+                        </td>
+                        <td className="py-4 px-4 font-bold text-slate-900 dark:text-white">
+                          {c.count} Parcels
+                        </td>
+                        <td className="py-4 px-4">
+                          <Badge variant="success">
+                            {c.verified} / {c.count} Clear
+                          </Badge>
+                        </td>
+                        <td className="py-4 px-4 text-right font-bold text-emerald-600 dark:text-emerald-400">
+                          ₹ {(c.valuation / 10000000).toFixed(2)} Cr
+                        </td>
+                      </tr>
                     ))}
-                  </Pie>
-                  <Tooltip contentStyle={{ backgroundColor: "#0F172A", border: "1px solid #334155", borderRadius: "12px", color: "#F8FAFC" }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-[#334155] text-xs font-mono">
-              {riskDistribution.map((item) => (
-                <div key={item.name} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-slate-700 dark:text-slate-300 font-bold">{item.name}</span>
-                  </div>
-                  <strong className="text-slate-900 dark:text-white font-extrabold">{item.value}%</strong>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Chart 4: Reports Generated & Client Growth (Bar Chart) */}
-          <motion.div key={`chart-rep-${timeRange}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="lg:col-span-8 white-card rounded-3xl p-6 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-mono uppercase font-bold text-purple-600 dark:text-purple-400">AUDIT PIPELINE & CLIENTS</span>
-                <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                  📄 Reports Generated & Client Growth
-                </h3>
-              </div>
-              <div className="flex items-center gap-4 text-xs font-mono">
-                <span className="flex items-center gap-1.5 text-purple-600 dark:text-purple-400 font-bold">
-                  <span className="w-2.5 h-2.5 rounded-full bg-purple-500" /> Reports Issued
-                </span>
-                <span className="flex items-center gap-1.5 text-cyan-600 dark:text-cyan-400 font-bold">
-                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-500" /> Active Clients
-                </span>
+                  </tbody>
+                </table>
               </div>
             </div>
-
-            <div className="h-72 w-full font-mono text-xs">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={revenueAndSales} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                  <XAxis dataKey="month" stroke="#94A3B8" />
-                  <YAxis stroke="#94A3B8" />
-                  <Tooltip contentStyle={{ backgroundColor: "#0F172A", border: "1px solid #334155", borderRadius: "12px", color: "#F8FAFC" }} />
-                  <Bar dataKey="reports" name="Reports Generated" fill="#8B5CF6" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="clients" name="Active Clients" fill="#06B6D4" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </motion.div>
-        </div>
-
-        {/* 4. CHARTS SECTION - ROW 3: Market Trends & Average Selling Price & Top Cities */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Chart 5: Market Trends Index (Line Chart) */}
-          <motion.div key={`chart-[#trends]-${timeRange}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="lg:col-span-4 white-card rounded-3xl p-6 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
-            <div>
-              <span className="text-[10px] font-mono uppercase font-bold text-amber-600 dark:text-amber-400">APPRECIATION VELOCITY</span>
-              <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                📉 Market Trends Index
-              </h3>
-            </div>
-
-            <div className="h-64 w-full font-mono text-xs">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={marketTrends} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                  <XAxis dataKey="month" stroke="#94A3B8" />
-                  <YAxis stroke="#94A3B8" />
-                  <Tooltip contentStyle={{ backgroundColor: "#0F172A", border: "1px solid #334155", borderRadius: "12px", color: "#F8FAFC" }} />
-                  <Line type="monotone" dataKey="commercial" name="Commercial Index" stroke="#F59E0B" strokeWidth={3} dot={{ r: 4 }} />
-                  <Line type="monotone" dataKey="residential" name="Residential Index" stroke="#3B82F6" strokeWidth={2} dot={{ r: 3 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </motion.div>
-
-          {/* Chart 6: Average Selling Price (ASP) per Property Type */}
-          <motion.div key={`chart-asp-${timeRange}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="lg:col-span-4 white-card rounded-3xl p-6 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
-            <div>
-              <span className="text-[10px] font-mono uppercase font-bold text-blue-600 dark:text-cyan-400">VALUATION BENCHMARK</span>
-              <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                🏷️ Average Selling Price (Cr)
-              </h3>
-            </div>
-
-            <div className="h-64 w-full font-mono text-xs">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={aspByType} layout="vertical" margin={{ top: 5, right: 10, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                  <XAxis type="number" stroke="#94A3B8" />
-                  <YAxis dataKey="type" type="category" stroke="#94A3B8" width={100} />
-                  <Tooltip contentStyle={{ backgroundColor: "#0F172A", border: "1px solid #334155", borderRadius: "12px", color: "#F8FAFC" }} />
-                  <Bar dataKey="asp" name="ASP (₹ Cr)" fill="#6366F1" radius={[0, 6, 6, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </motion.div>
-
-          {/* Chart 7: Top Cities Performance */}
-          <motion.div key={`chart-cities-${timeRange}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="lg:col-span-4 white-card rounded-3xl p-6 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
-            <div>
-              <span className="text-[10px] font-mono uppercase font-bold text-rose-600 dark:text-rose-400">GEOGRAPHIC DISTRIBUTION</span>
-              <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                🏙️ Top Cities Deal Volume
-              </h3>
-            </div>
-
-            <div className="space-y-3 pt-2 font-mono text-xs">
-              {topCities.map((item) => (
-                <div key={item.city} className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="font-extrabold text-slate-900 dark:text-white flex items-center gap-1">
-                      <MapPin size={13} className="text-cyan-500" /> {item.city}
-                    </span>
-                    <span className="text-slate-500 dark:text-slate-400 font-bold">
-                      {item.deals} Deals (₹ {item.revenue} Cr)
-                    </span>
-                  </div>
-                  <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-[#0F172A] overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-linear-to-r from-blue-500 to-cyan-400 transition-all duration-500"
-                      style={{ width: `${(item.deals / topCities[0].deals) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        </div>
+          </>
+        )}
       </div>
     </MainLayout>
   );

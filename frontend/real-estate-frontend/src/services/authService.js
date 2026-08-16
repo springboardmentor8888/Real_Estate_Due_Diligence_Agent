@@ -10,6 +10,11 @@ export const loginUser = async (loginData) => {
   return apiClient.post("/api/auth/login", loginData);
 };
 
+// Register OAuth User API
+export const registerOAuthUser = async (oauthData) => {
+  return apiClient.post("/api/auth/register-oauth", oauthData);
+};
+
 // Validate JWT Token
 export const isTokenValid = (token) => {
   if (!token || typeof token !== "string") return false;
@@ -28,6 +33,16 @@ export const isTokenValid = (token) => {
     return true;
   } catch (e) {
     return false;
+  }
+};
+
+// Get currently logged-in user from localStorage session
+export const getCurrentUser = () => {
+  try {
+    const raw = localStorage.getItem("user");
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
   }
 };
 

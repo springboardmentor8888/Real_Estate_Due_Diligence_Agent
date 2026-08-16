@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import MainLayout from "../components/layout/MainLayout";
@@ -31,113 +31,78 @@ import {
 import { showToast } from "../utils/swal";
 import { setLiveActiveProperty, getLiveProperties } from "../services/liveStore";
 import PropertyContextSwitcher from "../components/common/PropertyContextSwitcher";
+import { getAllProperties } from "../services/propertyService";
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80";
 
-// Mock Watchlist Data covering all 4 status change triggers
-const INITIAL_WATCHLIST = [
-  {
-    numericId: "1001",
-    id: "PR-1001",
-    propertyName: "Gachibowli Tech Park Phase 2",
-    city: "Hyderabad",
-    address: "Plot 45, Financial District, Gachibowli, Hyderabad",
-    price: "₹ 25.00 Cr",
-    oldPrice: "₹ 26.50 Cr",
-    priceChange: "-5.6% (Price Drop)",
-    riskScore: 14,
-    oldRiskScore: 18,
-    riskChange: "Risk Improved (-4 pts)",
-    taxStatus: "AY 2024-25 Paid (Zero Arrears)",
-    ownershipStatus: "Deed #REG/TS/2023/4412 Verified",
-    monitoringEnabled: true,
-    recentAlert: {
-      type: "PRICE_CHANGED",
-      title: "Price Changed",
-      message: "Market valuation adjusted from ₹26.50 Cr to ₹25.00 Cr (-5.6%).",
-      timestamp: "15 mins ago",
-    },
-    imgSrc: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    numericId: "1002",
-    id: "PR-1002",
-    propertyName: "Jubilee Hills Plot 36",
-    city: "Hyderabad",
-    address: "Road No. 36, Jubilee Hills, Hyderabad",
-    price: "₹ 18.50 Cr",
-    oldPrice: "₹ 18.50 Cr",
-    priceChange: "No Price Change",
-    riskScore: 68,
-    oldRiskScore: 42,
-    riskChange: "Risk Increased (+26 pts)",
-    taxStatus: "Municipal Tax Challan Verified",
-    ownershipStatus: "Sub-Registrar Deed #8891 Transfer",
-    monitoringEnabled: true,
-    recentAlert: {
-      type: "RISK_CHANGED",
-      title: "Risk Changed",
-      message: "Encumbrance check flagged buffer zone alert. Risk score increased to 68/100.",
-      timestamp: "1 hour ago",
-    },
-    imgSrc: "https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    numericId: "1003",
-    id: "PR-1003",
-    propertyName: "Whitefield Horizon Tech Campus",
-    city: "Bengaluru",
-    address: "EPIP Zone, Phase 2, Whitefield, Bengaluru",
-    price: "₹ 32.00 Cr",
-    oldPrice: "₹ 32.00 Cr",
-    priceChange: "No Price Change",
-    riskScore: 18,
-    oldRiskScore: 18,
-    riskChange: "Stable (Low Risk)",
-    taxStatus: "Tax Receipt #TAX-KA-2026 Paid",
-    ownershipStatus: "Devi Infra Outright Sale Deed",
-    monitoringEnabled: true,
-    recentAlert: {
-      type: "TAX_UPDATED",
-      title: "Tax Updated",
-      message: "BBMP Assessment AY 2024-25 clearance receipt #TAX-KA-2026-9041 verified.",
-      timestamp: "3 hours ago",
-    },
-    imgSrc: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    numericId: "1004",
-    id: "PR-1004",
-    propertyName: "BKC Corporate Hub Sector C",
-    city: "Mumbai",
-    address: "G-Block, Bandra Kurla Complex, Mumbai",
-    price: "₹ 45.00 Cr",
-    oldPrice: "₹ 45.00 Cr",
-    priceChange: "No Price Change",
-    riskScore: 22,
-    oldRiskScore: 22,
-    riskChange: "Stable (Low Risk)",
-    taxStatus: "Fully Settled (Zero Dues)",
-    ownershipStatus: "Deed Transfer Registered #REG/MH/9914",
-    monitoringEnabled: false,
-    recentAlert: {
-      type: "OWNERSHIP_CHANGED",
-      title: "Ownership Changed",
-      message: "Sub-Registrar recorded title deed transfer to Mehta Holdings Corp.",
-      timestamp: "Yesterday",
-    },
-    imgSrc: "https://images.unsplash.com/photo-1582407947304-fd86f028f716?auto=format&fit=crop&w=800&q=80",
-  },
-];
-
 function PropertyWatchlist() {
   const navigate = useNavigate();
-  const [watchlist, setWatchlist] = useState(INITIAL_WATCHLIST);
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const userId = storedUser.userId || storedUser.id || "2";
+
+  const [watchlist, setWatchlist] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [addModalOpen, setAddModalOpen] = useState(false);
-  const [selectedAddPropId, setSelectedAddPropId] = useState("1005");
+  const [selectedAddPropId, setSelectedAddPropId] = useState("1");
+  const [allAvailableProps, setAllAvailableProps] = useState([]);
 
-  const allAvailableProps = useMemo(() => getLiveProperties() || [], []);
+  useEffect(() => {
+    const fetchWatchlist = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await getAllProperties(0, 50);
+        const list = res?.content || (Array.isArray(res) ? res : res?.data?.content || res?.data || []);
+        setAllAvailableProps(list);
+        
+        // Read user-scoped saved IDs
+        const savedIds = JSON.parse(localStorage.getItem(`buyer_watchlist_${userId}`) || "[]");
+        const userWatchlistProps = list.filter((p) => {
+          const pId = (p.propertyId || p.numericId || p.id || "").toString();
+          return savedIds.includes(pId);
+        });
+
+        const formatted = userWatchlistProps.map((p, idx) => {
+          const pId = p.propertyId || p.id || idx + 1;
+          const mv = Number(p.marketValue || 0);
+          const crVal = mv >= 10000000 ? `₹ ${(mv / 10000000).toFixed(2)} Cr` : `₹ ${(mv / 100000).toFixed(2)} Lakhs`;
+          return {
+            numericId: pId.toString(),
+            id: p.propertyCode || `PR-${pId}`,
+            propertyName: p.propertyName || p.title || `Property Parcel PR-${pId}`,
+            city: p.address?.city || "Hyderabad",
+            address: p.address?.city ? `${p.address.addressLine1 || ""}, ${p.address.city}, ${p.address.state || ""}` : (p.address || "Hyderabad, Telangana"),
+            price: crVal,
+            oldPrice: crVal,
+            priceChange: "No Price Change",
+            riskScore: p.status === "VERIFIED" ? 14 : 35 + (idx * 5) % 40,
+            oldRiskScore: 20,
+            riskChange: "Stable",
+            taxStatus: "Municipal Tax Verified",
+            ownershipStatus: "Title Deed Verified",
+            monitoringEnabled: true,
+            recentAlert: {
+              type: "STATUS_VERIFIED",
+              title: "Due Diligence Active",
+              message: `Continuous monitoring enabled for ${p.propertyName || `PR-${pId}`}.`,
+              timestamp: "Active",
+            },
+            imgSrc: p.imageUrl || FALLBACK_IMAGE,
+          };
+        });
+        setWatchlist(formatted);
+      } catch (err) {
+        console.error("Failed to load watchlist:", err);
+        setError("Unable to load watchlist. Please verify backend is running on port 8081.");
+        setWatchlist([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchWatchlist();
+  }, [userId]);
 
   // Filter Watchlist items by search query
   const filteredWatchlist = useMemo(() => {
@@ -176,7 +141,12 @@ function PropertyWatchlist() {
   // Remove Property from Watchlist
   const handleRemoveFromWatchlist = (numId, propName, e) => {
     e.stopPropagation();
-    setWatchlist((prev) => prev.filter((item) => item.numericId !== numId));
+    setWatchlist((prev) => {
+      const updated = prev.filter((item) => item.numericId !== numId);
+      const remainingIds = updated.map((item) => item.numericId);
+      localStorage.setItem(`buyer_watchlist_${userId}`, JSON.stringify(remainingIds));
+      return updated;
+    });
     showToast(`Removed "${propName}" from Watchlist`, "info");
   };
 
@@ -190,44 +160,48 @@ function PropertyWatchlist() {
     }
 
     const found = allAvailableProps.find(
-      (p) => (p.numericId || p.propertyId || p.id).toString().replace(/\D/g, "") === selectedAddPropId
-    ) || {
-      numericId: selectedAddPropId,
-      id: `PR-${selectedAddPropId}`,
-      propertyName: `Cyberabad IT Zone Plot ${selectedAddPropId}`,
-      city: "Hyderabad",
-      address: "HITEC City Phase 2, Madhapur, Hyderabad",
-      price: "₹ 21.00 Cr",
-      riskScore: 16,
-    };
+      (p) => (p.numericId || p.propertyId || p.id || "").toString().replace(/\D/g, "") === selectedAddPropId
+    );
 
-    const newItem = {
-      numericId: selectedAddPropId,
-      id: `PR-${selectedAddPropId}`,
-      propertyName: found.propertyName || found.title || `Parcel PR-${selectedAddPropId}`,
-      city: found.city || "Hyderabad",
-      address: typeof found.address === "string" ? found.address : `${found.propertyName}, ${found.city || "Hyderabad"}`,
-      price: typeof found.marketValue === "number" ? `₹ ${(found.marketValue / 10000000).toFixed(2)} Cr` : found.price || found.marketValue || "₹ 21.00 Cr",
-      oldPrice: found.price || "₹ 21.00 Cr",
-      priceChange: "No Price Change",
-      riskScore: found.riskScore ?? 16,
-      oldRiskScore: found.riskScore ?? 16,
-      riskChange: "Stable (Low Risk)",
-      taxStatus: "Municipal Tax Clearance Active",
-      ownershipStatus: "Sub-Registrar Title Verified",
-      monitoringEnabled: true,
-      recentAlert: {
-        type: "PRICE_CHANGED",
-        title: "Added to Watchlist",
-        message: "24/7 GIS automated monitoring activated.",
-        timestamp: "Just now",
-      },
-      imgSrc: found.imageUrl || found.imgSrc || FALLBACK_IMAGE,
-    };
+    if (found) {
+      const pId = (found.propertyId || found.numericId || found.id || selectedAddPropId).toString();
+      const mv = Number(found.marketValue || 0);
+      const crVal = mv >= 10000000 ? `₹ ${(mv / 10000000).toFixed(2)} Cr` : `₹ ${(mv / 100000).toFixed(2)} Lakhs`;
 
-    setWatchlist([newItem, ...watchlist]);
+      const newItem = {
+        numericId: pId,
+        id: found.propertyCode || `PR-${pId}`,
+        propertyName: found.propertyName || found.title || `Property Parcel PR-${pId}`,
+        city: found.address?.city || "Hyderabad",
+        address: found.address?.city ? `${found.address.addressLine1 || ""}, ${found.address.city}, ${found.address.state || ""}` : (found.address || "Hyderabad, Telangana"),
+        price: crVal,
+        oldPrice: crVal,
+        priceChange: "No Price Change",
+        riskScore: found.status === "VERIFIED" ? 14 : 25,
+        oldRiskScore: 20,
+        riskChange: "Stable",
+        taxStatus: "Municipal Tax Verified",
+        ownershipStatus: "Title Deed Verified",
+        monitoringEnabled: true,
+        recentAlert: {
+          type: "STATUS_VERIFIED",
+          title: "Added to Watchlist",
+          message: `Monitoring active for ${found.propertyName || `PR-${pId}`}.`,
+          timestamp: "Active",
+        },
+        imgSrc: found.imageUrl || FALLBACK_IMAGE,
+      };
+
+      setWatchlist((prev) => {
+        const updated = [newItem, ...prev];
+        const newIds = updated.map((i) => i.numericId);
+        localStorage.setItem(`buyer_watchlist_${userId}`, JSON.stringify(newIds));
+        return updated;
+      });
+
+      showToast(`Added ${newItem.propertyName} to your Watchlist`, "success");
+    }
     setAddModalOpen(false);
-    showToast(`Added "${newItem.propertyName}" to Watchlist with 24/7 Monitoring`, "success");
   };
 
   const handleInspect = (numId) => {
@@ -475,10 +449,10 @@ function PropertyWatchlist() {
             </AnimatePresence>
           ) : (
             <EmptyState
-              title="Watchlist is Empty"
-              message="No properties currently added to your watchlist match your search filter."
-              actionLabel="Watch Property"
-              onAction={() => setAddModalOpen(true)}
+              title="No saved properties yet."
+              message="Explore properties to start your evaluation."
+              actionLabel="Explore Properties"
+              onAction={() => navigate("/property-search")}
             />
           )}
         </div>

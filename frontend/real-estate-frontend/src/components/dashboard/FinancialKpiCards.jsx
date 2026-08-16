@@ -15,15 +15,15 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-// Mock JSON Data for the 6 specified KPI cards
-const FINANCIAL_KPI_MOCK_DATA = [
+// Initial state JSON Data for the 6 specified KPI cards
+const FINANCIAL_KPI_DEFAULT_DATA = [
   {
     id: "kpi-1",
     title: "Pending Loan Requests",
-    count: "6 Applications",
-    trend: "+2 vs last week",
+    count: "0 Applications",
+    trend: "Live Database",
     isPositive: true,
-    lastUpdated: "Updated 10 mins ago",
+    lastUpdated: "Real-time",
     icon: Clock,
     colorStyle: "bg-blue-50/60 dark:bg-[#1E293B] border-blue-200/80 dark:border-[#334155] border-l-4 border-l-blue-500",
     iconBg: "bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-cyan-300 border-blue-300 dark:border-blue-800",
@@ -31,10 +31,10 @@ const FINANCIAL_KPI_MOCK_DATA = [
   {
     id: "kpi-2",
     title: "Approved Loans",
-    count: "14 Loans (₹ 340 Cr)",
-    trend: "+18.4% YTD",
+    count: "0 Loans",
+    trend: "Live Database",
     isPositive: true,
-    lastUpdated: "Updated today",
+    lastUpdated: "Real-time",
     icon: CheckCircle2,
     colorStyle: "bg-emerald-50/60 dark:bg-[#1E293B] border-emerald-200/80 dark:border-[#334155] border-l-4 border-l-emerald-500",
     iconBg: "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800",
@@ -42,10 +42,10 @@ const FINANCIAL_KPI_MOCK_DATA = [
   {
     id: "kpi-3",
     title: "High Risk Properties",
-    count: "1 Property",
-    trend: "-50% vs last month",
+    count: "0 Properties",
+    trend: "Live Database",
     isPositive: true,
-    lastUpdated: "Updated 2 hours ago",
+    lastUpdated: "Real-time",
     icon: AlertTriangle,
     colorStyle: "bg-rose-50/60 dark:bg-[#1E293B] border-rose-200/80 dark:border-[#334155] border-l-4 border-l-rose-500",
     iconBg: "bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-400 border-rose-300 dark:border-rose-800",
@@ -53,10 +53,10 @@ const FINANCIAL_KPI_MOCK_DATA = [
   {
     id: "kpi-4",
     title: "Reports Generated",
-    count: "48 Audit Reports",
-    trend: "+24.5% vs last month",
+    count: "0 Reports",
+    trend: "Live Database",
     isPositive: true,
-    lastUpdated: "Updated 1 hour ago",
+    lastUpdated: "Real-time",
     icon: FileSpreadsheet,
     colorStyle: "bg-purple-50/60 dark:bg-[#1E293B] border-purple-200/80 dark:border-[#334155] border-l-4 border-l-purple-500",
     iconBg: "bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-800",
@@ -64,28 +64,28 @@ const FINANCIAL_KPI_MOCK_DATA = [
   {
     id: "kpi-5",
     title: "Average Loan Amount",
-    count: "₹ 34.50 Cr",
-    trend: "+8.2% vs target",
+    count: "₹ 0.00 Cr",
+    trend: "Live Database",
     isPositive: true,
-    lastUpdated: "Updated 30 mins ago",
+    lastUpdated: "Real-time",
     icon: DollarSign,
     colorStyle: "bg-cyan-50/60 dark:bg-[#1E293B] border-cyan-200/80 dark:border-[#334155] border-l-4 border-l-cyan-500",
     iconBg: "bg-cyan-100 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-300 border-cyan-300 dark:border-cyan-800",
   },
   {
     id: "kpi-6",
-    title: "Investment Score",
-    count: "92/100 (AAA Rating)",
-    trend: "+4 pts growth",
+    title: "Investment Grade Rating",
+    count: "Grade A",
+    trend: "Live Database",
     isPositive: true,
-    lastUpdated: "Updated today",
+    lastUpdated: "Real-time",
     icon: Award,
     colorStyle: "bg-amber-50/60 dark:bg-[#1E293B] border-amber-200/80 dark:border-[#334155] border-l-4 border-l-amber-500",
     iconBg: "bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800",
   },
 ];
 
-function FinancialKpiCards({ cards = FINANCIAL_KPI_MOCK_DATA }) {
+function FinancialKpiCards({ cards = FINANCIAL_KPI_DEFAULT_DATA }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 font-mono text-xs">
       {cards.map((card) => {

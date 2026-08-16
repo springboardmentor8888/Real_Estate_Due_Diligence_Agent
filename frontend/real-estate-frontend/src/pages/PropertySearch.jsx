@@ -1,28 +1,40 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import MainLayout from "../components/layout/MainLayout";
 import PropertySearchWorkspaceHeader from "../components/property/PropertySearchWorkspaceHeader";
-import LinearPropertyCard from "../components/property/LinearPropertyCard";
 import PropertyInspectionDrawer from "../components/property/PropertyInspectionDrawer";
 import PropertyTable from "../components/property/PropertyTable";
 import EmptyState from "../components/common/EmptyState";
+import Badge from "../components/common/Badge";
+import Button from "../components/common/Button";
 import { Skeleton } from "../components/common/Skeleton";
-import { LayoutGrid, List, Building2, SlidersHorizontal, RefreshCw, AlertCircle } from "lucide-react";
-import { getLiveProperties, setLiveActiveProperty } from "../services/liveStore";
-import { showToast } from "../utils/swal";
+import {
+  LayoutGrid,
+  List,
+  Building2,
+  MapPin,
+  Eye,
+  ShieldCheck,
+  ArrowRight,
+  ArrowUpDown,
+  AlertCircle,
+  RefreshCw,
+  Search,
+} from "lucide-react";
 import { searchProperties } from "../services/propertyService";
+
+const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80";
 
 function PropertySearch() {
   const location = useLocation();
   const navigate = useNavigate();
   const initialQuery = location.state?.searchQuery || "";
 
-  const [allMasterProps, setAllMasterProps] = useState([]);
+  const [properties, setProperties] = useState([]);
   const [searchAddress, setSearchAddress] = useState(initialQuery);
   const [stateFilter, setStateFilter] = useState("ALL");
   const [cityFilter, setCityFilter] = useState("ALL");
   const [priceFilter, setPriceFilter] = useState("ALL");
-  const [riskFilter, setRiskFilter] = useState("ALL");
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [sortBy, setSortBy] = useState("price-asc");
@@ -35,213 +47,186 @@ function PropertySearch() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState(null);
 
-  // Fetch real properties from Backend REST API (GET /api/properties/search)
-  useEffect(() => {
-    let isMounted = true;
+  // Build backend search criteria object
+  const buildCriteria = useCallback(() => {
+    const criteria = {
+      page: 0,
+      size: 50,
+    };
+
+    if (searchAddress.trim()) {
+      criteria.keyword = searchAddress.trim();
+    }
+
+    if (stateFilter !== "ALL") {
+      criteria.state = stateFilter;
+    }
+
+    if (cityFilter !== "ALL") {
+      criteria.city = cityFilter;
+    }
+
+    if (typeFilter !== "ALL") {
+      criteria.propertyType = typeFilter;
+    }
+
+    if (statusFilter !== "ALL") {
+      criteria.status = statusFilter;
+    }
+
+    if (priceFilter === "UNDER_10CR") {
+      criteria.maxMarketValue = 100000000;
+    } else if (priceFilter === "10CR_25CR") {
+      criteria.minMarketValue = 100000000;
+      criteria.maxMarketValue = 250000000;
+    } else if (priceFilter === "25CR_50CR") {
+      criteria.minMarketValue = 250000000;
+      criteria.maxMarketValue = 500000000;
+    } else if (priceFilter === "ABOVE_50CR") {
+      criteria.minMarketValue = 500000000;
+    }
+
+    return criteria;
+  }, [searchAddress, stateFilter, cityFilter, typeFilter, statusFilter, priceFilter]);
+
+  // Execute Search against backend Spring Boot API
+  const executeSearch = useCallback(() => {
     setLoading(true);
     setError(null);
 
-    const criteria = {};
-    if (cityFilter !== "ALL") criteria.city = cityFilter;
-    if (stateFilter !== "ALL") criteria.state = stateFilter;
-    if (typeFilter !== "ALL") criteria.propertyType = typeFilter;
-    if (searchAddress.trim()) {
-      criteria.city = searchAddress.trim();
-    }
+    const criteria = buildCriteria();
 
     searchProperties(criteria)
       .then((res) => {
-        if (!isMounted) return;
-        let backendItems = [];
-
+        let items = [];
         if (res && res.data) {
-          backendItems = res.data.content || (Array.isArray(res.data) ? res.data : []);
+          items = res.data.content || (Array.isArray(res.data) ? res.data : []);
         }
 
-        // Map real backend response objects accurately
-        if (Array.isArray(backendItems) && backendItems.length > 0) {
-          const formatted = backendItems.map((item, idx) => {
-            const rawId = item.propertyId || item.id || (idx + 1);
-            const numId = typeof rawId === "number" ? rawId : parseInt(rawId.toString().replace(/\D/g, "") || `${idx + 1}`, 10);
-            const propCode = item.propertyCode || `PROP-${(item.city || "HYD").slice(0, 3).toUpperCase()}-${String(numId).padStart(3, "0")}`;
+        const formatted = items.map((item, idx) => {
+          const rawId = item.propertyId || item.id || idx + 1;
+          const numId = typeof rawId === "number" ? rawId : parseInt(rawId.toString().replace(/\D/g, "") || `${idx + 1}`, 10);
+          const propCode = item.propertyCode || `PROP-${numId}`;
 
-            let fullAddressStr = "";
-            if (typeof item.address === "string") {
-              fullAddressStr = item.address;
-            } else if (item.address && typeof item.address === "object") {
-              const parts = [
-                item.address.addressLine1,
-                item.address.addressLine2,
-                item.address.city,
-                item.address.district,
-                item.address.state,
-                item.address.postalCode,
-                item.address.country,
-              ].filter(Boolean);
-              fullAddressStr = parts.join(", ");
-            } else {
-              fullAddressStr = `${item.propertyName || "Property Parcel"}, ${item.city || "Hyderabad"}`;
-            }
+          let addressStr = "";
+          let cityName = "Hyderabad";
+          let stateName = "Telangana";
 
-            const cityName = item.city || (typeof item.address === "object" ? item.address?.city : null) || "Hyderabad";
-            const stateName = item.state || (typeof item.address === "object" ? item.address?.state : null) || "Telangana";
-            const pType = typeof item.propertyType === "object" ? item.propertyType?.typeName : (item.propertyType || item.landType || item.type || "Villa");
+          if (item.address && typeof item.address === "object") {
+            const parts = [
+              item.address.addressLine1,
+              item.address.addressLine2,
+              item.address.city,
+              item.address.state,
+              item.address.postalCode,
+            ].filter(Boolean);
+            addressStr = parts.join(", ");
+            cityName = item.address.city || cityName;
+            stateName = item.address.state || stateName;
+          } else if (typeof item.address === "string") {
+            addressStr = item.address;
+          } else {
+            addressStr = `${item.propertyName || "Property Parcel"}, ${item.city || "Hyderabad"}`;
+          }
 
-            return {
-              ...item,
-              propertyId: numId,
-              numericId: numId,
-              propertyCode: propCode,
-              id: propCode,
-              title: item.propertyName || "Gachibowli Property",
-              propertyName: item.propertyName || "Gachibowli Property",
-              description: item.description || "Institutional grade real estate parcel verified with clear sub-registrar deed records.",
-              address: fullAddressStr,
-              city: cityName,
-              state: stateName,
-              type: pType,
-              propertyType: pType,
-              owner: item.ownerName || item.owner || "Ananya Rao",
-              marketValue: item.marketValue || 42500000,
-              riskScore: item.riskScore ?? 14,
-              status: item.status || "VERIFIED",
-              builtYear: item.builtYear || item.year || 2022,
-              totalArea: item.totalArea || item.landArea || "45,000 sq ft",
-              landArea: item.landArea || item.totalArea || "45,000 sq ft",
-              listings: item.listings || [],
-              imageUrl: item.imageUrl || item.image || null,
-            };
-          });
-          setAllMasterProps(formatted);
-        } else {
-          setAllMasterProps([]);
-        }
+          const typeName =
+            typeof item.propertyType === "object"
+              ? item.propertyType?.typeName
+              : item.propertyType || "Residential";
+
+          const mv = Number(item.marketValue || 0);
+
+          return {
+            ...item,
+            propertyId: numId,
+            numericId: numId,
+            propertyCode: propCode,
+            id: propCode,
+            title: item.propertyName || `Property Parcel PR-${numId}`,
+            propertyName: item.propertyName || `Property Parcel PR-${numId}`,
+            description: item.description || "Real estate property parcel verified in PostgreSQL database.",
+            address: addressStr,
+            city: item.city || cityName,
+            state: item.state || stateName,
+            propertyType: typeName,
+            type: typeName,
+            status: item.status || "UNDER_REVIEW",
+            marketValue: mv,
+            price: mv >= 10000000 ? `₹ ${(mv / 10000000).toFixed(2)} Cr` : mv > 0 ? `₹ ${(mv / 100000).toFixed(2)} Lakhs` : "Price on Request",
+            imageUrl: item.imageUrl || FALLBACK_IMAGE,
+          };
+        });
+
+        setProperties(formatted);
       })
       .catch((err) => {
-        if (!isMounted) return;
-        console.warn("Backend search query error:", err?.message || err);
-        setError("Unable to load properties from backend server. Please verify Spring Boot service is running on port 8081.");
+        console.error("Property search error:", err);
+        setError("Unable to connect to search API. Please verify backend is running on port 8081.");
+        setProperties([]);
       })
-      .finally(() => {
-        if (isMounted) setLoading(false);
-      });
+      .finally(() => setLoading(false));
+  }, [buildCriteria]);
 
-    return () => {
-      isMounted = false;
-    };
-  }, [searchAddress, cityFilter, stateFilter, typeFilter]);
+  // Debounced search trigger when filter criteria change
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      executeSearch();
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [executeSearch]);
 
-  // Filter & Sort Logic
-  const filteredAndSortedProperties = useMemo(() => {
-    let result = [...allMasterProps];
-
-    // 1. Text Search Input
-    if (searchAddress.trim()) {
-      const q = searchAddress.toLowerCase().trim();
-      result = result.filter((p) => {
-        const name = (p.propertyName || p.title || "").toLowerCase();
-        const addr = p.address.toLowerCase();
-        const city = p.city.toLowerCase();
-        const state = p.state.toLowerCase();
-        const apn = (p.apnNumber || p.id || "").toLowerCase();
-        const owner = (p.owner || "").toLowerCase();
-        const survey = (p.surveyNumber || "").toLowerCase();
-
-        return (
-          name.includes(q) ||
-          addr.includes(q) ||
-          city.includes(q) ||
-          state.includes(q) ||
-          apn.includes(q) ||
-          owner.includes(q) ||
-          survey.includes(q)
-        );
-      });
-    }
-
-    // 2. State Filter
-    if (stateFilter !== "ALL") {
-      result = result.filter((p) => p.state.toLowerCase() === stateFilter.toLowerCase());
-    }
-
-    // 3. City Filter
-    if (cityFilter !== "ALL") {
-      result = result.filter((p) => p.city.toLowerCase() === cityFilter.toLowerCase());
-    }
-
-    // 4. Price Filter
-    if (priceFilter !== "ALL") {
-      result = result.filter((p) => {
-        const val = p.marketValue || 250000000;
-        if (priceFilter === "UNDER_10CR") return val < 100000000;
-        if (priceFilter === "10CR_25CR") return val >= 100000000 && val <= 250000000;
-        if (priceFilter === "25CR_50CR") return val >= 250000000 && val <= 500000000;
-        if (priceFilter === "ABOVE_50CR") return val > 500000000;
-        return true;
-      });
-    }
-
-    // 5. Risk Score Filter
-    if (riskFilter !== "ALL") {
-      result = result.filter((p) => {
-        const rs = p.riskScore ?? 14;
-        if (riskFilter === "LOW") return rs <= 30;
-        if (riskFilter === "MODERATE") return rs > 30 && rs <= 60;
-        if (riskFilter === "HIGH") return rs > 60;
-        return true;
-      });
-    }
-
-    // 6. Property Type Filter
-    if (typeFilter !== "ALL") {
-      result = result.filter((p) => (p.type || p.category || "").toLowerCase().includes(typeFilter.toLowerCase()));
-    }
-
-    // 7. Status Filter
-    if (statusFilter !== "ALL") {
-      result = result.filter((p) => (p.status || "").toLowerCase().includes(statusFilter.toLowerCase()));
-    }
-
-    // 8. Sorting
-    result.sort((a, b) => {
-      if (sortBy === "price-asc") return (a.marketValue || 0) - (b.marketValue || 0);
-      if (sortBy === "price-desc") return (b.marketValue || 0) - (a.marketValue || 0);
-      if (sortBy === "risk-asc") return (a.riskScore || 0) - (b.riskScore || 0);
-      if (sortBy === "year-desc") return (b.builtYear || 2021) - (a.builtYear || 2021);
-      if (sortBy === "name-asc") return (a.propertyName || "").localeCompare(b.propertyName || "");
-      return 0;
-    });
-
-    return result;
-  }, [allMasterProps, searchAddress, stateFilter, cityFilter, priceFilter, riskFilter, typeFilter, statusFilter, sortBy]);
-
+  // Handle Clear Filters
   const handleClearFilters = () => {
     setSearchAddress("");
     setStateFilter("ALL");
     setCityFilter("ALL");
     setPriceFilter("ALL");
-    setRiskFilter("ALL");
     setTypeFilter("ALL");
     setStatusFilter("ALL");
     setSortBy("price-asc");
-    showToast("Filters reset to default", "info");
   };
 
-  const handleOpenDrawer = (property) => {
-    setSelectedProperty(property);
-    setDrawerOpen(true);
-    if (property) {
-      const realId = property.propertyId || property.numericId || property.id;
-      const numId = typeof realId === "number" ? realId : parseInt(realId.toString().replace(/\D/g, "") || "1", 10);
-      setLiveActiveProperty(numId);
-      localStorage.setItem("active_property_id", numId.toString());
+  // Client-side sorting for display
+  const sortedProperties = useMemo(() => {
+    const list = [...properties];
+    if (sortBy === "price-asc") {
+      return list.sort((a, b) => (a.marketValue || 0) - (b.marketValue || 0));
     }
+    if (sortBy === "price-desc") {
+      return list.sort((a, b) => (b.marketValue || 0) - (a.marketValue || 0));
+    }
+    if (sortBy === "name-asc") {
+      return list.sort((a, b) => (a.propertyName || "").localeCompare(b.propertyName || ""));
+    }
+    if (sortBy === "newest") {
+      return list.sort((a, b) => (b.propertyId || 0) - (a.propertyId || 0));
+    }
+    return list;
+  }, [properties, sortBy]);
+
+  const handleInspect = (prop) => {
+    setSelectedProperty(prop);
+    setDrawerOpen(true);
+  };
+
+  // Compute appropriate empty state message
+  const getEmptyStateMessage = () => {
+    if (cityFilter !== "ALL") {
+      return `No properties available in ${cityFilter} yet.`;
+    }
+    if (stateFilter !== "ALL") {
+      return `No properties available in ${stateFilter} yet.`;
+    }
+    if (searchAddress.trim()) {
+      return `No properties found matching "${searchAddress}".`;
+    }
+    return "No properties found matching your filter criteria.";
   };
 
   return (
     <MainLayout>
-      <div className="space-y-6 sm:space-y-8 pb-16 max-w-7xl mx-auto">
-        {/* TOP SECTION: Search & Multi-Vector Filter Controls */}
+      <div className="space-y-6 max-w-7xl mx-auto pb-16 font-mono">
+        {/* FILTER WORKSPACE HEADER */}
         <PropertySearchWorkspaceHeader
           searchAddress={searchAddress}
           setSearchAddress={setSearchAddress}
@@ -251,93 +236,184 @@ function PropertySearch() {
           setCityFilter={setCityFilter}
           priceFilter={priceFilter}
           setPriceFilter={setPriceFilter}
-          riskFilter={riskFilter}
-          setRiskFilter={setRiskFilter}
           typeFilter={typeFilter}
           setTypeFilter={setTypeFilter}
           statusFilter={statusFilter}
           setStatusFilter={setStatusFilter}
           sortBy={sortBy}
           setSortBy={setSortBy}
-          allProperties={allMasterProps}
+          allProperties={properties}
           onClearFilters={handleClearFilters}
+          onSearchSubmit={executeSearch}
         />
 
-        {/* RESULTS BAR & VIEW MODE TOGGLE */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-1">
+        {/* ERROR BANNER */}
+        {error && (
+          <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <AlertCircle size={20} className="shrink-0" />
+              <p className="text-xs font-bold">{error}</p>
+            </div>
+            <Button variant="danger" size="sm" onClick={executeSearch}>
+              Retry
+            </Button>
+          </div>
+        )}
+
+        {/* RESULTS HEADER & VIEW CONTROLS */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2">
           <div className="flex items-center gap-3">
-            <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-[#F8FAFC]">
-              Search Results
+            <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">
+              {loading ? "Searching properties..." : `${sortedProperties.length} properties found`}
             </h2>
-            <span className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-cyan-300 font-mono font-bold text-xs border border-blue-200 dark:border-blue-800">
-              {filteredAndSortedProperties.length} Parcels Found
-            </span>
+            {loading && <RefreshCw size={14} className="animate-spin text-blue-600" />}
           </div>
 
-          {/* View Mode Toggle: Grid vs Table */}
-          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-200/70 dark:bg-[#1E293B] border border-slate-300/60 dark:border-[#334155] self-start sm:self-auto">
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                viewMode === "grid"
-                  ? "bg-white dark:bg-[#0F172A] text-blue-600 dark:text-cyan-400 shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-              }`}
-            >
-              <LayoutGrid size={14} />
-              <span>Grid</span>
-            </button>
-            <button
-              onClick={() => setViewMode("table")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                viewMode === "table"
-                  ? "bg-white dark:bg-[#0F172A] text-blue-600 dark:text-cyan-400 shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-              }`}
-            >
-              <List size={14} />
-              <span>Table</span>
-            </button>
+          <div className="flex items-center gap-2">
+            {/* View Mode Toggle */}
+            <div className="p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setViewMode("grid")}
+                className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  viewMode === "grid"
+                    ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-cyan-400 shadow-xs"
+                    : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                }`}
+                title="Grid View"
+              >
+                <LayoutGrid size={15} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("table")}
+                className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  viewMode === "table"
+                    ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-cyan-400 shadow-xs"
+                    : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                }`}
+                title="Table View"
+              >
+                <List size={15} />
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* RESULTS GRID / TABLE */}
+        {/* LOADING STATE */}
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="h-64 bg-slate-100 dark:bg-[#1E293B] animate-pulse rounded-2xl" />
+              <Skeleton key={i} className="h-72 w-full rounded-3xl" />
             ))}
           </div>
-        ) : filteredAndSortedProperties.length > 0 ? (
+        ) : sortedProperties.length > 0 ? (
           viewMode === "grid" ? (
+            /* GRID VIEW */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredAndSortedProperties.map((prop) => (
-                <LinearPropertyCard
-                  key={(prop.numericId || prop.id).toString()}
-                  property={prop}
-                  onInspect={() => handleOpenDrawer(prop)}
-                />
-              ))}
+              {sortedProperties.map((prop) => {
+                const isVerified = prop.status === "VERIFIED";
+                return (
+                  <div
+                    key={prop.propertyId}
+                    className="glass-card rounded-3xl bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs hover:shadow-xl transition-all duration-200 flex flex-col justify-between overflow-hidden group"
+                  >
+                    <div className="p-6 space-y-4">
+                      {/* Top Code & Status */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-extrabold text-blue-600 dark:text-cyan-400 text-xs">
+                          {prop.propertyCode}
+                        </span>
+                        <Badge variant={isVerified ? "success" : prop.status === "PENDING" ? "warning" : "info"}>
+                          {prop.status}
+                        </Badge>
+                      </div>
+
+                      {/* Title & Type */}
+                      <div>
+                        <div className="inline-block px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                          {prop.propertyType}
+                        </div>
+                        <h3 className="font-extrabold text-slate-900 dark:text-white text-base group-hover:text-blue-600 dark:group-hover:text-cyan-400 transition-colors line-clamp-1">
+                          {prop.propertyName}
+                        </h3>
+                      </div>
+
+                      {/* Location */}
+                      <div className="flex items-start gap-1.5 text-xs text-slate-500 font-sans">
+                        <MapPin size={14} className="shrink-0 text-slate-400 mt-0.5" />
+                        <span className="line-clamp-2">
+                          {prop.address || `${prop.city}, ${prop.state}`}
+                        </span>
+                      </div>
+
+                      {/* Market Value */}
+                      <div className="pt-3 flex items-baseline justify-between border-t border-slate-100 dark:border-[#334155]">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold">Market Value</span>
+                        <span className="text-base font-black text-slate-900 dark:text-white font-mono">
+                          {prop.price}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Card Action Buttons */}
+                    <div className="p-4 pt-0 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleInspect(prop)}
+                        className="py-2.5 px-3 rounded-xl border border-slate-200 dark:border-[#334155] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold text-center transition-all cursor-pointer"
+                      >
+                        Quick Inspect
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/properties/${prop.propertyId}`)}
+                        className="py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold text-center transition-all cursor-pointer shadow-md shadow-blue-500/20 flex items-center justify-center gap-1"
+                      >
+                        <span>View Details</span>
+                        <ArrowRight size={13} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           ) : (
-            <div className="white-card rounded-2xl bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] p-4">
-              <PropertyTable properties={filteredAndSortedProperties} onSelectProperty={handleOpenDrawer} />
-            </div>
+            /* TABLE VIEW */
+            <PropertyTable
+              properties={sortedProperties}
+              onInspect={handleInspect}
+              onViewDetails={(prop) => navigate(`/properties/${prop.propertyId || prop.numericId}`)}
+            />
           )
         ) : (
-          <EmptyState
-            title="No Matching Property Parcels Found"
-            message={`No property records matched your query "${searchAddress}" with current filter criteria.`}
-            actionLabel="Reset Search & Filters"
-            onAction={handleClearFilters}
-          />
+          /* EMPTY STATE */
+          <div className="glass-card rounded-3xl p-12 text-center bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4 max-w-xl mx-auto">
+            <Building2 size={44} className="mx-auto text-slate-300 dark:text-slate-600" />
+            <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">
+              {getEmptyStateMessage()}
+            </h3>
+            <p className="text-xs text-slate-500 font-sans">
+              Try adjusting your search criteria, selecting a different state or city, or clearing your active filters.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleClearFilters}
+              className="mt-2 inline-flex items-center gap-1.5"
+            >
+              <RefreshCw size={14} />
+              Clear All Filters
+            </Button>
+          </div>
         )}
 
-        {/* SIDE INSPECTION DRAWER */}
+        {/* QUICK INSPECTION DRAWER */}
         <PropertyInspectionDrawer
           isOpen={drawerOpen}
           onClose={() => setDrawerOpen(false)}
           property={selectedProperty}
+          onOpenFullDetails={(propId) => navigate(`/properties/${propId}`)}
         />
       </div>
     </MainLayout>

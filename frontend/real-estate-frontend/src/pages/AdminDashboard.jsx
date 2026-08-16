@@ -1,12 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   ResponsiveContainer,
   BarChart,
   Bar,
-  AreaChart,
-  Area,
   PieChart,
   Pie,
   Cell,
@@ -19,6 +17,7 @@ import {
 import MainLayout from "../components/layout/MainLayout";
 import Badge from "../components/common/Badge";
 import Button from "../components/common/Button";
+import EmptyState from "../components/common/EmptyState";
 import DashboardCard from "../components/dashboard/DashboardCard";
 import QuickActions from "../components/dashboard/QuickActions";
 import {
@@ -28,189 +27,167 @@ import {
   FileText,
   Activity,
   AlertTriangle,
-  UserPlus,
   BarChart3,
   CheckCircle2,
   Clock,
   Download,
   Eye,
-  Sparkles,
   Server,
   Database,
   ArrowUpRight,
   Shield,
   Layers,
-  Search,
-  Filter,
-  Check,
-  X,
-  FileSpreadsheet,
+  RotateCcw,
+  Sparkles,
+  MapPin,
 } from "lucide-react";
 import { showSuccessAlert, showToast } from "../utils/swal";
 import { exportToPdf } from "../utils/exportUtils";
 import { getAdminDashboardAnalytics } from "../services/adminService";
 import { getAllAuditLogs } from "../services/auditService";
-
-// CENTRALIZED MOCK DATA FOR ADMIN DASHBOARD
-const MOCK_RECENT_ACTIVITIES = [
-  {
-    id: "ACT-ADMIN-101",
-    user: "V Bharath (Admin)",
-    action: "Updated system security role permissions for Financial Institution",
-    timestamp: "10 mins ago",
-    status: "Completed",
-    variant: "success",
-  },
-  {
-    id: "ACT-ADMIN-102",
-    user: "Adv. Rajesh Sharma",
-    action: "Generated Legal Encumbrance Audit Report #RPT-881",
-    timestamp: "35 mins ago",
-    status: "Verified",
-    variant: "info",
-  },
-  {
-    id: "ACT-ADMIN-103",
-    user: "Adani Realty Institutional",
-    action: "Submitted Commercial Loan Application LN-HYD-2026-105",
-    timestamp: "1 hour ago",
-    status: "Under Review",
-    variant: "warning",
-  },
-  {
-    id: "ACT-ADMIN-104",
-    user: "System Telemetry",
-    action: "Automated Sub-Registrar API Database Sync completed",
-    timestamp: "2 hours ago",
-    status: "Success",
-    variant: "success",
-  },
-];
-
-// Mock System Alerts
-const MOCK_SYSTEM_ALERTS = [
-  {
-    id: "ALT-101",
-    title: "Sub-Registrar Registry API Latency Spike",
-    description: "API response latency reached 420ms during peak Telangana land records sync.",
-    severity: "Medium",
-    time: "25 mins ago",
-  },
-  {
-    id: "ALT-102",
-    title: "Storage Backup Snapshot Created",
-    description: "Daily automated PostgreSQL & Document storage snapshot completed successfully.",
-    severity: "Info",
-    time: "3 hours ago",
-  },
-];
-
-// Mock Recent Reports
-const MOCK_RECENT_REPORTS = [
-  {
-    id: "RPT-2026-901",
-    title: "Commercial Due Diligence Audit Dossier",
-    property: "Gachibowli Tech Park Phase 2",
-    applicant: "Adani Realty Institutional Fund",
-    date: "05 Aug 2026",
-    status: "Approved",
-  },
-  {
-    id: "RPT-2026-902",
-    title: "Municipal PTIN Tax Clearance Verification",
-    property: "Whitefield Horizon Tech Campus",
-    applicant: "Sobha Developers Commercial",
-    date: "04 Aug 2026",
-    status: "Verified",
-  },
-  {
-    id: "RPT-2026-903",
-    title: "Collateral Risk Index Assessment",
-    property: "Jubilee Hills Commercial Plot 36",
-    applicant: "DLF Cybercity Developers Ltd",
-    date: "04 Aug 2026",
-    status: "Under Review",
-  },
-];
-
-// Mock Recent User Registrations
-const MOCK_RECENT_USERS = [
-  {
-    id: "USR-301",
-    name: "Dr. Arvind Swamy",
-    email: "arvind.swamy@capital.in",
-    role: "Financial Institution",
-    organization: "HDFC Commercial Capital",
-    date: "Today at 09:15 AM",
-  },
-  {
-    id: "USR-302",
-    name: "Adv. Meera Deshmukh",
-    email: "meera.legal@lexjuris.in",
-    role: "Legal Reviewer",
-    organization: "LexJuris Legal Auditors",
-    date: "Yesterday at 04:40 PM",
-  },
-  {
-    id: "USR-303",
-    name: "Karan Johar Realty",
-    email: "karan@joharrealty.com",
-    role: "Real Estate Agent",
-    organization: "Prime Realty Advisors",
-    date: "Yesterday at 02:10 PM",
-  },
-];
-
-// Analytics Preview Mock Data
-const MOCK_USER_GROWTH = [
-  { month: "Jan", users: 420 },
-  { month: "Feb", users: 580 },
-  { month: "Mar", users: 740 },
-  { month: "Apr", users: 910 },
-  { month: "May", users: 1120 },
-  { month: "Jun", users: 1284 },
-];
-
-const MOCK_ROLE_DISTRIBUTION = [
-  { name: "Buyers", value: 520, color: "#3B82F6" },
-  { name: "Agents", value: 340, color: "#8B5CF6" },
-  { name: "Legal Reviewers", value: 240, color: "#F59E0B" },
-  { name: "Financial Institutions", value: 184, color: "#10B981" },
-];
+import { getAllReports } from "../services/reportService";
+import { getAllProperties } from "../services/propertyService";
+import { getCurrentUser } from "../services/authService";
 
 function AdminDashboard() {
   const navigate = useNavigate();
   const [analytics, setAnalytics] = useState(null);
   const [auditLogs, setAuditLogs] = useState([]);
+  const [reports, setReports] = useState([]);
+  const [properties, setProperties] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+  const [lastSyncTime, setLastSyncTime] = useState("");
 
-  // Get User Profile from LocalStorage
-  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  // Authenticated user identity
+  const storedUser = getCurrentUser() || JSON.parse(localStorage.getItem("user") || "{}");
   const userName = storedUser.firstName 
     ? `${storedUser.firstName} ${storedUser.lastName || ""}`.trim() 
-    : (storedUser.name || "Admin User");
+    : (storedUser.name || "System Administrator");
 
-  React.useEffect(() => {
-    getAdminDashboardAnalytics()
-      .then((res) => {
-        if (res && res.data) {
-          setAnalytics(res.data);
-        }
-      })
-      .catch((err) => console.warn("Backend admin analytics query fallback:", err));
+  const fetchAdminData = useCallback(async (isManualSync = false) => {
+    try {
+      if (isManualSync) setSyncing(true);
+      else setLoading(true);
 
-    getAllAuditLogs()
-      .then((res) => {
-        if (res && res.data && Array.isArray(res.data)) {
-          setAuditLogs(res.data);
-        }
-      })
-      .catch((err) => console.warn("Backend audit logs query fallback:", err));
+      const [analyticsRes, logsRes, reportsRes, propsRes] = await Promise.allSettled([
+        getAdminDashboardAnalytics(),
+        getAllAuditLogs(),
+        getAllReports(0, 20),
+        getAllProperties(0, 50),
+      ]);
+
+      let online = false;
+
+      if (analyticsRes.status === "fulfilled" && analyticsRes.value?.data) {
+        setAnalytics(analyticsRes.value.data);
+        online = true;
+      }
+      if (logsRes.status === "fulfilled") {
+        const logData = logsRes.value?.data || logsRes.value;
+        setAuditLogs(Array.isArray(logData) ? logData : []);
+        online = true;
+      }
+      if (reportsRes.status === "fulfilled") {
+        const rptData = reportsRes.value?.data || reportsRes.value;
+        setReports(rptData?.content || (Array.isArray(rptData) ? rptData : []));
+        online = true;
+      }
+      if (propsRes.status === "fulfilled") {
+        const pData = propsRes.value?.data || propsRes.value;
+        setProperties(pData?.content || (Array.isArray(pData) ? pData : []));
+        online = true;
+      }
+
+      setIsOnline(online);
+      const nowStr = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      setLastSyncTime(nowStr);
+
+      if (isManualSync) {
+        showToast("Platform telemetry refreshed from PostgreSQL database", "success");
+      }
+    } catch (err) {
+      console.error("Admin dashboard data fetch error:", err);
+      setIsOnline(false);
+      if (isManualSync) {
+        showToast("Unable to sync telemetry with backend", "error");
+      }
+    } finally {
+      setLoading(false);
+      setSyncing(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchAdminData();
+
+    // Auto-polling telemetry interval every 45 seconds with cleanup
+    const interval = setInterval(() => {
+      fetchAdminData();
+    }, 45000);
+
+    return () => clearInterval(interval);
+  }, [fetchAdminData]);
+
+  // Compute dynamic property status distribution from real properties
+  const propertyStatusDistribution = useMemo(() => {
+    if (properties.length === 0) return [];
+    const counts = {};
+    properties.forEach((p) => {
+      const st = p.status || "UNDER_REVIEW";
+      counts[st] = (counts[st] || 0) + 1;
+    });
+
+    const colors = {
+      ACTIVE: "#10B981",
+      AVAILABLE: "#10B981",
+      VERIFIED: "#3B82F6",
+      PENDING: "#F59E0B",
+      UNDER_REVIEW: "#F59E0B",
+      FLAGGED: "#EF4444",
+      SOLD: "#64748B",
+    };
+
+    return Object.entries(counts).map(([name, value]) => ({
+      name: name.replace(/_/g, " "),
+      value,
+      color: colors[name] || "#8B5CF6",
+    }));
+  }, [properties]);
+
+  // Compute dynamic audit log activity chart from real audit logs
+  const auditActivityByAction = useMemo(() => {
+    if (auditLogs.length === 0) return [];
+    const counts = {};
+    auditLogs.slice(0, 50).forEach((log) => {
+      const act = log.action || "SYSTEM_EVENT";
+      counts[act] = (counts[act] || 0) + 1;
+    });
+
+    return Object.entries(counts)
+      .slice(0, 6)
+      .map(([action, count]) => ({
+        action: action.replace(/_/g, " "),
+        count,
+      }));
+  }, [auditLogs]);
+
+  // Compute city distribution from real properties
+  const propertyCityDistribution = useMemo(() => {
+    if (properties.length === 0) return [];
+    const counts = {};
+    properties.forEach((p) => {
+      const city = p.address?.city || p.city || "Urban Hub";
+      counts[city] = (counts[city] || 0) + 1;
+    });
+    return Object.entries(counts).slice(0, 4);
+  }, [properties]);
 
   return (
     <MainLayout>
       <div className="space-y-8 max-w-7xl mx-auto pb-16 font-mono text-xs">
-        {/* 1. WELCOME SECTION */}
+        {/* 1. WELCOME & SYNC HEADER SECTION */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -224,45 +201,77 @@ function AdminDashboard() {
               👋 Welcome, {userName}
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-[#CBD5E1] mt-1 max-w-2xl">
-              System Dashboard Telemetry • Monitor User Accounts, System Health, Audit Logs, Recent Reports, and Platform Analytics.
+              System Dashboard Telemetry • Live PostgreSQL platform monitoring, audit telemetry, and due diligence registries.
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
-            <span className="px-3 py-1.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 font-mono font-bold text-xs border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
-              SYSTEM 100% OPERATIONAL
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            {/* Dynamic System Status */}
+            <span
+              className={`px-3 py-1.5 rounded-2xl font-mono font-bold text-xs border flex items-center gap-1.5 ${
+                isOnline
+                  ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
+                  : "bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800"
+              }`}
+            >
+              <span
+                className={`w-2.5 h-2.5 rounded-full inline-block ${
+                  isOnline ? "bg-emerald-500 animate-pulse" : "bg-rose-500"
+                }`}
+              />
+              {isOnline ? "SYSTEM OPERATIONAL" : "SYSTEM DEGRADED"}
             </span>
+
+            {/* Sync Button */}
+            <Button
+              onClick={() => fetchAdminData(true)}
+              variant="outline"
+              size="sm"
+              icon={RotateCcw}
+              loading={syncing || loading}
+            >
+              {syncing ? "Syncing..." : lastSyncTime ? `Sync (${lastSyncTime})` : "Sync Data"}
+            </Button>
           </div>
         </motion.div>
 
-        {/* 2. STATISTICS CARDS (REUSABLE KPI CARDS COMPONENT) */}
+        {/* 2. LIVE STATISTICS CARDS (8 KPI CARDS) */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider text-[11px] flex items-center gap-2">
-              <BarChart3 size={15} className="text-blue-500" /> SECTION 2: Key Performance Metrics
+              <BarChart3 size={15} className="text-blue-500" /> Key Performance Telemetry
             </h2>
+            {lastSyncTime && (
+              <span className="text-[10px] text-slate-400">
+                Auto-polled every 45s • Last: {lastSyncTime}
+              </span>
+            )}
           </div>
-          <DashboardCard analytics={analytics} />
+          <DashboardCard
+            analytics={analytics}
+            loading={loading}
+            isOnline={isOnline}
+            lastSyncTime={lastSyncTime}
+          />
         </section>
 
-        {/* 3. QUICK ACTIONS (REUSABLE QUICK ACTIONS COMPONENT) */}
+        {/* 3. QUICK ACTIONS WORKSTATION */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider text-[11px] flex items-center gap-2">
-              <Layers size={15} className="text-purple-500" /> SECTION 3: Quick Actions Workstation
+              <Layers size={15} className="text-purple-500" /> Administrative Quick Actions Workstation
             </h2>
           </div>
           <QuickActions />
         </section>
 
-        {/* 2-COLUMN MAIN GRID: ACTIVITIES (4) + ALERTS (5) */}
+        {/* 4. RECENT AUDIT LOGS & INFRASTRUCTURE TELEMETRY */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* 4. RECENT ACTIVITIES (7 COLS) */}
+          {/* RECENT LIVE AUDIT LOG FEED */}
           <div className="lg:col-span-7 white-card rounded-3xl p-6 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#334155] pb-3">
               <h2 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                <Clock size={16} className="text-blue-500" /> 4. Recent Activities
+                <Clock size={16} className="text-blue-500" /> Live Audit Log Feed ({analytics?.totalAuditLogs ?? auditLogs.length})
               </h2>
               <button
                 onClick={() => navigate("/recent-activity")}
@@ -273,6 +282,7 @@ function AdminDashboard() {
               </button>
             </div>
 
+<<<<<<< HEAD
             <div className="space-y-3 font-mono text-xs">
               {auditLogs && auditLogs.length > 0 ? (
                 auditLogs.slice(0, 4).map((act) => (
@@ -295,49 +305,115 @@ function AdminDashboard() {
                 <div className="text-center py-6 text-slate-500">No system activities recorded yet.</div>
               )}
             </div>
+=======
+            {auditLogs.length === 0 ? (
+              <div className="py-6">
+                <EmptyState
+                  title="No Audit Logs Recorded"
+                  message="System operations will automatically generate telemetry in this feed."
+                />
+              </div>
+            ) : (
+              <div className="space-y-3 font-mono text-xs">
+                {auditLogs.slice(0, 5).map((log, idx) => {
+                  const logId = log.id || log.logId || `LOG-${idx + 1}`;
+                  const actionStr = (log.action || "SYSTEM_EVENT").replace(/_/g, " ");
+                  const userStr = log.username || log.performedBy || log.userEmail || "System Telemetry";
+                  const dateStr = log.timestamp ? new Date(log.timestamp).toLocaleString("en-GB") : "Recent";
+                  const isSuccess = (log.status || "SUCCESS").toUpperCase() === "SUCCESS";
+
+                  return (
+                    <div
+                      key={logId}
+                      className="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] flex items-center justify-between gap-3 hover:border-blue-500/40 transition-all"
+                    >
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-slate-900 dark:text-white text-xs truncate">
+                          {actionStr}
+                        </h3>
+                        <span className="text-[10px] text-slate-400 block mt-0.5">
+                          By {userStr} • {dateStr}
+                        </span>
+                      </div>
+                      <Badge variant={isSuccess ? "success" : "danger"}>
+                        {log.status || "SUCCESS"}
+                      </Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+>>>>>>> 1318ddef (Complete real estate due diligence platform)
           </div>
 
-          {/* 5. SYSTEM ALERTS (5 COLS) */}
+          {/* INFRASTRUCTURE & DATABASE TELEMETRY */}
           <div className="lg:col-span-5 white-card rounded-3xl p-6 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#334155] pb-3">
               <h2 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                <AlertTriangle size={16} className="text-amber-500" /> 5. System Alerts
+                <Server size={16} className="text-emerald-500" /> Platform Infrastructure Telemetry
               </h2>
               <button
                 onClick={() => navigate("/system-monitoring")}
-                className="text-xs text-amber-600 dark:text-amber-400 font-bold hover:underline cursor-pointer flex items-center gap-1"
+                className="text-xs text-emerald-600 dark:text-emerald-400 font-bold hover:underline cursor-pointer flex items-center gap-1"
               >
-                <span>Monitor Health</span>
+                <span>Full Telemetry</span>
                 <ArrowUpRight size={13} />
               </button>
             </div>
 
             <div className="space-y-3 font-mono text-xs">
-              {MOCK_SYSTEM_ALERTS.map((alert) => (
-                <div
-                  key={alert.id}
-                  className="p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 space-y-1.5"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <strong className="text-slate-900 dark:text-white font-extrabold text-xs">
-                      {alert.title}
-                    </strong>
-                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold">{alert.time}</span>
-                  </div>
-                  <p className="text-slate-600 dark:text-slate-300 text-[11px] font-medium leading-relaxed">
-                    {alert.description}
-                  </p>
+              <div className="p-3.5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between">
+                <div>
+                  <strong className="text-slate-900 dark:text-white font-extrabold text-xs block">
+                    PostgreSQL Database Engine
+                  </strong>
+                  <span className="text-[10px] text-slate-400">Port 5432 • HikariCP Active</span>
                 </div>
-              ))}
+                <Badge variant={isOnline ? "success" : "danger"}>{isOnline ? "CONNECTED" : "OFFLINE"}</Badge>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 flex items-center justify-between">
+                <div>
+                  <strong className="text-slate-900 dark:text-white font-extrabold text-xs block">
+                    Spring Boot 3.5.16 REST API
+                  </strong>
+                  <span className="text-[10px] text-slate-400">Port 8081 • JWT Security</span>
+                </div>
+                <Badge variant={isOnline ? "success" : "danger"}>{isOnline ? "ONLINE" : "OFFLINE"}</Badge>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 flex items-center justify-between">
+                <div>
+                  <strong className="text-slate-900 dark:text-white font-extrabold text-xs block">
+                    Live Properties Catalog
+                  </strong>
+                  <span className="text-[10px] text-slate-400">Real estate parcels registered</span>
+                </div>
+                <strong className="text-purple-600 dark:text-cyan-400 font-black text-sm">
+                  {analytics?.totalProperties ?? properties.length} Parcels
+                </strong>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-cyan-50/50 dark:bg-cyan-950/20 border border-cyan-200 dark:border-cyan-800 flex items-center justify-between">
+                <div>
+                  <strong className="text-slate-900 dark:text-white font-extrabold text-xs block">
+                    Registered Users
+                  </strong>
+                  <span className="text-[10px] text-slate-400">Buyer, Agent, Legal, Financial & Admin</span>
+                </div>
+                <strong className="text-cyan-600 dark:text-cyan-400 font-black text-sm">
+                  {analytics?.totalUsers ?? "—"} Users
+                </strong>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* 6. RECENT REPORTS */}
+        {/* 5. RECENT DUE DILIGENCE REPORTS REGISTRY */}
         <div className="white-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#334155] pb-4">
             <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-              <FileText size={18} className="text-purple-500" /> 6. Recent Reports
+              <FileText size={18} className="text-purple-500" /> Recent Due Diligence Reports ({analytics?.totalReports ?? reports.length})
             </h2>
             <button
               onClick={() => navigate("/report-management")}
@@ -348,6 +424,7 @@ function AdminDashboard() {
             </button>
           </div>
 
+<<<<<<< HEAD
           <div className="overflow-x-auto">
             <table className="w-full text-left font-mono text-xs">
               <thead>
@@ -441,22 +518,99 @@ function AdminDashboard() {
         </div>
 
         {/* 8. ANALYTICS PREVIEW */}
+=======
+          {reports.length === 0 ? (
+            <div className="py-8">
+              <EmptyState
+                title="No Reports Generated Yet"
+                message="Due diligence reports generated by users will appear in this administrative registry."
+              />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left font-mono text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-[#334155] text-slate-400 text-[10px] uppercase font-bold">
+                    <th className="pb-3">Report ID</th>
+                    <th className="pb-3">Property ID / Name</th>
+                    <th className="pb-3">Report Type</th>
+                    <th className="pb-3">Generated Date</th>
+                    <th className="pb-3">Status</th>
+                    <th className="pb-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-[#334155]">
+                  {reports.slice(0, 5).map((rpt) => {
+                    const rptId = rpt.reportId || rpt.id;
+                    const pId = rpt.propertyId || rpt.property?.propertyId || "—";
+                    const pName = rpt.propertyName || rpt.property?.propertyName || `Property #${pId}`;
+                    const rptType = (rpt.reportType || "DUE_DILIGENCE").replace(/_/g, " ");
+                    const dateStr = rpt.createdAt ? new Date(rpt.createdAt).toLocaleDateString("en-GB") : "Recent";
+                    const st = rpt.status || "COMPLETED";
+
+                    return (
+                      <tr key={rptId} className="hover:bg-slate-50 dark:hover:bg-[#0F172A]">
+                        <td className="py-3 font-bold text-blue-600 dark:text-cyan-400">
+                          RPT-{rptId}
+                        </td>
+                        <td className="py-3 font-bold text-slate-900 dark:text-white">
+                          {pName} (PR-{pId})
+                        </td>
+                        <td className="py-3 text-slate-600 dark:text-slate-300 font-medium">
+                          {rptType}
+                        </td>
+                        <td className="py-3 text-slate-400">{dateStr}</td>
+                        <td className="py-3">
+                          <Badge variant={st === "COMPLETED" || st === "VERIFIED" ? "success" : "warning"}>
+                            {st}
+                          </Badge>
+                        </td>
+                        <td className="py-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => navigate(`/report-history`)}
+                              className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-cyan-300 hover:bg-blue-100 cursor-pointer"
+                              title="Preview"
+                            >
+                              <Eye size={14} />
+                            </button>
+                            <button
+                              onClick={() => exportToPdf(rptId, rpt)}
+                              className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-100 cursor-pointer"
+                              title="Download PDF"
+                            >
+                              <Download size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* 6. CHARTS & REGISTRY BREAKDOWNS */}
+>>>>>>> 1318ddef (Complete real estate due diligence platform)
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* USER GROWTH (7 COLS) */}
+          {/* AUDIT LOG TELEMETRY CHART (7 COLS) */}
           <div className="lg:col-span-7 white-card rounded-3xl p-6 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#334155] pb-3">
               <h2 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                <BarChart3 size={16} className="text-blue-500" /> 8A. User Growth Analytics Preview
+                <BarChart3 size={16} className="text-blue-500" /> Audit Actions Breakdown
               </h2>
               <button
-                onClick={() => navigate("/financial-analytics")}
+                onClick={() => navigate("/recent-activity")}
                 className="text-xs text-blue-600 dark:text-cyan-400 font-bold hover:underline cursor-pointer flex items-center gap-1"
               >
-                <span>Full Analytics</span>
+                <span>Audit Logs</span>
                 <ArrowUpRight size={13} />
               </button>
             </div>
             <div className="h-64 w-full pt-2">
+<<<<<<< HEAD
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={(analytics && analytics.userGrowth) || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
@@ -466,23 +620,34 @@ function AdminDashboard() {
                   <Area type="monotone" dataKey="users" name="Total Users" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.3} />
                 </AreaChart>
               </ResponsiveContainer>
+=======
+              {auditActivityByAction.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-slate-400">
+                  No telemetry logged yet.
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={auditActivityByAction} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
+                    <XAxis dataKey="action" stroke="#94A3B8" fontSize={9} tickLine={false} />
+                    <YAxis stroke="#94A3B8" fontSize={10} tickLine={false} />
+                    <Tooltip contentStyle={{ backgroundColor: "#0F172A", borderColor: "#334155", borderRadius: "12px", color: "#FFF", fontSize: "11px" }} />
+                    <Bar dataKey="count" name="Audit Events" fill="#3B82F6" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+>>>>>>> 1318ddef (Complete real estate due diligence platform)
             </div>
           </div>
 
-          {/* ROLE DISTRIBUTION (5 COLS) */}
+          {/* PROPERTY VERIFICATION DISTRIBUTION (5 COLS) */}
           <div className="lg:col-span-5 white-card rounded-3xl p-6 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#334155] pb-3">
               <h2 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                <Shield size={16} className="text-purple-500" /> 8B. Role Distribution Preview
+                <Building2 size={16} className="text-purple-500" /> Property Status Breakdown
               </h2>
-              <button
-                onClick={() => navigate("/role-management")}
-                className="text-xs text-purple-600 dark:text-purple-400 font-bold hover:underline cursor-pointer flex items-center gap-1"
-              >
-                <span>Manage Roles</span>
-                <ArrowUpRight size={13} />
-              </button>
             </div>
+<<<<<<< HEAD
             <div className="h-64 w-full pt-2">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -495,6 +660,32 @@ function AdminDashboard() {
                   <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "10px" }} />
                 </PieChart>
               </ResponsiveContainer>
+=======
+            <div className="h-64 w-full flex items-center justify-center">
+              {propertyStatusDistribution.length === 0 ? (
+                <span className="text-slate-400">No properties in database.</span>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={propertyStatusDistribution}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {propertyStatusDistribution.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ backgroundColor: "#0F172A", borderColor: "#334155", borderRadius: "12px", color: "#FFF", fontSize: "11px" }} />
+                    <Legend wrapperStyle={{ fontSize: "11px" }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+>>>>>>> 1318ddef (Complete real estate due diligence platform)
             </div>
           </div>
         </div>

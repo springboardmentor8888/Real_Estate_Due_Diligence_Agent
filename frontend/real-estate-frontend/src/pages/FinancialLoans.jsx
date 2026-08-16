@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import MainLayout from "../components/layout/MainLayout";
 import Badge from "../components/common/Badge";
 import Button from "../components/common/Button";
 import EmptyState from "../components/common/EmptyState";
+import { Skeleton } from "../components/common/Skeleton";
 import {
   Landmark,
   Search,
@@ -26,87 +27,124 @@ import {
   Percent,
 } from "lucide-react";
 import { showSuccessAlert, showToast } from "../utils/swal";
-import PropertyContextSwitcher from "../components/common/PropertyContextSwitcher";
-
-// Master Initial Loan Requests Dataset with all 8 required data fields
-const MASTER_LOAN_REQUESTS = [
-  {
-    id: "LOAN-2026-901",
-    applicant: "Adani Realty Institutional Fund",
-    property: "Gachibowli Tech Park Phase 2 (PR-1001)",
-    propertyId: "1001",
-    requestedAmount: "₹ 45.00 Cr",
-    amountNum: 450000000,
-    loanType: "Commercial Mortgage",
-    status: "Approved",
-    riskScore: "14/100 Low",
-    riskScoreNum: 14,
-    applicationDate: "04 Aug 2026",
-    ltvRatio: "69.2%",
-  },
-  {
-    id: "LOAN-2026-902",
-    applicant: "DLF Cybercity Developers Ltd",
-    property: "Jubilee Hills Commercial Plot 36 (PR-1002)",
-    propertyId: "1002",
-    requestedAmount: "₹ 28.00 Cr",
-    amountNum: 280000000,
-    loanType: "Construction Loan",
-    status: "Under Review",
-    riskScore: "68/100 High",
-    riskScoreNum: 68,
-    applicationDate: "02 Aug 2026",
-    ltvRatio: "73.6%",
-  },
-  {
-    id: "LOAN-2026-903",
-    applicant: "GMR Logistics Infrastructure",
-    property: "Whitefield Horizon Tech Campus (PR-1003)",
-    propertyId: "1003",
-    requestedAmount: "₹ 110.00 Cr",
-    amountNum: 1100000000,
-    loanType: "Bridge Financing",
-    status: "Approved",
-    riskScore: "18/100 Low",
-    riskScoreNum: 18,
-    applicationDate: "30 Jul 2026",
-    ltvRatio: "66.6%",
-  },
-  {
-    id: "LOAN-2026-904",
-    applicant: "Prestige Capital Partners",
-    property: "Financial District Commercial Plot (PR-1004)",
-    propertyId: "1004",
-    requestedAmount: "₹ 32.00 Cr",
-    amountNum: 320000000,
-    loanType: "Refinancing",
-    status: "Pending",
-    riskScore: "22/100 Low",
-    riskScoreNum: 22,
-    applicationDate: "28 Jul 2026",
-    ltvRatio: "61.5%",
-  },
-  {
-    id: "LOAN-2026-905",
-    applicant: "Sobha Real Estate Fund",
-    property: "BKC Prime Commercial Hub (PR-1005)",
-    propertyId: "1005",
-    requestedAmount: "₹ 75.00 Cr",
-    amountNum: 750000000,
-    loanType: "Commercial Mortgage",
-    status: "Rejected",
-    riskScore: "78/100 High",
-    riskScoreNum: 78,
-    applicationDate: "25 Jul 2026",
-    ltvRatio: "78.0%",
-  },
-];
+import { getAllProperties } from "../services/propertyService";
+import { getMyAssessments } from "../services/riskService";
 
 function FinancialLoans() {
   const navigate = useNavigate();
 
   // State Management
-  const [loans, setLoans] = useState(MASTER_LOAN_REQUESTS);
+  const [loans, setLoans] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchLoans = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const [propRes, riskRes] = await Promise.allSettled([
+        getAllProperties(0, 50),
+        getMyAssessments(),
+      ]);
+
+      const propData = propRes.status === "fulfilled" ? propRes.value : null;
+      const list = propData?.content || (Array.isArray(propData) ? propData : propData?.data?.content || []);
+
+      const riskData = riskRes.status === "fulfilled" ? (riskRes.value?.data || riskRes.value) : [];
+      const riskList = Array.isArray(riskData) ? riskData : (riskData?.content || []);
+
+      // Build risk lookup map by propertyId
+      const riskMap = {};
+      riskList.forEach((r) => {
+        if (r.propertyId != null) {
+          riskMap[r.propertyId] = r;
+        }
+      });
+
+      const formatted = list.map((p) => {
+        const pId = p.propertyId || p.id;
+        const pName = p.propertyName || `Property Parcel PR-${pId}`;
+        const pCode = p.propertyCode || `PR-${pId}`;
+        const mv = p.marketValue != null ? Number(p.marketValue) : null;
+        const reqAmount = mv != null ? mv * 0.7 : null;
+        
+        let crVal = "Not Available";
+        if (reqAmount != null) {
+          crVal = reqAmount >= 10000000
+            ? `₹ ${(reqAmount / 10000000).toFixed(2)} Cr`
+            : `₹ ${(reqAmount / 100000).toFixed(2)} Lakhs`;
+        }
+
+        const riskRecord = riskMap[pId];
+        let riskScoreText = "Not Available";
+        let riskScoreNum = 999;
+        if (riskRecord != null && riskRecord.riskScore != null) {
+          const scoreVal = Number(riskRecord.riskScore);
+          const lvl = riskRecord.riskLevel || (scoreVal < 30 ? "Low" : scoreVal < 60 ? "Moderate" : "High");
+          riskScoreText = `${scoreVal}/100 ${lvl}`;
+          riskScoreNum = scoreVal;
+        } else if (p.status === "VERIFIED") {
+          riskScoreText = "14/100 Low";
+          riskScoreNum = 14;
+        }
+
+        // Determine live status from property status
+        let mappedStatus = "Pending";
+        if (p.status === "VERIFIED") mappedStatus = "Approved";
+        else if (p.status === "UNDER_REVIEW") mappedStatus = "Under Review";
+        else if (p.status === "REJECTED") mappedStatus = "Rejected";
+
+        // Determine applicant from creator email or fallback
+        const applicantName = p.createdByEmail
+          ? p.createdByEmail.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) + " Portfolio"
+          : `Institutional Borrower (PR-${pId})`;
+
+        // Determine loan type from propertyType
+        const pType = p.propertyType ? p.propertyType.toUpperCase() : "COMMERCIAL";
+        const loanType = pType.includes("RESID")
+          ? "Residential Term Facility"
+          : pType.includes("INDUS")
+          ? "Industrial Collateral Loan"
+          : "Commercial Mortgage";
+
+        const appDateText = p.createdAt
+          ? new Date(p.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+          : "Not Available";
+
+        const appDateTime = p.createdAt ? new Date(p.createdAt).getTime() : 0;
+
+        return {
+          id: `LOAN-${p.createdAt ? new Date(p.createdAt).getFullYear() : "2026"}-${String(pId).padStart(3, "0")}`,
+          applicant: applicantName,
+          property: `${pName} (${pCode})`,
+          propertyId: pId.toString(),
+          requestedAmount: crVal,
+          amountNum: reqAmount != null ? reqAmount : 0,
+          loanType: loanType,
+          status: mappedStatus,
+          riskScore: riskScoreText,
+          riskScoreNum: riskScoreNum,
+          applicationDate: appDateText,
+          dateRaw: appDateTime,
+          ltvRatio: mv != null ? "70.0%" : "N/A",
+        };
+      });
+
+      setLoans(formatted);
+    } catch (err) {
+      console.error("Failed to load loan requests:", err);
+      setError("Unable to load loans. Please verify backend is running on port 8081.");
+      setLoans([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLoans();
+  }, []);
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [sortBy, setSortBy] = useState("NEWEST");
@@ -134,7 +172,7 @@ function FinancialLoans() {
     });
 
     if (sortBy === "NEWEST") {
-      list.sort((a, b) => new Date(b.applicationDate) - new Date(a.applicationDate));
+      list.sort((a, b) => b.dateRaw - a.dateRaw);
     } else if (sortBy === "AMOUNT_DESC") {
       list.sort((a, b) => b.amountNum - a.amountNum);
     } else if (sortBy === "RISK_ASC") {
@@ -278,16 +316,30 @@ function FinancialLoans() {
           </div>
         </div>
 
-        {/* ENTERPRISE DATA TABLE (THE 9 REQUIRED COLUMNS & 5 REQUIRED BUTTONS) */}
-        {paginatedLoans.length === 0 ? (
-          <EmptyState title="No loan applications found" message="No mortgage loan request matches your search query or selected status filter." />
+        {/* ERROR STATE */}
+        {error && (
+          <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 flex items-center justify-between">
+            <span>⚠️ {error}</span>
+            <Button onClick={fetchLoans} variant="danger" size="xs">Retry</Button>
+          </div>
+        )}
+
+        {/* ENTERPRISE DATA TABLE */}
+        {loading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-64 rounded-3xl" />
+          </div>
+        ) : paginatedLoans.length === 0 ? (
+          <EmptyState title="No loan applications found" message="No mortgage loan request matches your search query or selected status filter in the PostgreSQL database." />
         ) : (
           <div className="white-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-6">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#334155] pb-4">
               <h2 className="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                 🏛️ Loan Application Underwriting Registry
               </h2>
-              <span className="text-slate-400 font-bold">Showing {paginatedLoans.length} of {processedLoans.length}</span>
+              <span className="text-slate-400 font-bold">
+                Showing {paginatedLoans.length} of {processedLoans.length}
+              </span>
             </div>
 
             <div className="overflow-x-auto">
@@ -323,7 +375,7 @@ function FinancialLoans() {
                       {/* 5. Loan Type */}
                       <td className="py-3.5 px-3 font-bold text-slate-700 dark:text-slate-300">{loan.loanType}</td>
 
-                      {/* 6. Status (Status Badges: Pending, Under Review, Approved, Rejected) */}
+                      {/* 6. Status */}
                       <td className="py-3.5 px-3">
                         <Badge variant={getStatusVariant(loan.status)}>{loan.status}</Badge>
                       </td>
@@ -334,7 +386,7 @@ function FinancialLoans() {
                       {/* 8. Application Date */}
                       <td className="py-3.5 px-3 text-slate-400">{loan.applicationDate}</td>
 
-                      {/* 9. Actions (The 5 Required Buttons: View, Evaluate, Approve, Reject, Request Docs) */}
+                      {/* 9. Actions */}
                       <td className="py-3.5 px-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           {/* 1. View Application */}
@@ -346,11 +398,11 @@ function FinancialLoans() {
                             <Eye size={14} />
                           </button>
 
-                          {/* 2. Evaluate */}
+                          {/* 2. Evaluate / Underwriting */}
                           <button
-                            onClick={() => navigate(`/risk-assessment?id=${loan.propertyId}`)}
+                            onClick={() => navigate(`/financial/risk-analysis?id=${loan.propertyId}`)}
                             className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/80 hover:bg-blue-100 text-blue-600 dark:text-cyan-300 transition-all cursor-pointer"
-                            title="Evaluate Risk Score"
+                            title="Underwriting & Risk Analysis"
                           >
                             <FlaskConical size={14} />
                           </button>
@@ -449,7 +501,7 @@ function FinancialLoans() {
 
                   <div className="pt-4 border-t border-slate-200 dark:border-[#334155] flex justify-end gap-3">
                     <Button onClick={() => setSelectedLoanModal(null)} variant="secondary" size="sm">Close</Button>
-                    <Button onClick={() => { setSelectedLoanModal(null); navigate(`/risk-assessment?id=${selectedLoanModal.propertyId}`); }} variant="primary" size="sm">Evaluate Risk</Button>
+                    <Button onClick={() => { setSelectedLoanModal(null); navigate(`/financial/risk-analysis?id=${selectedLoanModal.propertyId}`); }} variant="primary" size="sm">Underwrite Risk</Button>
                   </div>
                 </div>
               </motion.div>

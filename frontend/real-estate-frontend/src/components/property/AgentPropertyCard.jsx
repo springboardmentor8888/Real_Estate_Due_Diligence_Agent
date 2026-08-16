@@ -11,7 +11,7 @@ import {
   UserPlus,
   Tag,
 } from "lucide-react";
-import { UNIQUE_PROPERTY_IMAGES } from "../../data/mockPropertyData";
+const DEFAULT_PROPERTY_IMAGE = "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80";
 
 /**
  * Reusable Agent Property Card Component
@@ -52,7 +52,7 @@ function AgentPropertyCard({
   const propertyImage =
     property.image ||
     (Array.isArray(property.images) && property.images.length > 0 ? property.images[0] : null) ||
-    UNIQUE_PROPERTY_IMAGES[0];
+    DEFAULT_PROPERTY_IMAGE;
 
   const getRiskBadgeColor = (score) => {
     if (score <= 25)
@@ -77,7 +77,7 @@ function AgentPropertyCard({
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             onError={(e) => {
               e.target.onerror = null;
-              e.target.src = UNIQUE_PROPERTY_IMAGES[0];
+              e.target.src = DEFAULT_PROPERTY_IMAGE;
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent" />

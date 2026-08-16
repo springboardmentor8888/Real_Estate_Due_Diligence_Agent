@@ -16,10 +16,10 @@ public interface RiskService {
     void deleteRiskCategory(Long id);
     List<RiskCategoryResponse> getAllRiskCategories();
 
-    // Risk Assessment Operations
     RiskAssessmentResponse createRiskAssessment(RiskAssessmentRequest request, String assessorEmail);
     RiskAssessmentResponse getRiskAssessmentById(Long id);
     List<RiskAssessmentResponse> getRiskAssessmentsByProperty(Long propertyId);
+    List<RiskAssessmentResponse> getMyAssessments(Long currentUserId);
     RiskAssessmentResponse updateRiskAssessment(Long id, RiskAssessmentRequest request);
     void deleteRiskAssessment(Long id);
 }

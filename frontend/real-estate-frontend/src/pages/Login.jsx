@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Building2,
@@ -40,7 +40,16 @@ function Login() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [showDemoModal, setShowDemoModal] = useState(false);
+  const [ssoLoading, setSsoLoading] = useState(null);
+
+  // Check URL error parameter on mount (e.g. redirected from OAuth failure)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const errorParam = params.get("error");
+    if (errorParam) {
+      showErrorAlert("Authentication Notice", decodeURIComponent(errorParam));
+    }
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -54,50 +63,33 @@ function Login() {
     setIsAdminLogin(adminMode);
     if (adminMode) {
       setLoginData({
-        email: "bharath@gmail.com",
-        password: "Admin@123",
+        email: "admin@realdiligence.in",
+        password: "Password@123",
       });
     } else {
       setLoginData({
-        email: "ramacharan@enterprise.com",
-        password: "Password123!",
+        email: "rajesh.kumar@gmail.com",
+        password: "Password@123",
       });
     }
   };
 
-  const handleDemoRoleLogin = (role, name, email) => {
-    const mockToken = `header.${btoa(JSON.stringify({ sub: email, role, exp: Math.floor(Date.now() / 1000) + 86400 }))}.signature`;
-    const mockUser = {
-      name,
-      firstName: name.split(" ")[0],
-      lastName: name.split(" ")[1] || "",
-      email,
-      role,
-      token: mockToken,
-    };
-    localStorage.setItem("token", mockToken);
-    localStorage.setItem("user", JSON.stringify(mockUser));
-    showToast(`Logged in as ${role}`, "success");
-    const targetPath = getRoleDashboardPath(role);
-    navigate(targetPath);
-    setShowDemoModal(false);
-  };
+  const handleGoogleLogin = async () => {
+    setSsoLoading("google");
+    showToast("Redirecting to Google Single Sign-On...", "info");
 
-  const handleDemoAdminLogin = () => {
-    const mockPayload = btoa(JSON.stringify({ sub: "bharath@gmail.com", role: "Administrator", exp: Math.floor(Date.now() / 1000) + 864000 }));
-    const adminToken = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${mockPayload}.signature`;
-    const mockAdminUser = {
-      name: "V Bharath",
-      email: "bharath@gmail.com",
-      role: "Administrator",
-      token: adminToken,
-    };
-    localStorage.setItem("token", adminToken);
-    localStorage.setItem("user", JSON.stringify(mockAdminUser));
-    localStorage.setItem("role", "Administrator");
-    showToast("Signed in as Administrator (Demo)", "success");
-    navigate("/admin/dashboard");
-    setShowDemoModal(false);
+    const oauthUrl = "http://localhost:8081/oauth2/authorization/google";
+
+    try {
+      await fetch(oauthUrl, { method: "HEAD", mode: "no-cors" });
+      window.location.href = oauthUrl;
+    } catch (err) {
+      setSsoLoading(null);
+      showErrorAlert(
+        "Google SSO Notice",
+        "Single Sign-On with Google requires client credentials (GOOGLE_CLIENT_ID) configured on the backend server.\n\nPlease sign in with your enterprise email and password below."
+      );
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -121,21 +113,6 @@ function Login() {
     if (loginData.password.length < 6) {
       showErrorAlert("Weak Password", "Password must be at least 6 characters long.");
       return;
-    }
-
-    // Development-only Administrator Login
-    if (loginData.email.trim().toLowerCase() === "bharath@gmail.com" && loginData.password === "Admin@123") {
-      if (!isAdminLogin) {
-        showErrorAlert(
-          "Administrator Login Required",
-          "Please switch to the 'Administrator' portal tab to log in with administrative credentials."
-        );
-        return;
-      }
-      handleDemoAdminLogin();
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -168,6 +145,7 @@ function Login() {
 
         localStorage.setItem("token", response.data.token);
         localStorage.setItem("user", JSON.stringify(response.data));
+        localStorage.setItem("role", userRole);
         showToast("Signed in successfully", "success");
         navigate(getRoleDashboardPath(userRole));
       } else {
@@ -479,39 +457,33 @@ function Login() {
           <div className="relative flex items-center justify-center my-6">
             <div className="absolute w-full h-[1px] bg-slate-200 dark:bg-slate-800" />
             <span className="relative z-10 px-3 bg-white dark:bg-[#111827] text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-              OR
+              OR CONTINUE WITH
             </span>
           </div>
 
-          {/* SSO Corporate Login Buttons (Trigger sandbox mode automatically) */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Enterprise Single Sign-On (SSO) OAuth2 Buttons */}
+          <div className="space-y-3">
             <button
-              onClick={() => handleDemoRoleLogin("Buyer", "Rama Charan", "buyer@enterprise.com")}
-              className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-[#1E293B] dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 transition-all flex items-center justify-center gap-2 cursor-pointer text-xs font-bold text-slate-600 hover:text-slate-800 dark:text-slate-300 dark:hover:text-white shadow-xs"
+              type="button"
+              disabled={Boolean(ssoLoading)}
+              onClick={handleGoogleLogin}
+              className="w-full py-3 px-4 rounded-xl bg-white hover:bg-slate-50 dark:bg-[#1E293B] dark:hover:bg-slate-800 border border-slate-250 dark:border-slate-700 transition-all flex items-center justify-center gap-3 cursor-pointer text-xs font-bold text-slate-700 hover:text-slate-900 dark:text-slate-200 dark:hover:text-white shadow-xs disabled:opacity-60"
             >
-              <svg className="w-4.5 h-4.5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
-              </svg>
-              <span>Google</span>
-            </button>
-            <button
-              onClick={() => handleDemoRoleLogin("Real Estate Agent", "Ananya Rao", "agent@enterprise.com")}
-              className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-[#1E293B] dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 transition-all flex items-center justify-center gap-2 cursor-pointer text-xs font-bold text-slate-600 hover:text-slate-800 dark:text-slate-300 dark:hover:text-white shadow-xs"
-            >
-              <svg className="w-4.5 h-4.5" viewBox="0 0 23 23" fill="currentColor">
-                <rect x="1" y="1" width="10" height="10" fill="#F25022" />
-                <rect x="12" y="1" width="10" height="10" fill="#7FBA00" />
-                <rect x="1" y="12" width="10" height="10" fill="#00A1F1" />
-                <rect x="12" y="12" width="10" height="10" fill="#FFB900" />
-              </svg>
-              <span>Microsoft</span>
+              {ssoLoading === "google" ? (
+                <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <svg className="w-4.5 h-4.5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+                </svg>
+              )}
+              <span>{ssoLoading === "google" ? "Connecting to Google..." : "Continue with Google"}</span>
             </button>
           </div>
 
-          {/* Sandbox Switcher & Support Info */}
+          {/* Support & Legal Links */}
           <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-850 text-center space-y-4">
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Don't have an enterprise account?{" "}
@@ -523,162 +495,20 @@ function Login() {
               </Link>
             </p>
 
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Need a demo?{" "}
-              <button
-                onClick={() => setShowDemoModal(true)}
-                className="font-bold text-[#2563EB] hover:underline cursor-pointer"
-              >
-                Schedule a Product Demo
-              </button>
-            </p>
-
             <div className="flex justify-center gap-4 text-[10px] font-semibold text-slate-450 dark:text-slate-500">
               <Link to="/" className="hover:text-slate-900 dark:hover:text-white transition-colors">Privacy Policy</Link>
               <span>•</span>
               <Link to="/" className="hover:text-slate-900 dark:hover:text-white transition-colors">Terms</Link>
               <span>•</span>
-              <button onClick={() => setShowDemoModal(true)} className="hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer">Support</button>
+              <Link to="/help" className="hover:text-slate-900 dark:hover:text-white transition-colors">Support</Link>
             </div>
             <p className="text-[10px] text-slate-500 dark:text-slate-600">
-              Need help? <a href="mailto:support@estateiq.com" className="hover:underline text-slate-600 dark:text-slate-500">support@estateiq.com</a>
+              Enterprise Support: <a href="mailto:support@estateiq.com" className="hover:underline text-slate-600 dark:text-slate-500">support@estateiq.com</a>
             </p>
           </div>
 
         </div>
       </div>
-
-      {/* Development Demo Selector Dialog Modal */}
-      {showDemoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Overlay backdrop */}
-          <div 
-            onClick={() => setShowDemoModal(false)}
-            className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" 
-          />
-          
-          {/* Modal content */}
-          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-lg w-full relative z-10 shadow-2xl space-y-6 text-left max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ShieldCheck size={20} className="text-[#2563EB]" />
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Product Demo & Sandbox</h3>
-              </div>
-              <button 
-                onClick={() => setShowDemoModal(false)}
-                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900 border border-transparent hover:border-slate-200 dark:hover:border-slate-800 text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* 1. Schedule a Demo Form */}
-            <form 
-              onSubmit={(e) => {
-                e.preventDefault();
-                showSuccessAlert("Demo Scheduled!", "Your demo request has been received. Our account manager will email you within 24 hours to coordinate a live walkthrough.");
-                setShowDemoModal(false);
-              }}
-              className="space-y-3 pb-5 border-b border-slate-150 dark:border-slate-805"
-            >
-              <h4 className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">Schedule a Live Demo</h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">Request a live presentation of EstateIQ customized for your team.</p>
-              
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="text"
-                  required
-                  placeholder="Full Name"
-                  className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-[#0B1220] border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 text-xs focus:outline-none focus:border-[#2563EB]"
-                />
-                <input
-                  type="email"
-                  required
-                  placeholder="Work Email"
-                  className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-[#0B1220] border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 text-xs focus:outline-none focus:border-[#2563EB]"
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#2563EB] to-[#10B981] text-white text-xs font-bold shadow-sm hover:shadow-md cursor-pointer transition-all"
-              >
-                Schedule Demo Request
-              </button>
-            </form>
-
-            {/* 2. Evaluation Sandbox Overrides */}
-            <div className="space-y-3">
-              <div>
-                <h4 className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">Evaluation Sandbox Bypass</h4>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                  Grader override: Instantly log in to inspect role dashboards without starting the database service.
-                </p>
-              </div>
-
-              <div className="space-y-2 max-h-[35vh] overflow-y-auto pr-1">
-                <button
-                  onClick={() => handleDemoRoleLogin("Buyer", "Rama Charan", "buyer@enterprise.com")}
-                  className="w-full p-3 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/40 dark:hover:bg-[#1E293B] border border-slate-200 dark:border-slate-900 hover:border-slate-300 dark:hover:border-slate-800 transition-all text-left flex items-center justify-between cursor-pointer"
-                >
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-900 dark:text-white">Buyer Workspace</h4>
-                    <p className="text-[10px] text-slate-450 dark:text-slate-500 mt-0.5">Explore title records and search property analytics.</p>
-                  </div>
-                  <ArrowRight size={14} className="text-slate-400 dark:text-slate-555" />
-                </button>
-
-                <button
-                  onClick={() => handleDemoRoleLogin("Real Estate Agent", "Ananya Rao", "agent@enterprise.com")}
-                  className="w-full p-3 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/40 dark:hover:bg-[#1E293B] border border-slate-200 dark:border-slate-900 hover:border-slate-300 dark:hover:border-slate-800 transition-all text-left flex items-center justify-between cursor-pointer"
-                >
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-900 dark:text-white">Agent Workspace</h4>
-                    <p className="text-[10px] text-slate-450 dark:text-slate-550 mt-0.5">Manage clients, due diligence requests, and listings.</p>
-                  </div>
-                  <ArrowRight size={14} className="text-slate-400 dark:text-slate-555" />
-                </button>
-
-                <button
-                  onClick={() => handleDemoRoleLogin("Legal Reviewer", "Rajesh Sharma", "legal@enterprise.com")}
-                  className="w-full p-3 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/40 dark:hover:bg-[#1E293B] border border-slate-200 dark:border-slate-900 hover:border-slate-300 dark:hover:border-slate-800 transition-all text-left flex items-center justify-between cursor-pointer"
-                >
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-900 dark:text-white">Legal Reviewer Workspace</h4>
-                    <p className="text-[10px] text-slate-455 dark:text-slate-500 mt-0.5">Evaluate structural zoning checklists and encumbrances.</p>
-                  </div>
-                  <ArrowRight size={14} className="text-slate-400 dark:text-slate-555" />
-                </button>
-
-                <button
-                  onClick={() => handleDemoRoleLogin("Financial Institution", "Venkatesh Iyer", "financial@enterprise.com")}
-                  className="w-full p-3 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/40 dark:hover:bg-[#1E293B] border border-slate-200 dark:border-slate-900 hover:border-slate-300 dark:hover:border-slate-800 transition-all text-left flex items-center justify-between cursor-pointer"
-                >
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-900 dark:text-white">Financial Institution Workspace</h4>
-                    <p className="text-[10px] text-slate-450 dark:text-slate-500 mt-0.5">Underwrite properties, analyze loan risks, and check margins.</p>
-                  </div>
-                  <ArrowRight size={14} className="text-slate-400 dark:text-slate-555" />
-                </button>
-
-                <button
-                  onClick={() => handleDemoAdminLogin()}
-                  className="w-full p-3 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/40 dark:hover:bg-[#1E293B] border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-850 transition-all text-left flex items-center justify-between cursor-pointer"
-                >
-                  <div>
-                    <h4 className="text-xs font-bold text-[#10B981]">Administrator Workspace</h4>
-                    <p className="text-[10px] text-slate-450 dark:text-slate-500 mt-0.5">Full platform settings, user controls, and data configurations.</p>
-                  </div>
-                  <ArrowRight size={14} className="text-[#10B981]" />
-                </button>
-              </div>
-            </div>
-            
-            <p className="text-[10px] text-slate-500 text-center">
-              Need real assistance? Contact us at <a href="mailto:support@estateiq.com" className="underline text-slate-655 dark:text-slate-400">support@estateiq.com</a>
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

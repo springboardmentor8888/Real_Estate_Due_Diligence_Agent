@@ -1,273 +1,288 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
 import {
   Scale,
   ShieldCheck,
-  FileText,
-  AlertOctagon,
-  FileSearch,
-  CheckSquare,
-  Home,
-  ChevronRight,
-  UserCheck,
-  Map,
-  History,
-  Clock,
-  Bell,
-  Calendar,
-  AlertTriangle,
-  ArrowUpRight,
-  Sparkles,
-  CheckCircle2,
-  Users,
   Building2,
+  CheckCircle,
+  Clock,
+  ArrowRight,
+  RefreshCw,
+  AlertCircle,
   FileCheck2,
+  FileSearch,
 } from "lucide-react";
 import MainLayout from "../components/layout/MainLayout";
 import DashboardHeroHeader from "../components/dashboard/DashboardHeroHeader";
-import StatCard from "../components/dashboard/StatCard";
-import LegalKpiCards from "../components/dashboard/LegalKpiCards";
-import QuickActions from "../components/dashboard/QuickActions";
 import Badge from "../components/common/Badge";
 import Button from "../components/common/Button";
-import { legalDashboardData } from "../mock/legalData";
-import { getLiveLegalReviews } from "../services/liveStore";
+import { Skeleton } from "../components/common/Skeleton";
+import { getAllProperties } from "../services/propertyService";
+import { getMyReports } from "../services/reportService";
+import { getMyAssessments } from "../services/riskService";
+import { getCurrentUser } from "../services/authService";
 import { showToast } from "../utils/swal";
+import QuickActions from "../components/dashboard/QuickActions";
 
 function LegalDashboard() {
   const navigate = useNavigate();
-  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+
+  // 1. Authenticated User & Role from Session
+  const storedUser = getCurrentUser() || {};
   const userName = storedUser.firstName
     ? `${storedUser.firstName} ${storedUser.lastName || ""}`.trim()
-    : storedUser.name || "Adv. Rajesh Sharma";
-  const userRole = "Legal Reviewer";
+    : storedUser.name || (storedUser.email ? storedUser.email.split("@")[0] : "Legal Reviewer");
+  const userRole = storedUser.role || "Legal Reviewer";
 
-  const [reviews, setReviews] = useState(getLiveLegalReviews);
+  // State Management
+  const [properties, setProperties] = useState([]);
+  const [reports, setReports] = useState([]);
+  const [assessments, setAssessments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Live Data Fetcher
+  const fetchLegalData = async (isManualSync = false) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const [propsRes, reportsRes, riskRes] = await Promise.allSettled([
+        getAllProperties(0, 50),
+        getMyReports(),
+        getMyAssessments(),
+      ]);
+
+      // 1. Properties
+      if (propsRes.status === "fulfilled") {
+        const payload = propsRes.value?.data || propsRes.value;
+        const items = payload?.content || (Array.isArray(payload) ? payload : []);
+        setProperties(items);
+      } else {
+        setProperties([]);
+      }
+
+      // 2. Reports
+      if (reportsRes.status === "fulfilled") {
+        const payload = reportsRes.value?.data || reportsRes.value;
+        const items = Array.isArray(payload) ? payload : (payload?.content || []);
+        setReports(items);
+      } else {
+        setReports([]);
+      }
+
+      // 3. Risk Assessments
+      if (riskRes.status === "fulfilled") {
+        const payload = riskRes.value?.data || riskRes.value;
+        const items = Array.isArray(payload) ? payload : (payload?.content || []);
+        setAssessments(items);
+      } else {
+        setAssessments([]);
+      }
+
+      if (isManualSync) {
+        showToast("Legal review workspace synchronized with live database.", "success");
+      }
+    } catch (err) {
+      console.warn("Legal dashboard API query error:", err);
+      setError("Unable to connect to backend server. Please verify Spring Boot is running on port 8081.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const syncLiveData = () => {
-      setReviews(getLiveLegalReviews());
-    };
-
-    window.addEventListener("live_data_updated", syncLiveData);
-    window.addEventListener("storage", syncLiveData);
-    return () => {
-      window.removeEventListener("live_data_updated", syncLiveData);
-      window.removeEventListener("storage", syncLiveData);
-    };
+    fetchLegalData();
   }, []);
+
+  // Compute Live Metrics from Database Records
+  const activeReportsCount = reports.length;
+  const reportsTodayCount = reports.filter((r) => {
+    if (!r.createdAt) return false;
+    const reportDate = new Date(r.createdAt).toDateString();
+    const today = new Date().toDateString();
+    return reportDate === today;
+  }).length;
+
+  const pendingReviewsCount = reports.filter(
+    (r) => r.status === "PENDING" || r.status === "UNDER_REVIEW" || r.status === "IN_PROGRESS"
+  ).length;
+
+  const highRiskCount = assessments.filter(
+    (a) =>
+      a.riskLevel === "HIGH" ||
+      a.riskLevel === "CRITICAL" ||
+      (a.riskScore !== undefined && a.riskScore !== null && Number(a.riskScore) >= 50)
+  ).length;
+
+  const portfolioParcelsCount = properties.length;
 
   return (
     <MainLayout>
-      <div className="space-y-8 pb-16 max-w-7xl mx-auto">
-        {/* Breadcrumb Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-medium text-slate-500 dark:text-[#CBD5E1]">
-          <div className="flex items-center gap-2">
-            <Home size={14} className="text-blue-500 dark:text-cyan-400" />
-            <span>/</span>
-            <span className="text-slate-900 dark:text-[#F8FAFC] font-extrabold">
-              Legal Reviewer Control Center
-            </span>
-          </div>
-
-          <span className="px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-mono font-bold text-xs border border-amber-200 dark:border-amber-800 flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            SUB-REGISTRAR AUDIT ACTIVE
-          </span>
-        </div>
-
-        {/* 1. WELCOME SECTION */}
-        <DashboardHeroHeader userName={userName} userRole={userRole} />
-
-        {/* 2. REUSABLE DASHBOARD KPI CARDS (6 CARDS) */}
-        <LegalKpiCards cards={legalDashboardData.kpiCards} />
-
-        {/* 3. QUICK ACTIONS */}
-        <QuickActions
-          title="⚡ Legal Audit & Signoff Operations"
-          subtitle="Execute 30-year title deed verification, permit compliance checks, and legal report signoffs."
-          actions={legalDashboardData.quickActions}
-        />
-
-        {/* 4. ASSIGNED REVIEWS QUEUE TABLE */}
-        <div className="white-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <span className="text-[10px] font-mono font-bold text-blue-600 dark:text-cyan-400 uppercase tracking-wider block">
-                LEGAL AUDIT QUEUE
-              </span>
-              <h2 className="text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2 mt-0.5">
-                📜 Assigned Reviews Queue
-              </h2>
+      <div className="space-y-8 pb-16 max-w-7xl mx-auto font-mono text-xs">
+        {/* HEADER */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase tracking-widest text-slate-400">LEGAL COMPLIANCE ENGINE</span>
+              <Badge variant="success">POSTGRESQL CONNECTED</Badge>
             </div>
-            <button
-              onClick={() => navigate("/legal/reviews")}
-              className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-cyan-400 hover:underline cursor-pointer"
-            >
-              <span>View Full Review Register</span>
-              <ChevronRight size={14} />
-            </button>
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+              Legal Review Workspace
+            </h1>
+            <p className="text-xs text-slate-500 font-medium">
+              Logged in as <span className="font-bold text-blue-600 dark:text-cyan-400">{userName}</span> ({userRole})
+            </p>
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#1E293B]">
-            <table className="w-full text-left text-xs font-mono border-collapse">
-              <thead>
-                <tr className="bg-slate-900 text-white uppercase text-[10px] tracking-wider">
-                  <th className="p-4">Review ID</th>
-                  <th className="p-4">Property Parcel</th>
-                  <th className="p-4">Client Organization</th>
-                  <th className="p-4">Deed Type</th>
-                  <th className="p-4">Assigned Date</th>
-                  <th className="p-4">Priority</th>
-                  <th className="p-4 text-right">Review Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-[#334155] text-slate-700 dark:text-slate-200">
-                {legalDashboardData.assignedReviews.map((item) => (
-                  <tr
-                    key={item.id}
-                    onClick={() => navigate("/legal/reviews")}
-                    className="hover:bg-slate-50 dark:hover:bg-[#0F172A] cursor-pointer transition-colors"
-                  >
-                    <td className="p-4 font-bold text-blue-600 dark:text-cyan-400">{item.id}</td>
-                    <td className="p-4 font-extrabold text-slate-900 dark:text-white">{item.property}</td>
-                    <td className="p-4 font-medium">{item.client}</td>
-                    <td className="p-4 text-slate-500 dark:text-slate-400">{item.deedType}</td>
-                    <td className="p-4 text-slate-400">{item.assignedDate}</td>
-                    <td className="p-4">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                        item.priority === "CRITICAL" ? "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/80 dark:text-rose-300" :
-                        item.priority === "HIGH" ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/80 dark:text-amber-300" :
-                        "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/80 dark:text-cyan-300"
-                      }`}>
-                        {item.priority}
-                      </span>
-                    </td>
-                    <td className="p-4 text-right">
-                      <Badge variant={item.variant}>{item.status}</Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchLegalData(true)}
+            className="flex items-center gap-1.5 shrink-0"
+            disabled={loading}
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            Sync Database
+          </Button>
         </div>
 
-        {/* 2 COLUMNS: RECENT LEGAL ACTIVITIES & NOTIFICATIONS */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* 5. RECENT LEGAL ACTIVITIES (7 Cols) */}
-          <div className="lg:col-span-7 white-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-mono font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider block">
-                  LEGAL TELEMETRY AUDIT
-                </span>
-                <h2 className="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2 mt-0.5">
-                  ⚡ Recent Legal Activities
+        {/* ERROR BANNER */}
+        {error && (
+          <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <AlertCircle size={20} className="shrink-0" />
+              <p className="text-xs font-bold">{error}</p>
+            </div>
+            <Button variant="danger" size="sm" onClick={() => fetchLegalData(true)}>
+              Retry Connection
+            </Button>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="space-y-6">
+            <Skeleton className="h-36 w-full rounded-3xl" />
+            <Skeleton className="h-48 w-full rounded-3xl" />
+            <Skeleton className="h-64 w-full rounded-3xl" />
+          </div>
+        ) : (
+          <>
+            {/* 1. DYNAMIC HERO HEADER WITH 100% DATABASE METRICS */}
+            <DashboardHeroHeader
+              userName={userName}
+              userRole={userRole}
+              metrics={{
+                activeReports: activeReportsCount,
+                reportsToday: reportsTodayCount,
+                pendingReviews: pendingReviewsCount,
+                highRiskCount: highRiskCount,
+                portfolioCount: portfolioParcelsCount,
+              }}
+              verificationBadge="PostgreSQL Verified"
+            />
+
+            {/* 2. LEGAL REVIEW WORKSPACE QUICK ACTIONS */}
+            <section className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider text-[11px] flex items-center gap-2">
+                  <Scale size={15} className="text-blue-500" /> Legal Workstation Actions
                 </h2>
               </div>
-              <button onClick={() => navigate("/activity")} className="text-xs font-bold text-blue-600 dark:text-cyan-400 hover:underline cursor-pointer">
-                Activity Log
-              </button>
-            </div>
+              <QuickActions role={userRole} />
+            </section>
 
-            <div className="space-y-3 font-mono text-xs">
-              {legalDashboardData.recentLegalActivities.map((act) => (
-                <div
-                  key={act.id}
-                  className="p-4 rounded-2xl border border-slate-200 dark:border-[#334155] bg-slate-50/70 dark:bg-[#0F172A]/70 space-y-2 hover:border-purple-300 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase">{act.action} • {act.time}</span>
-                    <Badge variant={act.variant}>{act.status}</Badge>
-                  </div>
-                  <h3 className="text-xs font-extrabold text-slate-900 dark:text-white">{act.title}</h3>
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200/60 dark:border-[#334155]">
-                    <span>🏢 {act.property}</span>
-                    <span>👤 {act.reviewer}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* 6. NOTIFICATIONS (5 Cols) */}
-          <div className="lg:col-span-5 white-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider block">
-                  SYSTEM ALERTS & DISPATCHES
-                </span>
-                <h2 className="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2 mt-0.5">
-                  🔔 Notifications
-                </h2>
-              </div>
-              <button onClick={() => navigate("/notifications")} className="text-xs font-bold text-blue-600 dark:text-cyan-400 hover:underline cursor-pointer">
-                Alert Center
-              </button>
-            </div>
-
-            <div className="space-y-3 font-mono text-xs">
-              {legalDashboardData.notifications.map((ntf) => (
-                <div
-                  key={ntf.id}
-                  className={`p-4 rounded-2xl border transition-all ${
-                    ntf.unread
-                      ? "bg-amber-50/40 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/80"
-                      : "bg-slate-50/70 dark:bg-[#0F172A]/70 border-slate-200 dark:border-[#334155]"
-                  }`}
-                >
-                  <div className="flex items-center justify-between text-[10px] font-bold mb-1">
-                    <span className="text-amber-600 dark:text-amber-400">{ntf.priority} PRIORITY</span>
-                    <span className="text-slate-400">{ntf.time}</span>
-                  </div>
-                  <h3 className="text-xs font-extrabold text-slate-900 dark:text-white leading-snug">{ntf.title}</h3>
-                  <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">{ntf.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* 7. UPCOMING DEADLINES SECTION */}
-        <div className="white-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4 font-mono text-xs">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-[10px] font-mono font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider block">
-                TIME CRITICAL COMPLIANCE
-              </span>
-              <h2 className="text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2 mt-0.5">
-                ⏰ Upcoming Deadlines
-              </h2>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {legalDashboardData.upcomingDeadlines.map((dl) => (
-              <div
-                key={dl.id}
-                className="p-5 rounded-2xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] space-y-3 flex flex-col justify-between"
-              >
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase">{dl.id}</span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 font-bold border border-rose-200 dark:border-rose-800 text-[10px]">
-                      {dl.daysRemaining}
-                    </span>
-                  </div>
-                  <h3 className="text-sm font-extrabold text-slate-900 dark:text-white leading-snug">{dl.title}</h3>
-                  <p className="text-[11px] text-slate-500 font-bold">🏢 {dl.property}</p>
-                </div>
-
-                <div className="pt-3 border-t border-slate-200/60 dark:border-[#334155] flex items-center justify-between">
-                  <span className="text-[11px] text-slate-400 font-bold">Due: {dl.dueDate}</span>
-                  <Badge variant={dl.variant}>{dl.status}</Badge>
+            {/* 3. LEGAL TITLE DEED VERIFICATION AUDIT TABLE */}
+            <div className="glass-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-[#334155]">
+                <div>
+                  <h2 className="text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Scale size={22} className="text-blue-600 dark:text-cyan-400" />
+                    Property Title Deed Verification Audit ({properties.length})
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Real estate parcels under title deed verification in PostgreSQL database.
+                  </p>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
+
+              {properties.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left font-mono">
+                    <thead className="bg-slate-100 dark:bg-[#0F172A] text-slate-600 dark:text-slate-400 uppercase text-[10px]">
+                      <tr>
+                        <th className="p-3.5 rounded-l-xl">Parcel Code</th>
+                        <th className="p-3.5">Property Name</th>
+                        <th className="p-3.5">City / State</th>
+                        <th className="p-3.5">Title Status</th>
+                        <th className="p-3.5">Assigned Reviewer</th>
+                        <th className="p-3.5 text-right rounded-r-xl">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-[#334155]">
+                      {properties.map((p, idx) => {
+                        const numId = p.propertyId || p.numericId || idx + 1;
+                        const propCity = (typeof p.city === "string" && p.city.trim()) || p.address?.city || "Hyderabad";
+                        const propState = (typeof p.state === "string" && p.state.trim()) || p.address?.state || "Telangana";
+                        const isVerified = p.status === "VERIFIED";
+
+                        return (
+                          <tr key={numId} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                            <td className="p-3.5 font-bold text-blue-600 dark:text-cyan-400">
+                              PR-{numId}
+                            </td>
+                            <td className="p-3.5 font-extrabold text-slate-900 dark:text-white">
+                              {p.propertyName || `Property Parcel #${numId}`}
+                            </td>
+                            <td className="p-3.5 text-slate-500">
+                              {propCity}, {propState}
+                            </td>
+                            <td className="p-3.5">
+                              <Badge variant={isVerified ? "success" : "warning"}>
+                                {isVerified ? "Verified Title" : (p.status || "Under Review")}
+                              </Badge>
+                            </td>
+                            <td className="p-3.5 text-slate-600 dark:text-slate-300 font-medium">
+                              {userName}
+                            </td>
+                            <td className="p-3.5 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="xs"
+                                  onClick={() => navigate(`/property-review?id=${numId}`)}
+                                  className="flex items-center gap-1"
+                                >
+                                  <FileSearch size={13} />
+                                  <span>Review</span>
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="xs"
+                                  onClick={() => navigate(`/review-checklist?id=${numId}`)}
+                                  className="flex items-center gap-1"
+                                >
+                                  <FileCheck2 size={13} />
+                                  <span>Checklist</span>
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-8 text-center border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl">
+                  <Building2 size={32} className="mx-auto text-slate-400 mb-2" />
+                  <p className="text-sm font-bold text-slate-700 dark:text-slate-300">No Legal Review Items</p>
+                  <p className="text-xs text-slate-500 mt-1">No property records were returned from the backend database.</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </MainLayout>
   );

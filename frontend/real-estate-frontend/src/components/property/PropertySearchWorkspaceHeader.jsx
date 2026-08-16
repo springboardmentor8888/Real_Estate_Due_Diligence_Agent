@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
   Search,
   MapPin,
@@ -6,12 +6,16 @@ import {
   SlidersHorizontal,
   ArrowUpDown,
   X,
-  History,
-  Check,
   Building2,
   ShieldCheck,
-  Sparkles,
+  RotateCcw,
 } from "lucide-react";
+import {
+  INDIAN_STATES_AND_UTS,
+  getCitiesForState,
+  BACKEND_PROPERTY_TYPES,
+  BACKEND_PROPERTY_STATUSES,
+} from "../../data/indiaLocations";
 
 function PropertySearchWorkspaceHeader({
   searchAddress,
@@ -32,30 +36,52 @@ function PropertySearchWorkspaceHeader({
   setSortBy,
   allProperties = [],
   onClearFilters,
+  onSearchSubmit,
 }) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchContainerRef = useRef(null);
 
-  const states = [
-    { id: "ALL", label: "All States" },
-    { id: "Telangana", label: "Telangana" },
-    { id: "Karnataka", label: "Karnataka" },
-    { id: "Maharashtra", label: "Maharashtra" },
-    { id: "Tamil Nadu", label: "Tamil Nadu" },
-    { id: "Delhi NCR", label: "Delhi NCR" },
-    { id: "Gujarat", label: "Gujarat" },
-  ];
+  // Available States derived from real property database records
+  const availableStates = useMemo(() => {
+    const statesSet = new Set();
+    allProperties.forEach((p) => {
+      const st = (typeof p.state === "string" && p.state.trim()) || p.address?.state || "";
+      if (st) statesSet.add(st);
+    });
 
-  const cities = [
-    { id: "ALL", label: "All Cities" },
-    { id: "Hyderabad", label: "Hyderabad" },
-    { id: "Bengaluru", label: "Bengaluru" },
-    { id: "Mumbai", label: "Mumbai" },
-    { id: "Chennai", label: "Chennai" },
-    { id: "Pune", label: "Pune" },
-    { id: "Ahmedabad", label: "Ahmedabad" },
-    { id: "Delhi", label: "Delhi" },
-  ];
+    if (statesSet.size > 0) {
+      return Array.from(statesSet).sort();
+    }
+    return INDIAN_STATES_AND_UTS;
+  }, [allProperties]);
+
+  // Available cities derived directly from real property database records
+  const availableCities = useMemo(() => {
+    const citiesSet = new Set();
+
+    allProperties.forEach((p) => {
+      const pState = (typeof p.state === "string" && p.state.trim()) || p.address?.state || "";
+      const pCity = (typeof p.city === "string" && p.city.trim()) || p.address?.city || "";
+
+      if (pCity) {
+        if (stateFilter === "ALL" || (pState && pState.toUpperCase() === stateFilter.toUpperCase())) {
+          citiesSet.add(pCity);
+        }
+      }
+    });
+
+    if (citiesSet.size > 0) {
+      return Array.from(citiesSet).sort();
+    }
+
+    return stateFilter !== "ALL" ? getCitiesForState(stateFilter) : [];
+  }, [allProperties, stateFilter]);
+
+  // Handle State Change: clear incompatible city selection
+  const handleStateChange = (newState) => {
+    setStateFilter(newState);
+    setCityFilter("ALL");
+  };
 
   const priceRanges = [
     { id: "ALL", label: "All Prices" },
@@ -65,57 +91,34 @@ function PropertySearchWorkspaceHeader({
     { id: "ABOVE_50CR", label: "Above ₹50 Cr" },
   ];
 
-  const riskScores = [
-    { id: "ALL", label: "All Risk Scores" },
-    { id: "LOW", label: "Low Risk (< 30)" },
-    { id: "MODERATE", label: "Moderate Risk (30-60)" },
-    { id: "HIGH", label: "High Risk (> 60)" },
-  ];
-
-  const propertyTypes = [
-    { id: "ALL", label: "All Property Types" },
-    { id: "Commercial", label: "Commercial Office" },
-    { id: "Residential", label: "Residential Plot" },
-    { id: "Industrial", label: "Industrial Warehouse" },
-    { id: "IT Campus", label: "IT Campus" },
-    { id: "Mixed-Use", label: "Mixed-Use Hub" },
-  ];
-
-  const statuses = [
-    { id: "ALL", label: "All Verification Statuses" },
-    { id: "Verified Clear Title", label: "Verified Clear Title" },
-    { id: "Encumbrance Verified", label: "Encumbrance Verified" },
-    { id: "Registered & Active", label: "Registered & Active" },
-  ];
-
   const sortOptions = [
     { id: "price-asc", label: "Price: Low to High" },
     { id: "price-desc", label: "Price: High to Low" },
-    { id: "risk-asc", label: "Risk Score: Lowest First" },
-    { id: "year-desc", label: "Year Built: Newest First" },
     { id: "name-asc", label: "Name: A to Z" },
+    { id: "newest", label: "Newest Listed First" },
   ];
 
-  const recentSearches = [
-    "Gachibowli Tech Park, Hyderabad",
-    "Whitefield Horizon Campus, Bengaluru",
-    "Jubilee Hills Plot 36",
-    "BKC Commercial Hub, Mumbai",
-    "APN-HYD-500032-1001",
-  ];
-
-  // Auto-complete suggestion matches
-  const suggestions = searchAddress.trim().length >= 2
-    ? allProperties
-        .filter((p) => {
-          const q = searchAddress.toLowerCase();
-          const name = (p.propertyName || p.title || "").toLowerCase();
-          const apn = (p.apnNumber || p.id || "").toLowerCase();
-          const city = (p.city || "").toLowerCase();
-          return name.includes(q) || apn.includes(q) || city.includes(q);
-        })
-        .slice(0, 5)
-    : [];
+  // Auto-complete suggestion matches based on real properties
+  const suggestions = useMemo(() => {
+    if (!searchAddress || searchAddress.trim().length < 2) return [];
+    const q = searchAddress.toLowerCase().trim();
+    return allProperties
+      .filter((p) => {
+        const name = (p.propertyName || p.title || "").toLowerCase();
+        const code = (p.propertyCode || p.id || "").toLowerCase();
+        const city = (p.city || p.address?.city || "").toLowerCase();
+        const state = (p.state || p.address?.state || "").toLowerCase();
+        const type = (typeof p.propertyType === "object" ? p.propertyType?.typeName : p.propertyType || "").toLowerCase();
+        return (
+          name.includes(q) ||
+          code.includes(q) ||
+          city.includes(q) ||
+          state.includes(q) ||
+          type.includes(q)
+        );
+      })
+      .slice(0, 5);
+  }, [searchAddress, allProperties]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -128,37 +131,44 @@ function PropertySearchWorkspaceHeader({
   }, []);
 
   const hasActiveFilters =
-    searchAddress ||
+    Boolean(searchAddress.trim()) ||
     stateFilter !== "ALL" ||
     cityFilter !== "ALL" ||
     priceFilter !== "ALL" ||
-    riskFilter !== "ALL" ||
     typeFilter !== "ALL" ||
     statusFilter !== "ALL";
 
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      setShowSuggestions(false);
+      if (onSearchSubmit) onSearchSubmit();
+    }
+  };
+
   return (
-    <div className="white-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200/80 dark:border-[#334155] shadow-xs space-y-6">
+    <div className="glass-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-6 font-mono">
       {/* Page Title Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-cyan-300 border border-blue-200 dark:border-blue-800 text-xs font-mono font-bold mb-2">
-            <Search size={14} /> Multi-Vector Land Registry Search
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-cyan-300 border border-blue-200 dark:border-blue-800 text-xs font-bold mb-2">
+            <Search size={14} /> Shared Real Estate Inventory
           </div>
-          <h1 className="text-xl sm:text-3xl font-extrabold text-slate-900 dark:text-[#F8FAFC] tracking-tight">
+          <h1 className="text-xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Property Search Workstation
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-[#CBD5E1] mt-1 max-w-2xl">
-            Query land registry deeds, survey numbers, APN IDs, title clearance records, and risk scores.
+          <p className="text-xs sm:text-sm text-slate-500 font-sans mt-1 max-w-2xl">
+            Query property records by title, state, city, property type, or verification status directly from PostgreSQL.
           </p>
         </div>
 
         {hasActiveFilters && (
           <button
+            type="button"
             onClick={onClearFilters}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-[#0F172A] hover:bg-slate-200 dark:hover:bg-[#334155] text-slate-700 dark:text-slate-200 text-xs font-bold transition-colors cursor-pointer shrink-0"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 dark:bg-[#0F172A] hover:bg-slate-200 dark:hover:bg-[#334155] text-slate-700 dark:text-slate-200 text-xs font-bold transition-colors cursor-pointer shrink-0"
           >
-            <X size={14} />
-            <span>Reset All Filters</span>
+            <RotateCcw size={14} />
+            <span>Clear All Filters</span>
           </button>
         )}
       </div>
@@ -166,20 +176,22 @@ function PropertySearchWorkspaceHeader({
       {/* 1. LARGE SEARCH BAR & AUTO-COMPLETE SUGGESTIONS */}
       <div className="relative" ref={searchContainerRef}>
         <div className="relative flex items-center">
-          <MapPin className="absolute left-4 text-blue-600 dark:text-cyan-400" size={20} />
+          <Search className="absolute left-4 text-blue-600 dark:text-cyan-400" size={20} />
           <input
             type="text"
             value={searchAddress}
             onFocus={() => setShowSuggestions(true)}
+            onKeyDown={handleKeyDown}
             onChange={(e) => {
               setSearchAddress(e.target.value);
               setShowSuggestions(true);
             }}
-            placeholder="Search by Property Name, APN, Survey Number, Address, City, State, or Owner..."
+            placeholder="Search by property name, city, state, address, or property code..."
             className="w-full pl-12 pr-10 py-3.5 rounded-2xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-xs sm:text-sm font-semibold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-xs"
           />
           {searchAddress && (
             <button
+              type="button"
               onClick={() => setSearchAddress("")}
               className="absolute right-4 p-1 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
             >
@@ -191,13 +203,13 @@ function PropertySearchWorkspaceHeader({
         {/* Auto-complete Suggestions Dropdown */}
         {showSuggestions && suggestions.length > 0 && (
           <div className="absolute left-0 right-0 top-full mt-2 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] rounded-2xl shadow-xl z-30 overflow-hidden divide-y divide-slate-100 dark:divide-[#334155]">
-            <div className="px-4 py-2 bg-slate-50 dark:bg-[#0F172A] text-[10px] font-mono font-bold text-slate-400 uppercase">
-              AUTO-COMPLETE SUGGESTIONS
+            <div className="px-4 py-2 bg-slate-50 dark:bg-[#0F172A] text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              MATCHING DATABASE PROPERTIES
             </div>
             {suggestions.map((item) => {
               const name = item.propertyName || item.title;
-              const pid = item.id || `PR-${item.numericId}`;
-              const city = item.city || "Hyderabad";
+              const pid = item.propertyCode || `PROP-${item.propertyId || item.numericId}`;
+              const city = item.city || item.address?.city || "Hyderabad";
               return (
                 <div
                   key={pid}
@@ -211,10 +223,10 @@ function PropertySearchWorkspaceHeader({
                     <Building2 size={16} className="text-blue-600 dark:text-cyan-400 shrink-0" />
                     <div>
                       <h4 className="text-xs font-bold text-slate-900 dark:text-white">{name}</h4>
-                      <p className="text-[11px] text-slate-500 font-mono">{city} • {pid}</p>
+                      <p className="text-[11px] text-slate-500">{city} • {pid}</p>
                     </div>
                   </div>
-                  <span className="text-[10px] font-mono font-bold text-blue-600 dark:text-cyan-400">
+                  <span className="text-[10px] font-bold text-blue-600 dark:text-cyan-400">
                     Select
                   </span>
                 </div>
@@ -224,129 +236,98 @@ function PropertySearchWorkspaceHeader({
         )}
       </div>
 
-      {/* 2. RECENT SEARCHES PILLS */}
-      <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span className="text-slate-400 dark:text-slate-400 font-bold flex items-center gap-1 shrink-0">
-          <History size={13} /> Recent Queries:
-        </span>
-        <div className="flex flex-wrap gap-1.5">
-          {recentSearches.map((item, idx) => (
-            <button
-              key={idx}
-              onClick={() => setSearchAddress(item)}
-              className="px-3 py-1 rounded-xl bg-slate-100 dark:bg-[#0F172A] hover:bg-slate-200 dark:hover:bg-[#334155] text-[11px] font-medium text-slate-700 dark:text-slate-200 transition-colors cursor-pointer border border-slate-200/60 dark:border-[#334155]"
-            >
-              {item}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 3. SIX FILTER DROPDOWNS + SORT CONTROL GRID */}
+      {/* 2. FILTER DROPDOWNS GRID */}
       <div className="pt-4 border-t border-slate-100 dark:border-[#334155] space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-300 uppercase flex items-center gap-1.5">
-            <SlidersHorizontal size={14} className="text-blue-600 dark:text-cyan-400" /> Filter & Sort Controls
+          <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase flex items-center gap-1.5">
+            <SlidersHorizontal size={14} className="text-blue-600 dark:text-cyan-400" /> Filter Criteria
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 text-xs">
-          {/* State Filter */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 text-xs">
+          {/* State Filter (All 36 Indian States & UTs) */}
           <div className="space-y-1">
-            <label className="text-[10px] font-mono text-slate-400 uppercase font-bold block">State</label>
+            <label className="text-[10px] text-slate-400 uppercase font-bold block">State / UT</label>
             <select
               value={stateFilter}
-              onChange={(e) => setStateFilter(e.target.value)}
+              onChange={(e) => handleStateChange(e.target.value)}
               className="w-full bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-slate-100 font-semibold px-3 py-2 rounded-xl focus:outline-none cursor-pointer"
             >
-              {states.map((s) => (
-                <option key={s.id} value={s.id}>{s.label}</option>
+              <option value="ALL">All States & UTs</option>
+              {availableStates.map((state) => (
+                <option key={state} value={state}>
+                  {state}
+                </option>
               ))}
             </select>
           </div>
 
-          {/* City Filter */}
+          {/* City Filter (Derived from Real Properties) */}
           <div className="space-y-1">
-            <label className="text-[10px] font-mono text-slate-400 uppercase font-bold block">City</label>
+            <label className="text-[10px] text-slate-400 uppercase font-bold block">City</label>
             <select
               value={cityFilter}
+              disabled={availableCities.length === 0}
               onChange={(e) => setCityFilter(e.target.value)}
               className="w-full bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-slate-100 font-semibold px-3 py-2 rounded-xl focus:outline-none cursor-pointer"
             >
-              {cities.map((c) => (
-                <option key={c.id} value={c.id}>{c.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Price Filter */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-mono text-slate-400 uppercase font-bold block">Price Range</label>
-            <select
-              value={priceFilter}
-              onChange={(e) => setPriceFilter(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-slate-100 font-semibold px-3 py-2 rounded-xl focus:outline-none cursor-pointer"
-            >
-              {priceRanges.map((pr) => (
-                <option key={pr.id} value={pr.id}>{pr.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Risk Score Filter */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-mono text-slate-400 uppercase font-bold block">Risk Score</label>
-            <select
-              value={riskFilter}
-              onChange={(e) => setRiskFilter(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-slate-100 font-semibold px-3 py-2 rounded-xl focus:outline-none cursor-pointer"
-            >
-              {riskScores.map((rs) => (
-                <option key={rs.id} value={rs.id}>{rs.label}</option>
+              <option value="ALL">
+                {stateFilter === "ALL" ? "All Cities" : "All Cities in " + stateFilter}
+              </option>
+              {availableCities.map((city) => (
+                <option key={city} value={city}>
+                  {city}
+                </option>
               ))}
             </select>
           </div>
 
           {/* Property Type Filter */}
           <div className="space-y-1">
-            <label className="text-[10px] font-mono text-slate-400 uppercase font-bold block">Property Type</label>
+            <label className="text-[10px] text-slate-400 uppercase font-bold block">Property Type</label>
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
               className="w-full bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-slate-100 font-semibold px-3 py-2 rounded-xl focus:outline-none cursor-pointer"
             >
-              {propertyTypes.map((pt) => (
-                <option key={pt.id} value={pt.id}>{pt.label}</option>
+              <option value="ALL">All Property Types</option>
+              {BACKEND_PROPERTY_TYPES.map((pt) => (
+                <option key={pt} value={pt}>
+                  {pt}
+                </option>
               ))}
             </select>
           </div>
 
           {/* Verification Status Filter */}
           <div className="space-y-1">
-            <label className="text-[10px] font-mono text-slate-400 uppercase font-bold block">Verification Status</label>
+            <label className="text-[10px] text-slate-400 uppercase font-bold block">Verification Status</label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="w-full bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-slate-100 font-semibold px-3 py-2 rounded-xl focus:outline-none cursor-pointer"
             >
-              {statuses.map((st) => (
-                <option key={st.id} value={st.id}>{st.label}</option>
+              <option value="ALL">All Statuses</option>
+              {BACKEND_PROPERTY_STATUSES.map((st) => (
+                <option key={st.value} value={st.value}>
+                  {st.label}
+                </option>
               ))}
             </select>
           </div>
 
-          {/* Sort By Dropdown */}
-          <div className="space-y-1 sm:col-span-2">
-            <label className="text-[10px] font-mono text-blue-600 dark:text-cyan-400 uppercase font-extrabold flex items-center gap-1">
-              <ArrowUpDown size={11} /> Sort Results By
-            </label>
+          {/* Price Range Filter */}
+          <div className="space-y-1">
+            <label className="text-[10px] text-slate-400 uppercase font-bold block">Price Range</label>
             <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="w-full bg-blue-50/80 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-cyan-200 font-bold px-3 py-2 rounded-xl focus:outline-none cursor-pointer"
+              value={priceFilter}
+              onChange={(e) => setPriceFilter(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-slate-100 font-semibold px-3 py-2 rounded-xl focus:outline-none cursor-pointer"
             >
-              {sortOptions.map((so) => (
-                <option key={so.id} value={so.id}>{so.label}</option>
+              {priceRanges.map((pr) => (
+                <option key={pr.id} value={pr.id}>
+                  {pr.label}
+                </option>
               ))}
             </select>
           </div>

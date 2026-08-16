@@ -13,12 +13,14 @@ public interface ReportService {
     DueDiligenceReportResponse generateReport(DueDiligenceReportRequest request, String userEmail);
     DueDiligenceReportResponse getReportById(Long id);
     List<DueDiligenceReportResponse> getReportsByProperty(Long propertyId);
+    List<DueDiligenceReportResponse> getMyReports(Long currentUserId);
     DueDiligenceReportResponse updateReport(Long id, DueDiligenceReportRequest request);
     void deleteReport(Long id);
 
     // Property Document CRUD Operations
     PropertyDocumentResponse uploadDocument(PropertyDocumentRequest request, String userEmail);
     PropertyDocumentResponse getDocumentById(Long id);
+    List<PropertyDocumentResponse> getAllDocuments();
     List<PropertyDocumentResponse> getDocumentsByProperty(Long propertyId);
     List<PropertyDocumentResponse> getDocumentsByReport(Long reportId);
     PropertyDocumentResponse updateDocument(Long id, PropertyDocumentRequest request);

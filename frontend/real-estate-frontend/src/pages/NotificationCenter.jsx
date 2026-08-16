@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import MainLayout from "../components/layout/MainLayout";
 import Badge from "../components/common/Badge";
 import Button from "../components/common/Button";
 import EmptyState from "../components/common/EmptyState";
+import { Skeleton } from "../components/common/Skeleton";
 import {
   Bell,
   CheckCheck,
@@ -32,154 +33,218 @@ import {
   FileUp,
   UserCheck,
   ShieldAlert,
+  SlidersHorizontal,
 } from "lucide-react";
-import { showToast, showConfirmDialog, showSuccessAlert } from "../utils/swal";
-import { getMyNotifications, markNotificationAsRead, markAllNotificationsAsRead } from "../services/notificationService";
+import { showToast, showConfirmDialog, showSuccessAlert, showErrorAlert } from "../utils/swal";
+import {
+  getMyNotifications,
+  getMyUnreadCount,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  deleteNotification,
+  clearReadNotifications,
+} from "../services/notificationService";
 
-// Master Initial Mock Notifications covering all 5 requested Notification Types
-const INITIAL_NOTIFICATIONS = [
-  // 1. New Review Assigned
-  {
-    id: "NTF-901",
-    type: "New Review Assigned",
-    title: "New Review Assigned: Title Audit PR-1001",
-    message: "Gachibowli Tech Park Phase 2 (PR-1001) title deed search assigned to your workstation.",
-    property: "Gachibowli Tech Park Phase 2 (PR-1001)",
-    propertyId: "1001",
-    timestamp: "10 mins ago",
-    read: false,
-    priority: "HIGH",
-    iconName: "UserCheck",
-  },
-  // 2. Document Uploaded
-  {
-    id: "NTF-902",
-    type: "Document Uploaded",
-    title: "Document Uploaded: 30-Year Encumbrance Certificate",
-    message: "Sub-Registrar Form 15 Encumbrance Certificate (EC #EC-2026-9041) uploaded for Whitefield Tech.",
-    property: "Whitefield Horizon Tech Campus (PR-1003)",
-    propertyId: "1003",
-    timestamp: "25 mins ago",
-    read: false,
-    priority: "HIGH",
-    iconName: "FileUp",
-  },
-  // 3. Ownership Updated
-  {
-    id: "NTF-903",
-    type: "Ownership Updated",
-    title: "Ownership Updated: Registered Sale Deed Transferred",
-    message: "Sub-Registrar recorded owner updated to Adani Realty Institutional Fund for PR-1001.",
-    property: "Gachibowli Tech Park Phase 2 (PR-1001)",
-    propertyId: "1001",
-    timestamp: "1 hour ago",
-    read: false,
-    priority: "HIGH",
-    iconName: "UserCheck",
-  },
-  // 4. Permit Expired
-  {
-    id: "NTF-904",
-    type: "Permit Expired",
-    title: "Urgent: Municipal Renovation Permit Expired",
-    message: "GHMC Renovation Permit (PMT-REN-1204) expired on 12 Feb 2025. Renewal clearance required.",
-    property: "BKC Prime Commercial Hub (PR-1005)",
-    propertyId: "1005",
-    timestamp: "2 hours ago",
-    read: false,
-    priority: "CRITICAL",
-    iconName: "AlertTriangle",
-  },
-  // 5. High Risk Property
-  {
-    id: "NTF-905",
-    type: "High Risk Property",
-    title: "High Risk Property Flagged: Civil Court Stay Order #CS-402",
-    property: "Jubilee Hills Commercial Plot 36 (PR-1002)",
-    propertyId: "1002",
-    message: "Risk Score 68/100 FLAGGED due to High Court civil stay order alert.",
-    timestamp: "4 hours ago",
-    read: false,
-    priority: "CRITICAL",
-    iconName: "ShieldAlert",
-  },
-  {
-    id: "NTF-906",
-    type: "New Review Assigned",
-    title: "New Review Assigned: Financial District Commercial Plot",
-    message: "Prestige Capital due diligence clearance request assigned to legal team.",
-    property: "Financial District Commercial Plot (PR-1004)",
-    propertyId: "1004",
-    timestamp: "Yesterday",
-    read: true,
-    priority: "MEDIUM",
-    iconName: "UserCheck",
-  },
-];
+// Helper for relative timestamps
+const formatRelativeTime = (rawDate) => {
+  if (!rawDate) return "Recently";
+  const d = new Date(rawDate);
+  if (isNaN(d.getTime())) return "Recently";
+  const now = new Date();
+  const diffSec = Math.floor((now.getTime() - d.getTime()) / 1000);
+  if (diffSec < 60) return "Just now";
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} min${diffMin > 1 ? "s" : ""} ago`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour} hour${diffHour > 1 ? "s" : ""} ago`;
+  const diffDays = Math.floor(diffHour / 24);
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays} days ago`;
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+};
 
 function NotificationCenter() {
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [error, setError] = useState(null);
+  const [lastSyncTime, setLastSyncTime] = useState("");
 
-  // Filters & Search
+  // Filters & Search State
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("ALL");
+  const [readFilter, setReadFilter] = useState("ALL"); // ALL, UNREAD, READ
 
-  // UNREAD BADGE COUNTER
-  const unreadCount = useMemo(() => {
-    return notifications.filter((n) => !n.read).length;
+  // Load live notifications and unread count from backend
+  const fetchNotifications = useCallback(async (isManual = false) => {
+    try {
+      if (isManual) setSyncing(true);
+      else setLoading(true);
+      setError(null);
+
+      const [listRes, countRes] = await Promise.allSettled([
+        getMyNotifications(),
+        getMyUnreadCount(),
+      ]);
+
+      if (listRes.status === "fulfilled" && listRes.value) {
+        const rawList = Array.isArray(listRes.value) ? listRes.value : (listRes.value?.data || []);
+        const formatted = rawList.map((item) => ({
+          id: item.notificationId || item.id,
+          type: item.notificationType || item.type || "System Alert",
+          title: item.title || "Notification Update",
+          message: item.message || "",
+          property: item.propertyName || (item.propertyId ? `Property #${item.propertyId}` : "General"),
+          propertyId: item.propertyId || null,
+          reportId: item.reportId || null,
+          reportName: item.reportName || null,
+          userEmail: item.userEmail || "",
+          rawDate: item.sentAt || item.createdAt,
+          timestamp: formatRelativeTime(item.sentAt || item.createdAt),
+          read: item.isRead === true,
+          priority: (item.notificationType || "").toUpperCase().includes("RISK") ? "CRITICAL" : "NORMAL",
+        }));
+        setNotifications(formatted);
+      } else {
+        setNotifications([]);
+      }
+
+      if (countRes.status === "fulfilled" && countRes.value != null) {
+        const cnt = typeof countRes.value === "number" ? countRes.value : Number(countRes.value?.data || 0);
+        setUnreadCount(cnt);
+      } else {
+        setUnreadCount(0);
+      }
+
+      const nowStr = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      setLastSyncTime(nowStr);
+
+      if (isManual) {
+        showToast("Notification feed synced with PostgreSQL database", "success");
+      }
+    } catch (err) {
+      console.error("Failed to load notifications from backend:", err);
+      setError("Unable to load notifications from backend database. Please verify Spring Boot connection.");
+      setNotifications([]);
+      setUnreadCount(0);
+      if (isManual) {
+        showToast("Failed to refresh notification feed", "error");
+      }
+    } finally {
+      setLoading(false);
+      setSyncing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  // Extract unique notification types dynamically from backend records
+  const availableTypes = useMemo(() => {
+    const types = new Set();
+    notifications.forEach((n) => {
+      if (n.type) types.add(n.type);
+    });
+    return Array.from(types);
   }, [notifications]);
 
-  // FILTERED NOTIFICATIONS
+  // Filtered Notifications List
   const filteredNotifications = useMemo(() => {
     return notifications.filter((ntf) => {
-      const matchType =
-        typeFilter === "ALL" ||
-        (typeFilter === "UNREAD" && !ntf.read) ||
-        ntf.type === typeFilter;
+      // Type Filter
+      const matchType = typeFilter === "ALL" || ntf.type === typeFilter;
 
+      // Read / Unread Filter
+      const matchRead =
+        readFilter === "ALL" ||
+        (readFilter === "UNREAD" && !ntf.read) ||
+        (readFilter === "READ" && ntf.read);
+
+      // Search Query
+      const q = searchQuery.toLowerCase().trim();
       const matchSearch =
-        ntf.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        ntf.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        ntf.property.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        ntf.type.toLowerCase().includes(searchQuery.toLowerCase());
+        !q ||
+        ntf.title.toLowerCase().includes(q) ||
+        ntf.message.toLowerCase().includes(q) ||
+        ntf.property.toLowerCase().includes(q) ||
+        ntf.type.toLowerCase().includes(q) ||
+        ntf.timestamp.toLowerCase().includes(q);
 
-      return matchType && matchSearch;
+      return matchType && matchRead && matchSearch;
     });
-  }, [notifications, typeFilter, searchQuery]);
+  }, [notifications, typeFilter, readFilter, searchQuery]);
 
   // ACTION: MARK READ (SINGLE)
-  const handleMarkAsRead = (id) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
-    showToast("Notification marked as read", "info");
+  const handleMarkAsRead = async (id) => {
+    try {
+      await markNotificationAsRead(id);
+      showToast("Notification marked as read in database", "info");
+      fetchNotifications(false);
+    } catch (err) {
+      console.error("Failed to mark notification as read:", err);
+      showErrorAlert("Update Failed", "Could not mark notification as read in backend.");
+    }
   };
 
   // ACTION: MARK ALL READ
-  const handleMarkAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    showToast("All notifications marked as read", "success");
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllNotificationsAsRead();
+      showSuccessAlert("All Marked Read", "All pending notifications marked as read in PostgreSQL.");
+      fetchNotifications(false);
+    } catch (err) {
+      console.error("Failed to mark all as read:", err);
+      showErrorAlert("Update Failed", "Could not update notification statuses in database.");
+    }
   };
 
   // ACTION: DELETE (SINGLE)
-  const handleDeleteNotification = (id) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-    showToast("Notification deleted", "info");
+  const handleDeleteNotification = async (id) => {
+    const confirmed = await showConfirmDialog(
+      "Delete Notification?",
+      "Are you sure you want to permanently delete this notification from your database feed?",
+      "Delete",
+      "Cancel"
+    );
+    if (!confirmed) return;
+
+    try {
+      await deleteNotification(id);
+      showToast("Notification deleted from database", "info");
+      fetchNotifications(false);
+    } catch (err) {
+      console.error("Failed to delete notification:", err);
+      showErrorAlert("Deletion Failed", "Could not remove notification record.");
+    }
   };
 
-  // ACTION: DELETE ALL
-  const handleDeleteAll = () => {
-    showConfirmDialog(
-      "Clear All Notifications?",
-      "Are you sure you want to delete all notifications from your feed?",
-      "Clear All"
-    ).then((res) => {
-      if (res.isConfirmed) {
-        setNotifications([]);
-        showSuccessAlert("Notifications Cleared", "All notifications deleted from your dispatch feed.");
-      }
-    });
+  // ACTION: CLEAR READ NOTIFICATIONS
+  const handleClearRead = async () => {
+    const readCount = notifications.filter((n) => n.read).length;
+    if (readCount === 0) {
+      showToast("No read notifications to clear", "info");
+      return;
+    }
+
+    const confirmed = await showConfirmDialog(
+      "Clear Read Notifications?",
+      `Are you sure you want to delete all ${readCount} read notifications from PostgreSQL?`,
+      "Clear Read",
+      "Cancel"
+    );
+    if (!confirmed) return;
+
+    try {
+      await clearReadNotifications();
+      showSuccessAlert("Read Notifications Cleared", `${readCount} read notifications removed from PostgreSQL.`);
+      fetchNotifications(false);
+    } catch (err) {
+      console.error("Failed to clear read notifications:", err);
+      showErrorAlert("Clear Failed", "Could not remove read notifications.");
+    }
   };
 
   return (
@@ -195,10 +260,10 @@ function NotificationCenter() {
             </span>
           </div>
 
-          {/* DYNAMIC UNREAD BADGE COUNTER */}
+          {/* DYNAMIC UNREAD BADGE COUNTER FROM BACKEND */}
           <span className="px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-mono font-bold text-xs border border-amber-200 dark:border-amber-800 flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-            {unreadCount} UNREAD NOTIFICATIONS
+            <span className={`w-2 h-2 rounded-full ${unreadCount > 0 ? "bg-amber-500 animate-pulse" : "bg-slate-400"}`} />
+            {unreadCount} UNREAD
           </span>
         </div>
 
@@ -212,11 +277,21 @@ function NotificationCenter() {
               🔔 Notifications Center
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-[#CBD5E1] mt-1 max-w-2xl">
-              Real-time dispatches for assigned reviews, uploaded documents, ownership updates, expired permits, and high risk properties.
+              Real-time dispatches for assigned reviews, uploaded documents, ownership updates, expired permits, and high risk properties in PostgreSQL.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <Button
+              onClick={() => fetchNotifications(true)}
+              variant="outline"
+              size="sm"
+              icon={RotateCcw}
+              loading={syncing || loading}
+            >
+              {syncing ? "Syncing..." : lastSyncTime ? `Sync (${lastSyncTime})` : "Refresh Feed"}
+            </Button>
+
             <Button
               onClick={handleMarkAllRead}
               variant="outline"
@@ -227,63 +302,87 @@ function NotificationCenter() {
               Mark All Read
             </Button>
             <Button
-              onClick={handleDeleteAll}
+              onClick={handleClearRead}
               variant="danger"
               size="sm"
               icon={Trash2}
-              disabled={notifications.length === 0}
+              disabled={notifications.filter((n) => n.read).length === 0}
             >
-              Clear All
+              Clear Read
             </Button>
           </div>
         </div>
 
-        {/* CONTROLS BAR: SEARCH & TYPE FILTER PILLS */}
-        <div className="white-card rounded-3xl p-5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4 font-mono text-xs">
-          {/* Search Input */}
-          <div className="relative flex-1">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search notifications by Title, Message, Property, or Type..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-100 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] font-bold text-slate-900 dark:text-slate-100 pl-10 pr-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500"
-            />
+        {/* ERROR STATE */}
+        {error && (
+          <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 font-mono text-xs flex items-center justify-between">
+            <span>⚠️ {error}</span>
+            <Button onClick={() => fetchNotifications(true)} variant="danger" size="xs">Retry</Button>
           </div>
+        )}
 
-          {/* Notification Type Filter Pills (The 5 Required Types + All & Unread) */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            {[
-              { id: "ALL", label: "All Feed" },
-              { id: "UNREAD", label: `Unread (${unreadCount})` },
-              { id: "New Review Assigned", label: "New Review" },
-              { id: "Document Uploaded", label: "Doc Uploaded" },
-              { id: "Ownership Updated", label: "Ownership" },
-              { id: "Permit Expired", label: "Permit Expired" },
-              { id: "High Risk Property", label: "High Risk" },
-            ].map((tab) => {
-              const active = typeFilter === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setTypeFilter(tab.id)}
-                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer font-bold ${
-                    active
-                      ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs"
-                      : "bg-slate-100 dark:bg-[#0F172A] text-slate-600 dark:text-slate-300 hover:text-slate-900"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              );
-            })}
+        {/* CONTROLS BAR: SEARCH, TYPE FILTER, READ/UNREAD FILTER */}
+        <div className="white-card rounded-3xl p-5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-3 font-mono text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+            {/* Search Input */}
+            <div className="sm:col-span-6 relative">
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search by Notification Title, Message, Type, or Time..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] font-bold text-slate-900 dark:text-slate-100 pl-10 pr-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+
+            {/* Notification Type Dropdown Filter */}
+            <div className="sm:col-span-3">
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="w-full py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-white font-bold cursor-pointer text-xs focus:outline-none focus:ring-2 focus:ring-amber-500"
+              >
+                <option value="ALL">All {availableTypes.length > 0 ? availableTypes.length : ""} Notification Types</option>
+                {availableTypes.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Read / Unread Status Dropdown Filter */}
+            <div className="sm:col-span-3">
+              <select
+                value={readFilter}
+                onChange={(e) => setReadFilter(e.target.value)}
+                className="w-full py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] text-slate-900 dark:text-white font-bold cursor-pointer text-xs focus:outline-none focus:ring-2 focus:ring-amber-500"
+              >
+                <option value="ALL">All Read & Unread ({notifications.length})</option>
+                <option value="UNREAD">Unread Only ({unreadCount})</option>
+                <option value="READ">Read Only ({notifications.length - unreadCount})</option>
+              </select>
+            </div>
           </div>
         </div>
 
         {/* NOTIFICATIONS FEED LIST */}
-        {filteredNotifications.length === 0 ? (
-          <EmptyState title="No notifications found" message="No notification dispatch matches your search query or selected type filter." />
+        {loading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-20 w-full rounded-3xl" />
+            <Skeleton className="h-20 w-full rounded-3xl" />
+            <Skeleton className="h-20 w-full rounded-3xl" />
+          </div>
+        ) : filteredNotifications.length === 0 ? (
+          <EmptyState
+            title={unreadCount === 0 && readFilter === "UNREAD" ? "All caught up" : "No notifications found"}
+            message={
+              searchQuery
+                ? `No notification dispatch matches "${searchQuery}".`
+                : unreadCount === 0 && readFilter === "UNREAD"
+                ? "You have 0 unread notifications in your feed."
+                : "No notification dispatches recorded in your backend feed."
+            }
+          />
         ) : (
           <div className="space-y-4">
             <AnimatePresence>
@@ -306,9 +405,9 @@ function NotificationCenter() {
                         <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" title="Unread Notification" />
                       )}
                       <div className={`p-2.5 rounded-2xl border ${
-                        ntf.priority === "CRITICAL" ? "bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950/80 dark:text-rose-400 dark:border-rose-800" :
-                        ntf.type === "High Risk Property" ? "bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950/80 dark:text-rose-400 dark:border-rose-800" :
-                        "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950/80 dark:text-amber-400 dark:border-amber-800"
+                        ntf.priority === "CRITICAL"
+                          ? "bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950/80 dark:text-rose-400 dark:border-rose-800"
+                          : "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950/80 dark:text-amber-400 dark:border-amber-800"
                       }`}>
                         <Bell size={18} />
                       </div>
@@ -317,11 +416,14 @@ function NotificationCenter() {
                     <div className="space-y-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">
-                          {ntf.type} • {ntf.id}
+                          {ntf.type} • NTF-{ntf.id}
                         </span>
                         <span className="text-slate-400 text-[10px] font-bold">• {ntf.timestamp}</span>
                         {ntf.priority === "CRITICAL" && (
                           <Badge variant="danger">CRITICAL</Badge>
+                        )}
+                        {!ntf.read && (
+                          <Badge variant="warning">NEW</Badge>
                         )}
                       </div>
 
@@ -335,13 +437,15 @@ function NotificationCenter() {
                         {ntf.message}
                       </p>
 
-                      <p className="text-[11px] font-bold text-slate-500 pt-1">
-                        🏢 {ntf.property}
-                      </p>
+                      {ntf.property && ntf.property !== "General" && (
+                        <p className="text-[11px] font-bold text-slate-500 pt-1">
+                          🏢 {ntf.property}
+                        </p>
+                      )}
                     </div>
                   </div>
 
-                  {/* ACTION BUTTONS: MARK READ & DELETE */}
+                  {/* ACTION BUTTONS: MARK READ, DELETE, VIEW PROPERTY */}
                   <div className="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-[#334155]">
                     {!ntf.read && (
                       <button
@@ -350,7 +454,7 @@ function NotificationCenter() {
                         title="Mark as Read"
                       >
                         <Check size={14} />
-                        <span>Read</span>
+                        <span>Mark Read</span>
                       </button>
                     )}
 
@@ -362,13 +466,15 @@ function NotificationCenter() {
                       <Trash2 size={15} />
                     </button>
 
-                    <button
-                      onClick={() => navigate(`/property-details?id=${ntf.propertyId || "1001"}`)}
-                      className="p-2 rounded-xl bg-slate-100 dark:bg-[#0F172A] hover:bg-slate-200 text-slate-700 dark:text-slate-300 transition-all cursor-pointer"
-                      title="Inspect Property Parcel"
-                    >
-                      <ArrowUpRight size={15} />
-                    </button>
+                    {ntf.propertyId && (
+                      <button
+                        onClick={() => navigate(`/property-details?id=${ntf.propertyId}`)}
+                        className="p-2 rounded-xl bg-slate-100 dark:bg-[#0F172A] hover:bg-slate-200 text-slate-700 dark:text-slate-300 transition-all cursor-pointer"
+                        title="Inspect Property Parcel"
+                      >
+                        <ArrowUpRight size={15} />
+                      </button>
+                    )}
                   </div>
                 </motion.div>
               ))}

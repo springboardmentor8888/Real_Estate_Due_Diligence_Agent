@@ -143,6 +143,14 @@ public class RiskServiceImpl implements RiskService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<RiskAssessmentResponse> getMyAssessments(Long currentUserId) {
+        return riskAssessmentRepository.findByAssessedByUserId(currentUserId).stream()
+                .map(riskMapper::toRiskAssessmentResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     @Transactional
     public RiskAssessmentResponse updateRiskAssessment(Long id, RiskAssessmentRequest request) {
         RiskAssessment assessment = riskAssessmentRepository.findById(id)

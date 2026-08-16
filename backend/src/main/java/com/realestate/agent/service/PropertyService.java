@@ -11,5 +11,7 @@ public interface PropertyService {
 
     Page<PropertyResponse> searchProperties(PropertySearchCriteria criteria);
 
+    Page<PropertyResponse> getMyProperties(Long currentUserId, org.springframework.data.domain.Pageable pageable);
+
     PropertyResponse getPropertyById(Long id);
 }

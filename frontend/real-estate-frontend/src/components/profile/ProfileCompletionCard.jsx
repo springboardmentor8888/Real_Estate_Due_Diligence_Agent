@@ -1,12 +1,14 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2, Sparkles, ArrowRight, ShieldCheck } from "lucide-react";
+import { Sparkles, ArrowRight } from "lucide-react";
 
-function ProfileCompletionCard({ completionPercentage = 72, onCompleteClick }) {
+function ProfileCompletionCard({ completionPercentage = 50, onCompleteClick }) {
+  const safePct = Math.min(100, Math.max(0, completionPercentage || 0));
+
   // SVG circle calculations
   const radius = 38;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (completionPercentage / 100) * circumference;
+  const strokeDashoffset = circumference - (safePct / 100) * circumference;
 
   return (
     <motion.div
@@ -39,7 +41,7 @@ function ProfileCompletionCard({ completionPercentage = 72, onCompleteClick }) {
               strokeDasharray={circumference}
               initial={{ strokeDashoffset: circumference }}
               animate={{ strokeDashoffset }}
-              transition={{ duration: 1.2, ease: "easeOut" }}
+              transition={{ duration: 1.0, ease: "easeOut" }}
               strokeLinecap="round"
               stroke="currentColor"
               fill="transparent"
@@ -49,7 +51,7 @@ function ProfileCompletionCard({ completionPercentage = 72, onCompleteClick }) {
           {/* Percentage Text Center */}
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
             <span className="text-xl font-black text-slate-900 dark:text-white leading-none">
-              {completionPercentage}%
+              {safePct}%
             </span>
             <span className="text-[9px] font-bold text-slate-400 dark:text-[#94A3B8] uppercase mt-0.5 tracking-wider">
               Done
@@ -58,20 +60,20 @@ function ProfileCompletionCard({ completionPercentage = 72, onCompleteClick }) {
         </div>
 
         {/* Informational Text & CTA */}
-        <div className="flex-1 text-center sm:text-left space-y-1.5">
+        <div className="flex-1 text-center sm:text-left space-y-1.5 font-mono">
           <div className="flex items-center justify-center sm:justify-start gap-2">
-            <Sparkles size={16} className="text-amber-500 animate-bounce" />
+            <Sparkles size={16} className="text-blue-600 dark:text-cyan-400" />
             <h3 className="text-base font-extrabold text-slate-900 dark:text-[#F8FAFC]">
-              Profile Completion Status
+              Profile Completion
             </h3>
           </div>
-          <p className="text-xs text-slate-600 dark:text-[#CBD5E1] max-w-lg leading-relaxed">
-            {completionPercentage >= 100
-              ? "Your profile is 100% complete and fully verified! You have maximum security clearance."
-              : "Complete your address, phone number, and organization details to reach 100% verification score."}
+          <p className="text-xs text-slate-600 dark:text-[#CBD5E1] max-w-lg leading-relaxed font-mono">
+            {safePct >= 100
+              ? "Your profile is complete."
+              : "Complete your profile to provide additional account information."}
           </p>
 
-          {completionPercentage < 100 && (
+          {safePct < 100 && (
             <button
               onClick={onCompleteClick}
               className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-cyan-400 dark:hover:text-cyan-300 pt-1 group cursor-pointer"

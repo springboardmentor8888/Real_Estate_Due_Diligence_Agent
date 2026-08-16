@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -29,118 +29,63 @@ import Button from "../components/common/Button";
 import Badge from "../components/common/Badge";
 import EmptyState from "../components/common/EmptyState";
 import { showToast, showSuccessAlert } from "../utils/swal";
-
-// Master Initial Calendar Schedule Mock Dataset
-const INITIAL_CALENDAR_EVENTS = [
-  {
-    id: "EVT-801",
-    title: "Gachibowli Tech Park Site Visit & Boundary Audit",
-    eventType: "Property Visits",
-    date: "2026-08-06",
-    dayNumber: 6,
-    timeSlot: "09:30 AM - 11:00 AM",
-    client: "Adani Realty Institutional Fund",
-    property: "Gachibowli Tech Park Phase 2 (PR-1001)",
-    location: "Financial District, Nanakramguda, Hyderabad",
-    priority: "HIGH",
-    notes: "Conduct physical boundary survey and verify Sub-Registrar map plot points.",
-  },
-  {
-    id: "EVT-802",
-    title: "DLF Portfolio Strategy Call & Encumbrance Review",
-    eventType: "Meetings",
-    date: "2026-08-06",
-    dayNumber: 6,
-    timeSlot: "11:30 AM - 12:30 PM",
-    client: "DLF Cybercity Portfolio",
-    property: "Jubilee Hills Commercial Plot 36 (PR-1002)",
-    location: "Zoom Video Workstation",
-    priority: "HIGH",
-    notes: "Review municipal tax lien receipt and present legal signoff options to DLF VP.",
-  },
-  {
-    id: "EVT-803",
-    title: "HMDA Master Plan Zoning & FAR Clearance Deadline",
-    eventType: "Deadlines",
-    date: "2026-08-08",
-    dayNumber: 8,
-    timeSlot: "05:00 PM",
-    client: "Prestige Capital Partners",
-    property: "Financial District Commercial Plot (PR-1004)",
-    location: "HMDA Statutory Office",
-    priority: "HIGH",
-    notes: "Hard deadline for filing Master Plan commercial land conversion NOC.",
-  },
-  {
-    id: "EVT-804",
-    title: "Sub-Registrar 30-Year Encumbrance & Title Search Review",
-    eventType: "Due Diligence Reviews",
-    date: "2026-08-10",
-    dayNumber: 10,
-    timeSlot: "02:00 PM - 04:00 PM",
-    client: "GMR Logistics Infrastructure",
-    property: "Whitefield Horizon Tech Campus (PR-1003)",
-    location: "Senior Counsel Chambers",
-    priority: "MEDIUM",
-    notes: "Examine 1996 - 2026 title deed transfers and verification certificates.",
-  },
-  {
-    id: "EVT-805",
-    title: "Dispatch Level 4 Institutional Audit PDF Report",
-    eventType: "Report Submission Dates",
-    date: "2026-08-12",
-    dayNumber: 12,
-    timeSlot: "04:00 PM",
-    client: "Sobha Real Estate Fund",
-    property: "BKC Prime Commercial Hub (PR-1005)",
-    location: "Client Institutional Vault",
-    priority: "HIGH",
-    notes: "Export and issue signed 13-vector due diligence audit certificate.",
-  },
-  {
-    id: "EVT-806",
-    title: "Whitefield Horizon Physical Soil & Elevation Audit",
-    eventType: "Property Visits",
-    date: "2026-08-14",
-    dayNumber: 14,
-    timeSlot: "10:00 AM - 01:00 PM",
-    client: "GMR Logistics Infrastructure",
-    property: "Whitefield Horizon Tech Campus (PR-1003)",
-    location: "EPIP Zone Phase 2, Bengaluru",
-    priority: "MEDIUM",
-    notes: "Inspect soil test reports and FIRM flood elevation markers.",
-  },
-  {
-    id: "EVT-807",
-    title: "Mahindra Lifespaces Board Diligence Briefing",
-    eventType: "Meetings",
-    date: "2026-08-16",
-    dayNumber: 16,
-    timeSlot: "03:00 PM - 04:30 PM",
-    client: "Mahindra Lifespaces Ltd",
-    property: "Kokapet SEZ Commercial Land (PR-1006)",
-    location: "Mahindra Corporate Hub",
-    priority: "HIGH",
-    notes: "Present risk assessment matrix for Kokapet SEZ land acquisition.",
-  },
-  {
-    id: "EVT-808",
-    title: "GHMC Municipal Zero-Dues Tax NOC Deadline",
-    eventType: "Deadlines",
-    date: "2026-08-18",
-    dayNumber: 18,
-    timeSlot: "05:00 PM",
-    client: "Adani Realty Institutional Fund",
-    property: "Gachibowli Tech Park Phase 2 (PR-1001)",
-    location: "GHMC Zonal Office",
-    priority: "MEDIUM",
-    notes: "Obtain official 0-dues municipal tax receipt.",
-  },
-];
+import { getAllProperties } from "../services/propertyService";
 
 function AgentCalendar() {
   const navigate = useNavigate();
-  const [events, setEvents] = useState(INITIAL_CALENDAR_EVENTS);
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await getAllProperties(0, 50);
+        const list = res?.content || (Array.isArray(res) ? res : res?.data?.content || []);
+        
+        const eventTypes = ["Property Visits", "Meetings", "Sub-Registrar Inspections", "Deadlines", "Report Submission Dates"];
+        const clients = [
+          "Adani Realty Institutional Fund",
+          "DLF Cybercity Portfolio",
+          "GMR Logistics Infrastructure",
+          "Prestige Capital Partners",
+          "Sobha Real Estate Fund",
+        ];
+
+        const formatted = list.map((p, idx) => {
+          const pId = p.propertyId || p.id || idx + 1;
+          const pName = p.propertyName || p.title || `Property Parcel PR-${pId}`;
+          const pCode = p.propertyCode || `PR-${pId}`;
+          const day = 6 + (idx * 2);
+
+          return {
+            id: `EVT-80${pId}`,
+            title: `${pName} Site Visit & Verification`,
+            eventType: eventTypes[idx % eventTypes.length],
+            date: `2026-08-${String(day).padStart(2, "0")}`,
+            dayNumber: day,
+            timeSlot: `${9 + (idx % 4)}:30 AM - ${11 + (idx % 4)}:00 AM`,
+            client: clients[idx % clients.length],
+            property: `${pName} (${pCode})`,
+            location: p.address?.city ? `${p.address.addressLine1 || ""}, ${p.address.city}` : "Hyderabad",
+            priority: idx % 2 === 0 ? "HIGH" : "MEDIUM",
+            notes: `Conduct physical boundary survey and due diligence verification for ${pName}.`,
+          };
+        });
+
+        setEvents(formatted);
+      } catch (err) {
+        console.error("Failed to load agent calendar:", err);
+        setError("Unable to load calendar. Please verify backend is running on port 8081.");
+        setEvents([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEvents();
+  }, []);
 
   // View Mode State: 'month', 'week', 'day', 'agenda'
   const [viewMode, setViewMode] = useState("month");

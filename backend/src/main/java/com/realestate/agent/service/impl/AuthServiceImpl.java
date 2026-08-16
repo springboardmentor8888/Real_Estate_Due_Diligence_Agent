@@ -22,7 +22,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 @Service
-@RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
@@ -30,6 +29,20 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
+
+    public AuthServiceImpl(
+            UserRepository userRepository,
+            RoleRepository roleRepository,
+            PasswordEncoder passwordEncoder,
+            AuthenticationManager authenticationManager,
+            JwtService jwtService
+    ) {
+        this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.authenticationManager = authenticationManager;
+        this.jwtService = jwtService;
+    }
 
     @Override
     public RegisterResponse register(RegisterRequest request) {
@@ -96,5 +109,89 @@ public class AuthServiceImpl implements AuthService {
                 .email(user.getEmail())
                 .role(user.getRole().getRoleName())
                 .build();
+    }
+
+    @Override
+    public LoginResponse registerOAuthUser(com.realestate.agent.dto.OAuthRegisterRequest request) {
+        if (!jwtService.isOAuthRegistrationTokenValid(request.getOauthToken())) {
+            throw new IllegalArgumentException("The OAuth registration session has expired or is invalid. Please sign in with your social account again.");
+        }
+
+        String verifiedEmail = jwtService.extractUsername(request.getOauthToken());
+
+        // Check if role is Administrator -> Disallow self-registration
+        if ("Administrator".equalsIgnoreCase(request.getRole()) || "Admin".equalsIgnoreCase(request.getRole())) {
+            throw new IllegalArgumentException("Administrator role cannot be self-registered.");
+        }
+
+        // If user already exists, update and return login response
+        User user = userRepository.findByEmailWithRole(verifiedEmail).orElse(null);
+
+        if (user == null) {
+            if (StringUtils.hasText(request.getPhone()) && userRepository.existsByPhone(request.getPhone())) {
+                throw new ResourceAlreadyExistsException("Phone number already exists in the system.");
+            }
+
+            Role role = roleRepository.findByRoleName(request.getRole())
+                    .orElseThrow(() -> new ResourceNotFoundException("Role not found: " + request.getRole()));
+
+            user = User.builder()
+                    .firstName(request.getFirstName())
+                    .lastName(request.getLastName())
+                    .email(verifiedEmail)
+                    .phone(request.getPhone())
+                    .passwordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()))
+                    .role(role)
+                    .isActive(true)
+                    .emailVerified(true)
+                    .lastLogin(java.time.LocalDateTime.now())
+                    .build();
+
+            user = userRepository.save(user);
+        } else {
+            user.setLastLogin(java.time.LocalDateTime.now());
+            user = userRepository.save(user);
+        }
+
+        CustomUserDetails userDetails = new CustomUserDetails(user);
+        String jwtToken = jwtService.generateToken(userDetails);
+
+        return LoginResponse.builder()
+                .token(jwtToken)
+                .userId(user.getUserId())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail())
+                .role(user.getRole().getRoleName())
+                .build();
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public java.util.Optional<LoginResponse> processExistingOAuthUser(String email) {
+        java.util.Optional<User> userOptional = userRepository.findByEmailWithRole(email);
+        if (userOptional.isEmpty()) {
+            return java.util.Optional.empty();
+        }
+
+        User user = userOptional.get();
+        if (user.getIsActive() != null && !user.getIsActive()) {
+            throw new IllegalArgumentException("Your account is currently disabled. Please contact your administrator.");
+        }
+
+        user.setLastLogin(java.time.LocalDateTime.now());
+        userRepository.save(user);
+
+        CustomUserDetails userDetails = new CustomUserDetails(user);
+        String jwtToken = jwtService.generateToken(userDetails);
+
+        return java.util.Optional.of(LoginResponse.builder()
+                .token(jwtToken)
+                .userId(user.getUserId())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail())
+                .role(user.getRole().getRoleName())
+                .build());
     }
 }

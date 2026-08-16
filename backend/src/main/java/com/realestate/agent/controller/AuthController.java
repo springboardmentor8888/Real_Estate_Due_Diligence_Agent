@@ -11,10 +11,13 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
-@RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
+
+    public AuthController(AuthService authService) {
+        this.authService = authService;
+    }
 
     @PostMapping("/register")
     public RegisterResponse register(
@@ -28,5 +31,12 @@ public class AuthController {
             @Valid @RequestBody LoginRequest request) {
 
         return authService.login(request);
+    }
+
+    @PostMapping("/register-oauth")
+    public LoginResponse registerOAuth(
+            @Valid @RequestBody com.realestate.agent.dto.OAuthRegisterRequest request) {
+
+        return authService.registerOAuthUser(request);
     }
 }

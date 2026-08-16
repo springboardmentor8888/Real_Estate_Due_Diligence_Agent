@@ -14,6 +14,9 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class PropertySearchCriteria {
 
+    private String keyword;
+    private String query;
+    private String propertyName;
     private String city;
     private String state;
     private String postalCode;

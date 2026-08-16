@@ -10,4 +10,6 @@ import java.util.List;
 public interface AddressRepository extends JpaRepository<Address, Long> {
 
     List<Address> findByPropertyPropertyId(Long propertyId);
+
+    List<Address> findByPropertyPropertyIdIn(List<Long> propertyIds);
 }

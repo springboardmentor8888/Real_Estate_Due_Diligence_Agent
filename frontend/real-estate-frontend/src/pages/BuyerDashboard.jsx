@@ -1,38 +1,32 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Building2,
-  FileText,
-  AlertTriangle,
-  Search,
-  ArrowLeftRight,
-  Download,
-  Home,
-  ChevronRight,
-  FileDown,
-  History,
-  CheckCircle2,
-  Activity,
-  Bell,
-  TrendingUp,
-  ArrowUpRight,
-  ShieldCheck,
-  MapPin,
-  Clock,
-  ExternalLink,
-} from "lucide-react";
 import MainLayout from "../components/layout/MainLayout";
-import DashboardHeroHeader from "../components/dashboard/DashboardHeroHeader";
-import { EnterpriseKPIGrid } from "../components/dashboard/DashboardCard";
 import QuickActions from "../components/dashboard/QuickActions";
-import SavedPropertiesGrid from "../components/dashboard/SavedPropertiesGrid";
-import MarketInsights from "../components/dashboard/MarketInsights";
-import RecentActivityFeed from "../components/dashboard/RecentActivityFeed";
-import { buyerDashboardData } from "../mock/buyerData";
-import { getLiveProperties, getLiveSavedProperties } from "../services/liveStore";
 import ReportGeneratorModal from "../components/dashboard/ReportGeneratorModal";
 import Badge from "../components/common/Badge";
 import Button from "../components/common/Button";
+import EmptyState from "../components/common/EmptyState";
+import { Skeleton } from "../components/common/Skeleton";
+import {
+  Building2,
+  Search,
+  Eye,
+  FileText,
+  ShieldCheck,
+  ArrowRight,
+  TrendingUp,
+  AlertCircle,
+  RefreshCw,
+  Sparkles,
+  MapPin,
+  Scale,
+  Bell,
+  CheckCircle2,
+  Calendar,
+  Layers,
+} from "lucide-react";
+import { getAllProperties, getMyReports } from "../services/propertyService";
+import { getMyNotifications } from "../services/notificationService";
 
 function BuyerDashboard() {
   const navigate = useNavigate();
@@ -40,214 +34,442 @@ function BuyerDashboard() {
   const [selectedModalPropId, setSelectedModalPropId] = useState("");
 
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const userName = storedUser.firstName
-    ? `${storedUser.firstName} ${storedUser.lastName || ""}`.trim()
-    : storedUser.name || "Rama Charan";
+  const userId = storedUser.userId || storedUser.id || "2";
+  const firstName = storedUser.firstName || storedUser.name?.split(" ")[0] || "Buyer";
   const userRole = "Buyer";
 
-  const [properties, setProperties] = useState(getLiveProperties);
-  const [savedProperties, setSavedProperties] = useState(getLiveSavedProperties);
+  const [properties, setProperties] = useState([]);
+  const [myReports, setMyReports] = useState([]);
+  const [myNotifications, setMyNotifications] = useState([]);
+  const [watchlistIds, setWatchlistIds] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const handleOpenReportModal = (propId = "") => {
-    setSelectedModalPropId(propId);
-    setReportModalOpen(true);
+  // Greeting based on time of day
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    return "Good evening";
+  };
+
+  const fetchBuyerData = async () => {
+    setLoading(true);
+    setError(null);
+
+    // Read user-scoped watchlist from localStorage
+    try {
+      const savedWatchlist = JSON.parse(localStorage.getItem(`buyer_watchlist_${userId}`) || "[]");
+      setWatchlistIds(Array.isArray(savedWatchlist) ? savedWatchlist : []);
+    } catch (e) {
+      setWatchlistIds([]);
+    }
+
+    try {
+      const [propsRes, reportsRes, notifsRes] = await Promise.allSettled([
+        getAllProperties(0, 50),
+        getMyReports(),
+        getMyNotifications(),
+      ]);
+
+      if (propsRes.status === "fulfilled" && propsRes.value?.data) {
+        const items = propsRes.value.data.content || (Array.isArray(propsRes.value.data) ? propsRes.value.data : []);
+        setProperties(items);
+      } else {
+        setProperties([]);
+      }
+
+      if (reportsRes.status === "fulfilled" && reportsRes.value?.data) {
+        const repItems = Array.isArray(reportsRes.value.data) ? reportsRes.value.data : [];
+        setMyReports(repItems);
+      } else {
+        setMyReports([]);
+      }
+
+      if (notifsRes.status === "fulfilled" && notifsRes.value?.data) {
+        const notifItems = Array.isArray(notifsRes.value.data) ? notifsRes.value.data : [];
+        setMyNotifications(notifItems);
+      } else {
+        setMyNotifications([]);
+      }
+    } catch (err) {
+      console.warn("Buyer dashboard fetch error:", err);
+      setError("Unable to connect to backend server. Please verify Spring Boot is running on port 8081.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    const syncLiveData = () => {
-      setProperties(getLiveProperties());
-      setSavedProperties(getLiveSavedProperties());
-    };
+    fetchBuyerData();
+  }, [userId]);
 
-    window.addEventListener("live_data_updated", syncLiveData);
-    window.addEventListener("storage", syncLiveData);
-    return () => {
-      window.removeEventListener("live_data_updated", syncLiveData);
-      window.removeEventListener("storage", syncLiveData);
-    };
-  }, []);
+  // Watchlisted properties derived from global catalog
+  const watchlistedProperties = properties.filter((p) => {
+    const pId = (p.propertyId || p.numericId || p.id || "").toString();
+    return watchlistIds.includes(pId);
+  });
 
-  const dynamicCards = [
-    {
-      id: "kpi-saved",
-      title: "Saved Properties",
-      value: `${savedProperties.length}`,
-      trend: "+2 this week",
-      isPositive: true,
-      lastUpdated: "Updated 5m ago",
-      iconName: "Building2",
-      cardStyle: "bg-blue-50/50 dark:bg-[#1E293B] border-blue-200/80 dark:border-[#334155] border-l-4 border-l-blue-500",
-      iconBg: "bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-800",
-    },
-    {
-      id: "kpi-generated",
-      title: "Reports Generated",
-      value: `${buyerDashboardData.purchasedReports.length}`,
-      trend: "+1 new report",
-      isPositive: true,
-      lastUpdated: "Updated 12m ago",
-      iconName: "FileText",
-      cardStyle: "bg-emerald-50/50 dark:bg-[#1E293B] border-emerald-200/80 dark:border-[#334155] border-l-4 border-l-emerald-500",
-      iconBg: "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800",
-    },
-    {
-      id: "kpi-pending",
-      title: "Pending Reports",
-      value: "3",
-      trend: "-1 resolved",
-      isPositive: true,
-      lastUpdated: "Updated 1h ago",
-      iconName: "Clock",
-      cardStyle: "bg-amber-50/50 dark:bg-[#1E293B] border-amber-200/80 dark:border-[#334155] border-l-4 border-l-amber-500",
-      iconBg: "bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-800",
-    },
-    {
-      id: "kpi-risk",
-      title: "Average Risk Score",
-      value: "18 / 100",
-      trend: "-3.2 pts (Low Risk)",
-      isPositive: true,
-      lastUpdated: "Updated 2m ago",
-      iconName: "ShieldCheck",
-      cardStyle: "bg-purple-50/50 dark:bg-[#1E293B] border-purple-200/80 dark:border-[#334155] border-l-4 border-l-purple-500",
-      iconBg: "bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-400 border-purple-300 dark:border-purple-800",
-    },
-  ];
+  const handleOpenReport = (propId) => {
+    setSelectedModalPropId(propId || "");
+    setReportModalOpen(true);
+  };
 
   return (
     <MainLayout>
-      <div className="space-y-8 pb-16">
-        {/* 1. HEADER & BREADCRUMB */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-medium text-slate-500 dark:text-[#CBD5E1]">
-          <div className="flex items-center gap-2">
-            <Home size={14} className="text-blue-500 dark:text-cyan-400" />
-            <span>/</span>
-            <span className="text-slate-900 dark:text-[#F8FAFC] font-extrabold">
-              Buyer Portal Dashboard
-            </span>
-          </div>
-
-          <span className="px-2.5 py-1 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-cyan-300 font-mono font-bold text-[11px] border border-blue-200 dark:border-blue-800 flex items-center gap-1.5 shrink-0">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            LIVE DATA ACTIVE
-          </span>
-        </div>
-
-        {/* 2. WELCOME HERO SECTION */}
-        <DashboardHeroHeader userName={userName} userRole={userRole} />
-
-        {/* 3. STATISTICS KPI CARDS */}
-        <EnterpriseKPIGrid kpiData={dynamicCards} />
-
-        {/* 4. BUYER QUICK ACTIONS */}
-        <QuickActions
-          title="Buyer Quick Actions"
-          subtitle="Direct workflows to query properties, run comparisons, and download reports."
-          actions={buyerDashboardData.quickActions}
-        />
-
-        {/* 5. RECENT ACTIVITY STREAM */}
-        <RecentActivityFeed />
-
-        {/* 6. RECENT REPORTS & NOTIFICATIONS PREVIEW GRID */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Recent Reports (6 Cols) */}
-          <div className="lg:col-span-6 white-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">
-                  VERIFIED AUDIT VAULT
+      <div className="space-y-8 pb-16 font-mono max-w-7xl mx-auto">
+        {/* BUYER HEADER */}
+        <div className="glass-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs relative overflow-hidden">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  REAL ESTATE BUYER WORKSPACE
                 </span>
-                <h2 className="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2 mt-0.5">
-                  <FileText size={18} className="text-emerald-600 dark:text-emerald-400" /> Recent Reports
-                </h2>
+                <Badge variant="success">POSTGRESQL LIVE</Badge>
               </div>
-              <button
-                onClick={() => navigate("/report-history")}
-                className="text-xs font-bold text-blue-600 dark:text-cyan-400 hover:underline cursor-pointer"
-              >
-                View History
-              </button>
+              <h1 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+                {getGreeting()}, <span className="text-blue-600 dark:text-cyan-400">{firstName}</span>
+              </h1>
+              <p className="text-sm text-slate-600 dark:text-slate-300 font-sans font-medium">
+                Evaluate properties with confidence.
+              </p>
             </div>
 
-            <div className="space-y-3">
-              {buyerDashboardData.purchasedReports.map((rpt) => (
-                <div
-                  key={rpt.id}
-                  className="p-4 rounded-2xl border border-slate-200 dark:border-[#334155] bg-slate-50/70 dark:bg-[#0F172A]/70 flex items-center justify-between gap-4 hover:border-blue-400 transition-colors"
+            <div className="flex items-center gap-3 shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchBuyerData}
+                className="flex items-center gap-1.5"
+              >
+                <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+                Sync Data
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => navigate("/property-search")}
+                className="flex items-center gap-1.5 shadow-md shadow-blue-500/20"
+              >
+                <Search size={14} />
+                Explore Properties
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* ERROR BANNER */}
+        {error && (
+          <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <AlertCircle size={20} className="shrink-0" />
+              <p className="text-xs font-bold">{error}</p>
+            </div>
+            <Button variant="danger" size="sm" onClick={fetchBuyerData}>
+              Retry
+            </Button>
+          </div>
+        )}
+
+        {/* LOADING STATE */}
+        {loading ? (
+          <div className="space-y-6">
+            <Skeleton className="h-28 w-full rounded-3xl" />
+            <Skeleton className="h-64 w-full rounded-3xl" />
+          </div>
+        ) : (
+          <>
+            {/* BUYER KPI METRICS */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              <div className="rounded-3xl p-6 border shadow-xs bg-white dark:bg-[#1E293B] border-slate-200 dark:border-[#334155] border-l-4 border-l-blue-500 font-mono text-xs">
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                    Property Catalog
+                  </span>
+                  <div className="p-2.5 rounded-2xl border bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-cyan-400 border-blue-200 dark:border-blue-800">
+                    <Building2 size={18} />
+                  </div>
+                </div>
+                <h3 className="text-3xl font-black text-slate-900 dark:text-white">
+                  {properties.length}
+                </h3>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold block mt-3">
+                  Shared real estate parcels
+                </span>
+              </div>
+
+              <div className="rounded-3xl p-6 border shadow-xs bg-white dark:bg-[#1E293B] border-slate-200 dark:border-[#334155] border-l-4 border-l-purple-500 font-mono text-xs">
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                    My Watchlist
+                  </span>
+                  <div className="p-2.5 rounded-2xl border bg-purple-100 dark:bg-purple-950 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800">
+                    <Eye size={18} />
+                  </div>
+                </div>
+                <h3 className="text-3xl font-black text-slate-900 dark:text-white">
+                  {watchlistIds.length}
+                </h3>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold block mt-3">
+                  Properties saved by you
+                </span>
+              </div>
+
+              <div className="rounded-3xl p-6 border shadow-xs bg-white dark:bg-[#1E293B] border-slate-200 dark:border-[#334155] border-l-4 border-l-emerald-500 font-mono text-xs">
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                    My Due Diligence Reports
+                  </span>
+                  <div className="p-2.5 rounded-2xl border bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">
+                    <FileText size={18} />
+                  </div>
+                </div>
+                <h3 className="text-3xl font-black text-slate-900 dark:text-white">
+                  {myReports.length}
+                </h3>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold block mt-3">
+                  Audits generated by you
+                </span>
+              </div>
+
+              <div className="rounded-3xl p-6 border shadow-xs bg-white dark:bg-[#1E293B] border-slate-200 dark:border-[#334155] border-l-4 border-l-amber-500 font-mono text-xs">
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                    Due Diligence Engine
+                  </span>
+                  <div className="p-2.5 rounded-2xl border bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800">
+                    <ShieldCheck size={18} />
+                  </div>
+                </div>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white">
+                  READY
+                </h3>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold block mt-3">
+                  30-Yr Title & Compliance Check
+                </span>
+              </div>
+            </div>
+
+            {/* BUYER WORKSPACE QUICK ACTIONS */}
+            <QuickActions role="Buyer" />
+
+            {/* SHARED PROPERTY CATALOG HIGHLIGHTS */}
+            <div className="glass-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-[#334155]">
+                <div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-cyan-300 border border-blue-200 dark:border-blue-800 text-xs font-bold mb-2">
+                    <Building2 size={14} /> Shared Real Estate Inventory
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                    Verified Properties For Purchase ({properties.length})
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Real estate parcels queried directly from PostgreSQL database.
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => navigate("/property-search")}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition-all cursor-pointer shrink-0"
                 >
-                  <div className="space-y-1 min-w-0">
-                    <span className="text-[10px] font-mono font-bold text-blue-600 dark:text-cyan-400">
-                      {rpt.id} • {rpt.date}
-                    </span>
-                    <h3 className="text-xs font-bold text-slate-900 dark:text-white truncate">{rpt.title}</h3>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{rpt.property} ({rpt.city})</p>
+                  <span>Explore Full Catalog ({properties.length})</span>
+                  <ArrowRight size={14} />
+                </button>
+              </div>
+
+              {properties.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {properties.slice(0, 6).map((prop, idx) => {
+                    const pId = prop.propertyId || prop.numericId || idx + 1;
+                    const mv = Number(prop.marketValue || 0);
+                    const formattedPrice =
+                      mv >= 10000000
+                        ? `₹ ${(mv / 10000000).toFixed(2)} Cr`
+                        : mv > 0
+                        ? `₹ ${(mv / 100000).toFixed(2)} Lakhs`
+                        : "Price on Request";
+
+                    return (
+                      <div
+                        key={pId}
+                        className="rounded-2xl border border-slate-200 dark:border-[#334155] bg-slate-50/50 dark:bg-[#0F172A] p-5 space-y-4 hover:border-blue-500 transition-all group flex flex-col justify-between"
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-bold text-blue-600 dark:text-cyan-400 text-xs">
+                              {prop.propertyCode || `PR-${pId}`}
+                            </span>
+                            <Badge variant={prop.status === "VERIFIED" ? "success" : "info"}>
+                              {prop.status || "ACTIVE"}
+                            </Badge>
+                          </div>
+
+                          <h3 className="font-extrabold text-slate-900 dark:text-white text-sm group-hover:text-blue-600 dark:group-hover:text-cyan-400 transition-colors">
+                            {prop.propertyName || `Property Parcel PR-${pId}`}
+                          </h3>
+
+                          <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                            <MapPin size={13} className="shrink-0 text-slate-400" />
+                            <span className="truncate">
+                              {prop.address?.city ? `${prop.address.city}, ${prop.address.state || ""}` : "Hyderabad, Telangana"}
+                            </span>
+                          </div>
+
+                          <div className="pt-2 flex items-baseline justify-between border-t border-slate-200/60 dark:border-[#1E293B]">
+                            <span className="text-[10px] text-slate-400 uppercase font-bold">Market Value</span>
+                            <span className="text-sm font-black text-slate-900 dark:text-white font-mono">
+                              {formattedPrice}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 pt-2">
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/properties/${pId}`)}
+                            className="py-2 px-3 rounded-xl border border-slate-200 dark:border-[#334155] hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-bold text-center transition-all cursor-pointer"
+                          >
+                            Inspect
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenReport(pId)}
+                            className="py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold text-center transition-all cursor-pointer shadow-xs"
+                          >
+                            Due Diligence
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <EmptyState
+                  title="No Properties Found"
+                  message="No active real estate parcels found in PostgreSQL database."
+                />
+              )}
+            </div>
+
+            {/* 2-COLUMN SECTION: MY REPORTS + RECENT NOTIFICATIONS */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* MY REPORTS */}
+              <div className="glass-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#334155] pb-4">
+                  <div>
+                    <h2 className="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                      <FileText size={18} className="text-emerald-500" /> My Diligence Reports
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Private reports generated by your account.
+                    </p>
                   </div>
                   <button
-                    onClick={() => handleOpenReportModal(rpt.propertyId || "1001")}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs cursor-pointer shrink-0"
+                    onClick={() => navigate("/report-history")}
+                    className="text-xs font-bold text-blue-600 dark:text-cyan-400 hover:underline cursor-pointer"
                   >
-                    <FileDown size={14} />
-                    <span>Download</span>
+                    View All ({myReports.length})
                   </button>
                 </div>
-              ))}
-            </div>
-          </div>
 
-          {/* Notifications Preview (6 Cols) */}
-          <div className="lg:col-span-6 white-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider block">
-                  SYSTEM ALERTS
-                </span>
-                <h2 className="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2 mt-0.5">
-                  <Bell size={18} className="text-amber-600 dark:text-amber-400" /> Notifications Center
-                </h2>
-              </div>
-              <button
-                onClick={() => navigate("/notifications")}
-                className="text-xs font-bold text-blue-600 dark:text-cyan-400 hover:underline cursor-pointer"
-              >
-                View All
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {buyerDashboardData.notifications.map((notif) => (
-                <div
-                  key={notif.id}
-                  onClick={() => navigate("/notifications")}
-                  className="p-4 rounded-2xl border border-slate-200 dark:border-[#334155] bg-slate-50/70 dark:bg-[#0F172A]/70 space-y-1.5 hover:border-amber-400 transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400">
-                      {notif.badge}
-                    </span>
-                    <span className="text-[10px] font-mono text-slate-400">{notif.time}</span>
+                {myReports.length > 0 ? (
+                  <div className="divide-y divide-slate-100 dark:divide-[#334155]">
+                    {myReports.slice(0, 4).map((r, idx) => {
+                      const pId = r.propertyId || r.property?.propertyId || idx + 1;
+                      return (
+                        <div key={r.reportId || idx} className="py-3 flex items-center justify-between gap-4">
+                          <div>
+                            <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                              {r.reportName || `Due Diligence Audit - PR-${pId}`}
+                            </span>
+                            <span className="text-[10px] text-slate-400 block mt-0.5">
+                              {r.generatedAt ? new Date(r.generatedAt).toLocaleDateString() : "Recently Generated"} • {r.status || "FINAL"}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => navigate("/report-history")}
+                            className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer"
+                          >
+                            View
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <h4 className="text-xs font-extrabold text-slate-900 dark:text-white">{notif.title}</h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{notif.message}</p>
+                ) : (
+                  <div className="py-8 text-center space-y-2">
+                    <FileText size={28} className="mx-auto text-slate-300 dark:text-slate-600" />
+                    <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                      My reports will appear here after you generate a due-diligence report.
+                    </p>
+                    <button
+                      onClick={() => handleOpenReport("")}
+                      className="text-xs font-bold text-blue-600 dark:text-cyan-400 hover:underline cursor-pointer"
+                    >
+                      + Generate New Report
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* RECENT NOTIFICATIONS */}
+              <div className="glass-card rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] shadow-xs space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#334155] pb-4">
+                  <div>
+                    <h2 className="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                      <Bell size={18} className="text-blue-500" /> Notifications
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Updates on your searches, assessments, and reports.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => navigate("/notifications")}
+                    className="text-xs font-bold text-blue-600 dark:text-cyan-400 hover:underline cursor-pointer"
+                  >
+                    View All ({myNotifications.length})
+                  </button>
                 </div>
-              ))}
+
+                {myNotifications.length > 0 ? (
+                  <div className="divide-y divide-slate-100 dark:divide-[#334155]">
+                    {myNotifications.slice(0, 4).map((n, idx) => (
+                      <div key={n.notificationId || idx} className="py-3 flex items-start gap-3">
+                        <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-cyan-400 shrink-0 mt-0.5">
+                          <Bell size={13} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-xs font-bold text-slate-900 dark:text-white block truncate">
+                            {n.title || "Notification"}
+                          </span>
+                          <span className="text-[10px] text-slate-400 block mt-0.5 line-clamp-2">
+                            {n.message || ""}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-8 text-center space-y-2">
+                    <Bell size={28} className="mx-auto text-slate-300 dark:text-slate-600" />
+                    <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                      No notifications.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </div>
+          </>
+        )}
 
-        {/* 7. MARKET INSIGHTS SECTION */}
-        <MarketInsights />
-
-        {/* 8. SAVED PROPERTIES PREVIEW GRID */}
-        <SavedPropertiesGrid />
+        {/* REPORT GENERATION MODAL */}
+        <ReportGeneratorModal
+          isOpen={reportModalOpen}
+          onClose={() => setReportModalOpen(false)}
+          initialPropertyId={selectedModalPropId}
+        />
       </div>
-
-      {/* REPORT GENERATOR MODAL */}
-      <ReportGeneratorModal
-        isOpen={reportModalOpen}
-        onClose={() => setReportModalOpen(false)}
-        initialPropertyId={selectedModalPropId}
-      />
     </MainLayout>
   );
 }
