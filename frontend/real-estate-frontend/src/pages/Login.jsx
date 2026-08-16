@@ -74,22 +74,14 @@ function Login() {
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = () => {
     setSsoLoading("google");
     showToast("Redirecting to Google Single Sign-On...", "info");
 
-    const oauthUrl = "http://localhost:8081/oauth2/authorization/google";
+    const apiBase = import.meta.env.VITE_API_BASE_URL || "http://localhost:8081";
+    const oauthUrl = `${apiBase}/oauth2/authorization/google`;
 
-    try {
-      await fetch(oauthUrl, { method: "HEAD", mode: "no-cors" });
-      window.location.href = oauthUrl;
-    } catch (err) {
-      setSsoLoading(null);
-      showErrorAlert(
-        "Google SSO Notice",
-        "Single Sign-On with Google requires client credentials (GOOGLE_CLIENT_ID) configured on the backend server.\n\nPlease sign in with your enterprise email and password below."
-      );
-    }
+    window.location.href = oauthUrl;
   };
 
   const handleSubmit = async (e) => {
