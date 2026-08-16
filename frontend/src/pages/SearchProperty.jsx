@@ -88,26 +88,57 @@ const SearchProperty = () => {
 
       const propertiesWithRisk = await Promise.all(
         data.map(async (property) => {
+          let riskScore = null;
+          let riskLevel = null;
+          let purchaseStatus = null;
+
+          // Get risk assessment
           try {
             const risk = await getRiskAssessment(property.id);
 
-            return {
-              ...property,
-              riskScore: Number(risk?.riskScore ?? 0),
-              riskLevel: risk?.overallRisk ?? null,
-            };
+            riskScore = Number(risk?.riskScore ?? 0);
+            riskLevel = risk?.overallRisk ?? null;
           } catch (riskError) {
             console.error(
               `Risk assessment failed for property ${property.id}:`,
               riskError,
             );
-
-            return {
-              ...property,
-              riskScore: null,
-              riskLevel: null,
-            };
           }
+
+          // Get purchase status
+          try {
+            const token =
+              localStorage.getItem("token") ||
+              localStorage.getItem("authToken");
+
+            const response = await axios.get(
+              `http://localhost:8080/api/purchases/property/${property.id}/status`,
+              {
+                headers: token
+                  ? {
+                      Authorization: `Bearer ${token}`,
+                    }
+                  : {},
+              },
+            );
+
+            purchaseStatus = response.data?.status || null;
+          } catch (purchaseError) {
+            // No purchase request for this property is okay
+            if (purchaseError.response?.status !== 404) {
+              console.error(
+                `Purchase status failed for property ${property.id}:`,
+                purchaseError,
+              );
+            }
+          }
+
+          return {
+            ...property,
+            riskScore,
+            riskLevel,
+            purchaseStatus,
+          };
         }),
       );
 
@@ -455,14 +486,18 @@ const SearchProperty = () => {
                         <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                           <span
                             className={`text-xs px-3 py-1 rounded-full font-medium ${
-                              property.status === "Verified"
-                                ? "bg-green-100 text-green-700"
-                                : property.status === "Pending"
-                                  ? "bg-yellow-100 text-yellow-700"
-                                  : "bg-red-100 text-red-700"
+                              property.purchaseStatus === "COMPLETED"
+                                ? "bg-gray-200 text-gray-700"
+                                : property.status === "Verified"
+                                  ? "bg-green-100 text-green-700"
+                                  : property.status === "Pending"
+                                    ? "bg-yellow-100 text-yellow-700"
+                                    : "bg-red-100 text-red-700"
                             }`}
                           >
-                            {property.status || "Pending"}
+                            {property.purchaseStatus === "COMPLETED"
+                              ? "Sold"
+                              : property.status || "Pending"}
                           </span>
 
                           <span

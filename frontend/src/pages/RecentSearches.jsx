@@ -14,33 +14,69 @@ const RecentSearches = () => {
   const fetchRecentSearches = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
+
+      const token =
+        localStorage.getItem("token") || localStorage.getItem("authToken");
+
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
+      // 1. Get properties
       const response = await axios.get("http://localhost:8080/api/properties", {
         headers,
       });
+
       const propertyList = Array.isArray(response.data)
         ? response.data
         : response.data?.content || [];
 
-      // Map backend property records into recent searches format (take latest 5)
-      const mappedList = propertyList.slice(0, 5).map((prop) => ({
-        id: prop.id,
-        address: prop.address || prop.title || `Property #${prop.id}`,
-        location:
-          [prop.city, prop.state, prop.zipCode || prop.pincode]
-            .filter(Boolean)
-            .join(", ") || "Location details on file",
-        date: prop.createdAt
-          ? new Date(prop.createdAt).toLocaleDateString(undefined, {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })
-          : "Recently Added",
-        status: prop.status || "Pending",
-      }));
+      // 2. Get purchase status for each property
+      const mappedList = await Promise.all(
+        propertyList.slice(0, 5).map(async (prop) => {
+          let purchaseStatus = null;
+
+          try {
+            const purchaseResponse = await axios.get(
+              `http://localhost:8080/api/purchases/property/${prop.id}/status`,
+              { headers },
+            );
+
+            purchaseStatus = purchaseResponse.data?.status || null;
+          } catch (purchaseError) {
+            // No purchase request for this property is okay
+            if (purchaseError.response?.status !== 404) {
+              console.error(
+                `Failed to get purchase status for property ${prop.id}:`,
+                purchaseError,
+              );
+            }
+          }
+
+          return {
+            id: prop.id,
+
+            address: prop.address || prop.title || `Property #${prop.id}`,
+
+            location:
+              [prop.city, prop.state, prop.zipCode || prop.pincode]
+                .filter(Boolean)
+                .join(", ") || "Location details on file",
+
+            date: prop.createdAt
+              ? new Date(prop.createdAt).toLocaleDateString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })
+              : "Recently Added",
+
+            // Purchase status has priority over property status
+            status:
+              purchaseStatus === "COMPLETED"
+                ? "Completed"
+                : prop.status || "Pending",
+          };
+        }),
+      );
 
       setSearches(mappedList);
     } catch (err) {
