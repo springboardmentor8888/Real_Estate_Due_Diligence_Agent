@@ -1,50 +1,79 @@
 import React from "react";
 import { Navigate, Outlet } from "react-router-dom";
 
-/**
- * ProtectedRoute Guard Component
- * Enforces Authentication & Role-Based Access Control (RBAC) on frontend routes.
- */
-const ProtectedRoute = ({ allowedRoles }) => {
-  const token = localStorage.getItem("token");
+const getUserRole = () => {
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-  // 1. If not logged in, redirect straight to /login
+  const role =
+    localStorage.getItem("role") ||
+    localStorage.getItem("userRole") ||
+    user.role ||
+    "";
+
+  return String(role)
+    .replace(/^ROLE_/i, "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "_");
+};
+
+const normalizeRole = (role) => {
+  if (!role) return "";
+
+  return String(role)
+    .replace(/^ROLE_/i, "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+};
+
+const ProtectedRoute = ({ allowedRoles }) => {
+  const token =
+    localStorage.getItem("token") || localStorage.getItem("authToken");
+
   if (!token) {
     return <Navigate to="/login" replace />;
   }
 
-  // 2. If specific allowedRoles are passed (e.g. allowedRoles={["ADMIN"]}), check user role
-  if (allowedRoles && allowedRoles.length > 0) {
-    // Read role from userRole, role, or parsed user object
-    let rawRole = localStorage.getItem("userRole") || localStorage.getItem("role") || "";
-    
-    if (!rawRole) {
-      try {
-        const userObj = JSON.parse(localStorage.getItem("user") || "{}");
-        rawRole = userObj.role || "BUYER";
-      } catch (e) {
-        rawRole = "BUYER";
-      }
-    }
-
-    // Clean "ROLE_" prefix (e.g. "ROLE_ADMIN" -> "ADMIN")
-    const cleanUserRole = String(rawRole).replace(/^ROLE_/, "").trim().toUpperCase();
-
-    // Clean "ROLE_" prefix from allowedRoles (e.g. ["ADMIN", "ROLE_ADMIN"] -> ["ADMIN"])
-    const normalizedAllowedRoles = allowedRoles.map((role) =>
-      String(role).replace(/^ROLE_/, "").trim().toUpperCase()
-    );
-
-    const hasAccess = normalizedAllowedRoles.includes(cleanUserRole);
-
-    if (!hasAccess) {
-      console.warn(`[RBAC] Access denied for role '${cleanUserRole}'. Allowed:`, normalizedAllowedRoles);
-      // Unauthorized role -> redirect back to /dashboard
-      return <Navigate to="/dashboard" replace />;
-    }
+  if (!allowedRoles || allowedRoles.length === 0) {
+    return <Outlet />;
   }
 
-  // 3. Authenticated & authorized -> render the requested page
+  let storedUser = {};
+
+  try {
+    storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  } catch {
+    storedUser = {};
+  }
+
+  const rawRole =
+    localStorage.getItem("role") ||
+    localStorage.getItem("userRole") ||
+    storedUser.role ||
+    "";
+
+  const userRole = normalizeRole(rawRole);
+
+  const normalizedAllowedRoles = allowedRoles.map(normalizeRole);
+
+  const hasAccess = normalizedAllowedRoles.includes(userRole);
+
+  console.log("========== RBAC DEBUG ==========");
+  console.log("rawRole:", JSON.stringify(rawRole));
+  console.log("userRole:", JSON.stringify(userRole));
+  console.log(
+    "allowedRoles:",
+    normalizedAllowedRoles.map((r) => JSON.stringify(r)),
+  );
+  console.log("MATCH:", hasAccess);
+  console.log("================================");
+
+  if (!hasAccess) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return <Outlet />;
 };
 

@@ -203,39 +203,58 @@ const LegalReviewerDashboard = () => {
                 <tbody>
                   {dashboard.pendingProperties.map((property) => (
                     <tr
-                      key={property.id}
+                      key={property.propertyId}
                       className="border-b last:border-b-0 hover:bg-gray-50"
                     >
+                      {/* Property */}
                       <td className="px-6 py-4">
                         <p className="font-medium text-gray-900">
-                          {property.address}
+                          {property.address || "Unknown Address"}
                         </p>
 
                         <p className="text-xs text-gray-500">
-                          Property ID: {property.id}
+                          Property ID: {property.propertyId}
                         </p>
                       </td>
 
+                      {/* Location */}
                       <td className="px-6 py-4 text-sm text-gray-600">
-                        {property.location}
+                        {property.city}, {property.state}
                       </td>
 
+                      {/* Risk */}
                       <td className="px-6 py-4">
-                        <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-600">
-                          {property.risk || "Pending"}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                          <span
+                            className={`w-fit rounded-full px-3 py-1 text-xs font-medium ${
+                              property.overallRisk === "HIGH"
+                                ? "bg-red-100 text-red-600"
+                                : property.overallRisk === "MEDIUM"
+                                  ? "bg-yellow-100 text-yellow-700"
+                                  : "bg-green-100 text-green-700"
+                            }`}
+                          >
+                            {property.overallRisk}
+                          </span>
+
+                          <span className="text-xs text-gray-500">
+                            Score: {property.riskScore}/100
+                          </span>
+                        </div>
                       </td>
 
+                      {/* Status */}
                       <td className="px-6 py-4">
                         <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-medium text-yellow-700">
-                          {property.status || "Pending"}
+                          {property.reviewStatus || "PENDING"}
                         </span>
                       </td>
 
+                      {/* Action */}
                       <td className="px-6 py-4">
                         <button
                           onClick={() =>
-                            navigate(`/property-details/${property.id}`)
+                            navigate(`/property-details/${property.propertyId}`)
                           }
                           className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                         >
@@ -317,7 +336,7 @@ const LegalReviewerDashboard = () => {
             <div className="divide-y">
               {dashboard.recentReviews.map((review) => (
                 <div
-                  key={review.id}
+                  key={`${review.propertyId}-${review.reviewDate}`}
                   className="flex items-center justify-between p-5"
                 >
                   <div>
@@ -326,13 +345,23 @@ const LegalReviewerDashboard = () => {
                     </p>
 
                     <p className="text-sm text-gray-500">
-                      Reviewed on {review.reviewedOn}
+                      Reviewed on{" "}
+                      {review.reviewDate
+                        ? new Date(review.reviewDate).toLocaleDateString(
+                            "en-IN",
+                            {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            },
+                          )
+                        : "Not available"}
                     </p>
                   </div>
 
                   <div className="flex items-center gap-3">
                     <span className="rounded-full bg-green-100 px-3 py-1 text-xs text-green-700">
-                      {review.status}
+                      {review.reviewStatus || "REVIEWED"}
                     </span>
 
                     <button
@@ -340,10 +369,6 @@ const LegalReviewerDashboard = () => {
                       className="text-blue-600 hover:text-blue-700"
                     >
                       <FaEye />
-                    </button>
-
-                    <button className="text-gray-500 hover:text-blue-600">
-                      <FaDownload />
                     </button>
                   </div>
                 </div>
@@ -367,7 +392,7 @@ const LegalReviewerDashboard = () => {
             </button>
           </div>
 
-          {dashboard.notifications.length === 0 ? (
+          {(dashboard.notifications || []).length === 0 ? (
             <div className="p-10 text-center">
               <FaCheckCircle className="mx-auto text-4xl text-gray-300 mb-3" />
 
@@ -375,7 +400,7 @@ const LegalReviewerDashboard = () => {
             </div>
           ) : (
             <div className="divide-y">
-              {dashboard.notifications.map((notification) => (
+              {(dashboard.notifications || []).map((notification) => (
                 <div key={notification.id} className="p-5">
                   <p className="font-medium text-gray-800">
                     {notification.message}

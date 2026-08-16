@@ -14,7 +14,10 @@ import {
 import { useNavigate, useOutletContext } from "react-router-dom";
 import axios from "axios";
 
-import { getProperties } from "../services/dueDiligenceService";
+import {
+  getProperties,
+  getRiskAssessment,
+} from "../services/dueDiligenceService";
 
 function formatCurrency(value) {
   const numberValue = Number(value ?? 0);
@@ -54,8 +57,6 @@ const SearchProperty = () => {
   const [fetchingProps, setFetchingProps] = useState(true);
   const [savedIds, setSavedIds] = useState([]);
   const [error, setError] = useState("");
-
-  // Helper to scope storage key to the active user
   const getSavedKey = () => {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     const userId = user.id || user.email || "guest";
@@ -82,8 +83,35 @@ const SearchProperty = () => {
     try {
       setFetchingProps(true);
       setError("");
+
       const data = await getProperties();
-      setProperties(data);
+
+      const propertiesWithRisk = await Promise.all(
+        data.map(async (property) => {
+          try {
+            const risk = await getRiskAssessment(property.id);
+
+            return {
+              ...property,
+              riskScore: Number(risk?.riskScore ?? 0),
+              riskLevel: risk?.overallRisk ?? null,
+            };
+          } catch (riskError) {
+            console.error(
+              `Risk assessment failed for property ${property.id}:`,
+              riskError,
+            );
+
+            return {
+              ...property,
+              riskScore: null,
+              riskLevel: null,
+            };
+          }
+        }),
+      );
+
+      setProperties(propertiesWithRisk);
     } catch (err) {
       console.error("Backend GET failed:", err);
       setProperties([]);
@@ -110,7 +138,6 @@ const SearchProperty = () => {
       localStorage.setItem(key, JSON.stringify(updated));
       setSavedIds(updated.map((p) => p.id));
 
-      // Trigger instant event for Sidebar update
       window.dispatchEvent(new Event("savedPropertiesUpdated"));
     } catch (err) {
       console.error("Failed to update saved properties:", err);
@@ -354,13 +381,15 @@ const SearchProperty = () => {
                 property.price ||
                 property.priceValue ||
                 property.marketValueValue;
-              const riskText =
-                property.riskLevel ||
-                (property.riskScore > 70
+              const riskScore = Number(property.riskScore);
+
+              const riskText = Number.isFinite(riskScore)
+                ? riskScore >= 60
                   ? "High Risk"
-                  : property.riskScore > 30
+                  : riskScore >= 30
                     ? "Medium Risk"
-                    : "Low Risk");
+                    : "Low Risk"
+                : "Risk unavailable";
               const isSaved = savedIds.includes(property.id);
 
               return (
@@ -378,7 +407,6 @@ const SearchProperty = () => {
                       }}
                     />
 
-                    {/* TOP RIGHT BUTTON GROUP (SAVE + DELETE) */}
                     <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
                       <button
                         type="button"
@@ -498,7 +526,6 @@ const SearchProperty = () => {
                         </div>
                       )}
 
-                      {/* PRICE DISPLAY */}
                       {priceVal ? (
                         <p className="text-blue-600 font-bold text-lg mt-2">
                           {formatCurrency(priceVal)}

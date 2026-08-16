@@ -66,7 +66,8 @@ const FinancialInstitutionDashboard = () => {
     try {
       setLoading(true);
 
-      const token = localStorage.getItem("token");
+      const token =
+        localStorage.getItem("token") || localStorage.getItem("authToken");
 
       const headers = token
         ? {
@@ -74,106 +75,62 @@ const FinancialInstitutionDashboard = () => {
           }
         : {};
 
-      /*
-       * Get properties
-       *
-       * We use the real backend data here.
-       * If the API is unavailable, the dashboard stays empty
-       * instead of displaying fake/mock data.
-       */
-      let properties = [];
+      const response = await axios.get(
+        "http://localhost:8080/api/financial-institution/dashboard",
+        { headers },
+      );
 
+      const data = response.data;
+
+      setStats({
+        propertiesEvaluated: data.propertiesEvaluated ?? 0,
+        underReview: data.underReview ?? 0,
+        highRiskProperties: data.highRiskProperties ?? 0,
+        reportsReviewed: data.reportsReviewed ?? 0,
+      });
+
+      setRecentAssessments(
+        Array.isArray(data.recentAssessments) ? data.recentAssessments : [],
+      );
+
+      // Notifications are still coming from the existing endpoint
       try {
-        const response = await axios.get(
-          "http://localhost:8080/api/properties",
-          { headers },
-        );
-
-        properties = Array.isArray(response.data)
-          ? response.data
-          : response.data?.content || [];
-      } catch (error) {
-        console.warn("Could not fetch properties:", error);
-      }
-
-      /*
-       * Notifications
-       */
-      let notificationList = [];
-
-      try {
-        const response = await axios.get(
+        const notificationResponse = await axios.get(
           "http://localhost:8080/api/notifications",
           { headers },
         );
 
-        notificationList = Array.isArray(response.data) ? response.data : [];
+        setNotifications(
+          Array.isArray(notificationResponse.data)
+            ? notificationResponse.data.slice(0, 3)
+            : [],
+        );
       } catch (error) {
         console.warn("Could not fetch notifications:", error);
+        setNotifications([]);
       }
-
-      /*
-       * Calculate basic property statistics.
-       *
-       * These are intentionally defensive because your
-       * backend property structure may have different field names.
-       */
-      const highRisk = properties.filter((property) => {
-        const risk = String(
-          property.riskLevel || property.risk || property.riskStatus || "",
-        ).toUpperCase();
-
-        return risk.includes("HIGH");
-      }).length;
-
-      const underReview = properties.filter((property) => {
-        const status = String(
-          property.status ||
-            property.reviewStatus ||
-            property.assessmentStatus ||
-            "",
-        ).toUpperCase();
-
-        return status.includes("REVIEW") || status.includes("PENDING");
-      }).length;
+    } catch (error) {
+      console.error("Error loading financial institution dashboard:", error);
 
       setStats({
-        propertiesEvaluated: properties.length,
-        underReview,
-        highRiskProperties: highRisk,
+        propertiesEvaluated: 0,
+        underReview: 0,
+        highRiskProperties: 0,
         reportsReviewed: 0,
       });
 
-      /*
-       * Only show real backend records.
-       * No mock properties are inserted.
-       */
-      setRecentAssessments(properties.slice(0, 5));
-
-      setNotifications(notificationList.slice(0, 3));
-    } catch (error) {
-      console.error("Error loading financial institution dashboard:", error);
+      setRecentAssessments([]);
     } finally {
       setLoading(false);
     }
   };
 
   const getPropertyName = (property) => {
-    return (
-      property.address ||
-      property.propertyName ||
-      property.name ||
-      `Property #${property.id}`
-    );
+    return property.property || `Property #${property.propertyId}`;
   };
 
   const getLocation = (property) => {
-    return (
-      property.location ||
-      property.city ||
-      property.address ||
-      "Location unavailable"
-    );
+    return property.location || "Location unavailable";
   };
 
   const getRisk = (property) => {
@@ -238,8 +195,8 @@ const FinancialInstitutionDashboard = () => {
   };
 
   const handlePropertyClick = (property) => {
-    if (property.id) {
-      navigate(`/property-details/${property.id}`);
+    if (property.propertyId) {
+      navigate(`/property-details/${property.propertyId}`);
     }
   };
 
@@ -362,7 +319,7 @@ const FinancialInstitutionDashboard = () => {
 
                     return (
                       <tr
-                        key={property.id}
+                        key={property.propertyId}
                         onClick={() => handlePropertyClick(property)}
                         className="border-b last:border-0 hover:bg-gray-50 cursor-pointer transition"
                       >

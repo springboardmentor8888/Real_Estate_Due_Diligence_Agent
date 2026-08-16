@@ -14,6 +14,7 @@ import {
   FaMoneyBillWave,
   FaRulerCombined,
   FaShieldAlt,
+  FaShoppingCart,
 } from "react-icons/fa";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import axios from "axios";
@@ -75,9 +76,34 @@ function SourceStatus({ label, records, error }) {
   );
 }
 
+const getUserRole = () => {
+  let user = {};
+
+  try {
+    user = JSON.parse(localStorage.getItem("user") || "{}");
+  } catch {
+    user = {};
+  }
+
+  const role =
+    localStorage.getItem("role") ||
+    localStorage.getItem("userRole") ||
+    user.role ||
+    "";
+
+  return String(role)
+    .replace(/^ROLE_/i, "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+};
+
 function PropertyDetails() {
   const { propertyId, id } = useParams();
   const targetId = id || propertyId;
+  const userRole = getUserRole();
+  const isBuyer = userRole === "BUYER";
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -89,6 +115,9 @@ function PropertyDetails() {
   const [pdfMessage, setPdfMessage] = useState("");
   const [error, setError] = useState("");
   const [selectedImage, setSelectedImage] = useState("");
+  const [buyLoading, setBuyLoading] = useState(false);
+  const [purchaseStatus, setPurchaseStatus] = useState(null);
+  const [purchaseStatusLoading, setPurchaseStatusLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
@@ -107,11 +136,17 @@ function PropertyDetails() {
           localStorage.getItem("token") || localStorage.getItem("authToken");
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-        const [propRes, bundleData] = await Promise.allSettled([
+        const [propRes, bundleData, purchaseRes] = await Promise.allSettled([
           axios.get(`http://localhost:8080/api/properties/${targetId}`, {
             headers,
           }),
+
           getDueDiligenceBundle(targetId),
+
+          axios.get(
+            `http://localhost:8080/api/purchases/property/${targetId}/status`,
+            { headers },
+          ),
         ]);
 
         if (propRes.status === "fulfilled" && propRes.value.data) {
@@ -147,6 +182,11 @@ function PropertyDetails() {
         if (bundleData.status === "fulfilled" && bundleData.value) {
           if (active) setBundle(bundleData.value);
         }
+        if (purchaseRes.status === "fulfilled") {
+          if (active) {
+            setPurchaseStatus(purchaseRes.value.data);
+          }
+        }
       } catch (err) {
         console.error("Failed to load property details:", err);
         if (active) setError("Unable to load property details from backend.");
@@ -154,6 +194,7 @@ function PropertyDetails() {
         if (active) {
           setLoading(false);
           setDiligenceLoading(false);
+          setPurchaseStatusLoading(false);
         }
       }
     }
@@ -163,6 +204,38 @@ function PropertyDetails() {
       active = false;
     };
   }, [targetId]);
+
+  const handleBuyProperty = async () => {
+    try {
+      setBuyLoading(true);
+      setPurchaseStatus(null);
+
+      const token =
+        localStorage.getItem("token") || localStorage.getItem("authToken");
+
+      const response = await axios.post(
+        `http://localhost:8080/api/purchases/property/${targetId}`,
+        {},
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        },
+      );
+
+      setPurchaseStatus(response.data);
+
+      alert(
+        "Purchase request submitted successfully. It is now pending Legal and Financial approval.",
+      );
+    } catch (error) {
+      console.error("Purchase request failed:", error);
+
+      alert(
+        error.response?.data?.message || "Unable to submit purchase request.",
+      );
+    } finally {
+      setBuyLoading(false);
+    }
+  };
 
   const handleDownloadFullPdf = async () => {
     try {
@@ -257,6 +330,38 @@ function PropertyDetails() {
           </div>
 
           <div className="flex flex-wrap gap-3">
+            {isBuyer && !purchaseStatusLoading && (
+              <>
+                {!purchaseStatus ? (
+                  <button
+                    onClick={handleBuyProperty}
+                    disabled={buyLoading}
+                    className="inline-flex items-center gap-2 rounded-lg border border-blue-600 px-4 py-2.5 font-semibold text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition"
+                  >
+                    <FaShoppingCart />
+                    {buyLoading ? "Submitting..." : "Buy Property"}
+                  </button>
+                ) : purchaseStatus.status === "COMPLETED" ? (
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-gray-200 px-4 py-2.5 font-semibold text-gray-600">
+                    Sold
+                  </span>
+                ) : purchaseStatus.status === "PENDING" ? (
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-yellow-100 px-4 py-2.5 font-semibold text-yellow-700">
+                    Purchase Pending
+                  </span>
+                ) : (
+                  <button
+                    onClick={handleBuyProperty}
+                    disabled={buyLoading}
+                    className="inline-flex items-center gap-2 rounded-lg border border-blue-600 px-4 py-2.5 font-semibold text-blue-600 hover:bg-blue-50 disabled:opacity-50 cursor-pointer transition"
+                  >
+                    <FaShoppingCart />
+                    {buyLoading ? "Submitting..." : "Buy Property"}
+                  </button>
+                )}
+              </>
+            )}
+
             <button
               onClick={() => navigate(`/property-history/${property.id}`)}
               className="inline-flex items-center gap-2 rounded-lg border border-blue-600 px-4 py-2.5 font-semibold text-blue-600 hover:bg-blue-50 cursor-pointer transition"
@@ -306,6 +411,58 @@ function PropertyDetails() {
           </p>
         )}
       </header>
+
+      {purchaseStatus && (
+        <div className="mt-4 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-semibold text-gray-900">Purchase Request</p>
+
+              <p className="mt-1 text-sm text-gray-600">
+                Legal Review:{" "}
+                <span className="font-semibold">
+                  {purchaseStatus.legalStatus}
+                </span>
+              </p>
+
+              <p className="text-sm text-gray-600">
+                Financial Review:{" "}
+                <span className="font-semibold">
+                  {purchaseStatus.financialStatus}
+                </span>
+              </p>
+            </div>
+
+            <span
+              className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                purchaseStatus.status === "COMPLETED"
+                  ? "bg-green-100 text-green-700"
+                  : purchaseStatus.status === "REJECTED"
+                    ? "bg-red-100 text-red-700"
+                    : "bg-yellow-100 text-yellow-700"
+              }`}
+            >
+              {purchaseStatus.status}
+            </span>
+          </div>
+
+          {/* COMPLETED PURCHASE MESSAGE */}
+          {purchaseStatus.status === "COMPLETED" && (
+            <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-4">
+              <p className="font-semibold text-green-800">
+                Purchase Request Approved
+              </p>
+
+              <p className="mt-1 text-sm leading-6 text-green-700">
+                Your property purchase request has been approved by both the
+                Legal Reviewer and Financial Institution. Our Real Estate Agent
+                or Administrator will contact you shortly to proceed with the
+                further purchase process.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* PROPERTY IMAGE GALLERY */}
       <section className="mt-8 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">

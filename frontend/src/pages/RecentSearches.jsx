@@ -17,7 +17,9 @@ const RecentSearches = () => {
       const token = localStorage.getItem("token");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const response = await axios.get("http://localhost:8080/api/properties", { headers });
+      const response = await axios.get("http://localhost:8080/api/properties", {
+        headers,
+      });
       const propertyList = Array.isArray(response.data)
         ? response.data
         : response.data?.content || [];
@@ -26,9 +28,10 @@ const RecentSearches = () => {
       const mappedList = propertyList.slice(0, 5).map((prop) => ({
         id: prop.id,
         address: prop.address || prop.title || `Property #${prop.id}`,
-        location: [prop.city, prop.state, prop.zipCode || prop.pincode]
-          .filter(Boolean)
-          .join(", ") || "Location details on file",
+        location:
+          [prop.city, prop.state, prop.zipCode || prop.pincode]
+            .filter(Boolean)
+            .join(", ") || "Location details on file",
         date: prop.createdAt
           ? new Date(prop.createdAt).toLocaleDateString(undefined, {
               month: "short",
@@ -36,7 +39,7 @@ const RecentSearches = () => {
               year: "numeric",
             })
           : "Recently Added",
-        status: prop.status || "Completed",
+        status: prop.status || "Pending",
       }));
 
       setSearches(mappedList);
@@ -76,13 +79,19 @@ const RecentSearches = () => {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="5" className="text-center py-6 text-sm text-gray-400">
+                <td
+                  colSpan="5"
+                  className="text-center py-6 text-sm text-gray-400"
+                >
                   Loading recent searches...
                 </td>
               </tr>
             ) : searches.length === 0 ? (
               <tr>
-                <td colSpan="5" className="text-center py-6 text-sm text-gray-500">
+                <td
+                  colSpan="5"
+                  className="text-center py-6 text-sm text-gray-500"
+                >
                   No recent property searches found.
                 </td>
               </tr>
@@ -96,13 +105,9 @@ const RecentSearches = () => {
                     {property.address}
                   </td>
 
-                  <td className="text-gray-600 text-sm">
-                    {property.location}
-                  </td>
+                  <td className="text-gray-600 text-sm">{property.location}</td>
 
-                  <td className="text-gray-600 text-sm">
-                    {property.date}
-                  </td>
+                  <td className="text-gray-600 text-sm">{property.date}</td>
 
                   <td>
                     <span
@@ -110,7 +115,9 @@ const RecentSearches = () => {
                         property.status.toLowerCase() === "completed" ||
                         property.status.toLowerCase() === "active"
                           ? "bg-green-100 text-green-700"
-                          : "bg-blue-100 text-blue-700"
+                          : property.status.toLowerCase() === "pending"
+                            ? "bg-yellow-100 text-yellow-700"
+                            : "bg-blue-100 text-blue-700"
                       }`}
                     >
                       {property.status}

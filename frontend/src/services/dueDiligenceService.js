@@ -61,6 +61,11 @@ export async function getProperties() {
   return normalizeArray(response.data);
 }
 
+export async function getAuditLogs() {
+  const response = await api.get("/api/audit");
+  return normalizeArray(response.data);
+}
+
 export async function getProperty(propertyId) {
   const response = await api.get(`/api/properties/${propertyId}`);
   return response.data;

@@ -19,6 +19,7 @@ import {
   HiOutlineQuestionMarkCircle,
   HiOutlineShieldCheck,
   HiOutlineUser,
+  HiOutlineUsers,
 } from "react-icons/hi2";
 import { NavLink, useNavigate } from "react-router-dom";
 
@@ -56,16 +57,16 @@ const mainMenuItems = [
   },
 
   {
-    icon: <HiOutlineDocumentMagnifyingGlass />,
-    label: "Legal Reviews",
-    path: "/legal-reviews",
-    roles: ["LEGAL_REVIEWER"],
+    icon: <HiOutlineCheckBadge />,
+    label: "Financial Review History",
+    path: "/financial-review-history",
+    roles: ["FINANCIAL_INSTITUTION"],
   },
 
   {
-    icon: <HiOutlineExclamationTriangle />,
-    label: "Risk & Evidence",
-    path: "/risk-evidence",
+    icon: <HiOutlineDocumentMagnifyingGlass />,
+    label: "Legal Reviews",
+    path: "/legal-reviews",
     roles: ["LEGAL_REVIEWER"],
   },
 
@@ -96,6 +97,13 @@ const mainMenuItems = [
   },
 
   {
+    icon: <HiOutlineUsers />,
+    label: "Customers",
+    path: "/customers",
+    roles: ["REAL_ESTATE_AGENT", "ADMINISTRATOR"],
+  },
+
+  {
     icon: <HiOutlineBookmark />,
     label: "Saved Properties",
     path: "/saved-properties",
@@ -105,6 +113,13 @@ const mainMenuItems = [
       "FINANCIAL_INSTITUTION",
       "ADMINISTRATOR",
     ],
+  },
+
+  {
+    icon: <HiOutlineDocumentText />,
+    label: "My Purchases",
+    path: "/purchase-history",
+    roles: ["BUYER"],
   },
   {
     icon: <HiOutlineBell />,

@@ -56,35 +56,28 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
 
                 .authorizeHttpRequests(auth -> auth
-                        // 1. Public Authentication & OAuth endpoints
                         .requestMatchers(
                                 "/auth/**",
                                 "/api/auth/**",
                                 "/oauth2/**",
                                 "/login/oauth2/**"
                         ).permitAll()
-
-                        // 2. Swagger / OpenAPI Documentation
                         .requestMatchers(
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/swagger-ui/index.html"
                         ).permitAll()
-
-                        // 3. Public User, Report & Audit View Routes
                         .requestMatchers(
                                 "/api/reports/**",
                                 "/api/users/**",
                                 "/api/audit/**"
                         ).permitAll()
-
-                        // 4. ✅ Public Due Diligence & Property Endpoints
-                        .requestMatchers(
+                        .requestMatchers(HttpMethod.GET,
                                 "/api/properties/**",
-                                "/api/property-history/**",  // ✅ Added
-                                "/api/property-tax/**",   // ✅ Matches PropertyTaxHistoryController
-                                "/api/flood-zones/**",   // ✅ Matches FloodZoneInfoController
+                                "/api/property-history/**",
+                                "/api/property-tax/**",
+                                "/api/flood-zones/**",
                                 "/api/tax/**",
                                 "/api/flood/**",
                                 "/api/zoning/**",
@@ -92,17 +85,36 @@ public class SecurityConfig {
                                 "/api/environmental/**",
                                 "/api/ownership/**",
                                 "/api/due-diligence/**",
-                                "/api/reports/**",            // ✅ Added for Report Generation
-                                "/api/notifications/**"       // ✅ Added for Notifications
+                                "/api/reports/**",
+                                "/api/notifications/**"
 
                         ).permitAll()
-
-                        // 5. Protected Modification Endpoints
                         .requestMatchers(HttpMethod.PUT, "/api/properties/**").authenticated()
-                        .requestMatchers(HttpMethod.DELETE, "/**").hasRole("ADMINISTRATOR")
+                        .requestMatchers(
+                                HttpMethod.DELETE,
+                                "/api/properties/**"
+                        ).hasRole("ADMINISTRATOR")
+                                .requestMatchers(
+                                        HttpMethod.POST,
+                                        "/api/purchases/property/**"
+                                ).hasRole("BUYER")
 
-                        // 6. Everything else requires authentication
-                        .anyRequest().authenticated()
+                                .requestMatchers(
+                                        "/api/purchases/my"
+                                ).hasRole("BUYER")
+
+                                .requestMatchers(
+                                        "/api/purchases/legal/**"
+                                ).hasRole("LEGAL_REVIEWER")
+
+                                .requestMatchers(
+                                        "/api/purchases/financial/**"
+                                ).hasRole("FINANCIAL_INSTITUTION")
+                        .requestMatchers(
+                                "/api/purchases/completed/customers"
+                        ).hasAnyRole("REAL_ESTATE_AGENT", "ADMINISTRATOR")
+                                .anyRequest().authenticated()
+
                 )
 
                 .oauth2Login(oauth -> oauth

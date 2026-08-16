@@ -9,11 +9,18 @@ import ResetPassword from "../pages/ResetPassword";
 
 import Dashboard from "../pages/Dashboard";
 import LegalReviewerDashboard from "../pages/LegalReviewerDashboard";
+import FinancialInstitutionDashboard from "../pages/FinancialInstitutionDashboard";
+import FinancialAssessment from "../pages/FinancialAssessment";
+import LegalReviews from "../pages/LegalReviews";
+import ReviewHistory from "../pages/ReviewHistory";
 import AdminDashboard from "../pages/AdminDashboard";
 import SearchProperty from "../pages/SearchProperty";
 import AddProperty from "../pages/AddProperty";
 import PropertyDetails from "../pages/PropertyDetails";
 import PropertyHistory from "../pages/PropertyHistory";
+import MyPurchases from "../pages/MyPurchases";
+import FinancialReviewHistory from "../pages/FinancialReviewHistory";
+import Customers from "../pages/Customers";
 
 import Layout from "../components/common/Layout";
 import SavedProperties from "../pages/SavedProperties";
@@ -25,6 +32,9 @@ import Analytics from "../pages/Analytics";
 import ProtectedRoute from "../components/common/ProtectedRoute";
 import Alerts from "../pages/Alerts";
 import OAuth2Success from "../components/auth/OAuth2Success";
+import Settings from "../pages/Settings";
+import Help from "../pages/Help";
+import PurchaseHistory from "../pages/PurchaseHistory";
 
 function AppRouter() {
   const PRO_ROLES = [
@@ -46,6 +56,10 @@ function AppRouter() {
 
   const ADMIN_ROLES = ["ADMINISTRATOR"];
 
+  const FINANCIAL_ROLES = ["FINANCIAL_INSTITUTION", "ADMINISTRATOR"];
+
+  const BUYER_ROLES = ["BUYER"];
+
   return (
     <Routes>
       <Route path="/" element={<RoleBasedDashboard />} />
@@ -66,6 +80,22 @@ function AppRouter() {
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<Dashboard />} />
 
+          <Route element={<ProtectedRoute allowedRoles={FINANCIAL_ROLES} />}>
+            <Route
+              path="/financial-assessment"
+              element={<FinancialAssessment />}
+            />
+            <Route
+              path="/financial-review-history"
+              element={<FinancialReviewHistory />}
+            />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={["LEGAL_REVIEWER"]} />}>
+            <Route path="/legal-reviews" element={<LegalReviews />} />
+            <Route path="/review-history" element={<ReviewHistory />} />
+          </Route>
+
           <Route element={<ProtectedRoute allowedRoles={ADMIN_ROLES} />}>
             <Route path="/admin" element={<AdminDashboard />} />
 
@@ -76,6 +106,7 @@ function AppRouter() {
 
           <Route element={<ProtectedRoute allowedRoles={AGENT_ROLES} />}>
             <Route path="/add-property" element={<AddProperty />} />
+            <Route path="/customers" element={<Customers />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={COMPARISON_ROLES} />}>
@@ -132,6 +163,10 @@ function AppRouter() {
 
           <Route path="/saved-properties" element={<SavedProperties />} />
 
+          <Route element={<ProtectedRoute allowedRoles={BUYER_ROLES} />}>
+            <Route path="/purchase-history" element={<PurchaseHistory />} />
+          </Route>
+
           <Route
             path="/risk-assessment/:propertyId"
             element={<RiskAssessment />}
@@ -174,11 +209,3 @@ function RoleBasedDashboard() {
 }
 
 export default AppRouter;
-
-function Settings() {
-  return <div>Settings</div>;
-}
-
-function Help() {
-  return <div>Help & Support</div>;
-}

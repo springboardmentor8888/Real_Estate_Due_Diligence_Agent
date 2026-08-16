@@ -2,24 +2,12 @@ import React from "react";
 import { Navigate, Outlet } from "react-router-dom";
 
 const normalizeRole = (role) => {
-  if (!role) return "";
-
-  let value = String(role).trim();
-
-  // Remove quotes if the role was stored as a JSON string
-  if (value.startsWith('"') && value.endsWith('"')) {
-    try {
-      value = JSON.parse(value);
-    } catch {
-      value = value.replace(/^"|"$/g, "");
-    }
-  }
-
-  return value
+  return String(role || "")
     .replace(/^ROLE_/i, "")
     .trim()
     .toUpperCase()
-    .replace(/\s+/g, "_");
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
 };
 
 const ProtectedRoute = ({ allowedRoles }) => {
@@ -30,7 +18,6 @@ const ProtectedRoute = ({ allowedRoles }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // No role restriction
   if (!allowedRoles || allowedRoles.length === 0) {
     return <Outlet />;
   }
@@ -53,21 +40,17 @@ const ProtectedRoute = ({ allowedRoles }) => {
 
   const normalizedAllowedRoles = allowedRoles.map(normalizeRole);
 
-  const hasAccess = normalizedAllowedRoles.includes(userRole);
+  console.log("========== RBAC DEBUG ==========");
+  console.log("rawRole:", JSON.stringify(rawRole));
+  console.log("userRole:", JSON.stringify(userRole));
+  console.log(
+    "allowedRoles:",
+    normalizedAllowedRoles.map((r) => JSON.stringify(r)),
+  );
+  console.log("MATCH:", normalizedAllowedRoles.includes(userRole));
+  console.log("================================");
 
-  console.log("[RBAC CHECK]", {
-    rawRole,
-    userRole,
-    normalizedAllowedRoles,
-    hasAccess,
-  });
-
-  if (!hasAccess) {
-    console.warn(
-      `[RBAC] Access denied for role '${userRole}'. Allowed:`,
-      normalizedAllowedRoles,
-    );
-
+  if (!normalizedAllowedRoles.includes(userRole)) {
     return <Navigate to="/dashboard" replace />;
   }
 
