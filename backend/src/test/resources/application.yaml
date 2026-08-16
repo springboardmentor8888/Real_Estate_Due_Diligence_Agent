@@ -1,36 +1,33 @@
 spring:
   application:
-    name: agent
+    name: agent-test
 
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/real_estate_due_diligence}
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:tiger}
+    url: jdbc:postgresql://localhost:5432/real_estate_due_diligence
+    username: postgres
+    password: tiger
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
+    show-sql: false
 
   security:
     oauth2:
       client:
         registration:
           google:
-            client-id: ${GOOGLE_CLIENT_ID}
-            client-secret: ${GOOGLE_CLIENT_SECRET}
+            client-id: test-google-client-id
+            client-secret: test-google-client-secret
             scope:
               - email
               - profile
               - openid
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
           microsoft:
-            client-id: ${MICROSOFT_CLIENT_ID:microsoft-client-id-placeholder}
-            client-secret: ${MICROSOFT_CLIENT_SECRET:microsoft-client-secret-placeholder}
+            client-id: test-microsoft-client-id
+            client-secret: test-microsoft-client-secret
             client-name: Microsoft
             provider: microsoft
             scope:
@@ -52,10 +49,10 @@ server:
 
 application:
   frontend:
-    redirect-uri: ${FRONTEND_REDIRECT_URI:http://localhost:5174/oauth2/redirect}
-    login-uri: ${FRONTEND_LOGIN_URI:http://localhost:5174/login}
-    complete-oauth-registration-uri: ${FRONTEND_COMPLETE_OAUTH_REGISTRATION_URI:http://localhost:5174/complete-oauth-registration}
+    redirect-uri: http://localhost:5174/oauth2/redirect
+    login-uri: http://localhost:5174/login
+    complete-oauth-registration-uri: http://localhost:5174/complete-oauth-registration
   security:
     jwt:
-      secret-key: ${JWT_SECRET_KEY:dGVzdHNlY3JldGtleWZvcmhlbHBpbmdidWlsZGluZ3RoZXJlYWxlc3RhdGVkdWVkaWxpZ2VuY2VwbGF0Zm9ybQ==}
-      expiration: ${JWT_EXPIRATION:86400000} # 24 hours in milliseconds
+      secret-key: dGVzdHNlY3JldGtleWZvcmhlbHBpbmdidWlsZGluZ3RoZXJlYWxlc3RhdGVkdWVkaWxpZ2VuY2VwbGF0Zm9ybQ==
+      expiration: 86400000
