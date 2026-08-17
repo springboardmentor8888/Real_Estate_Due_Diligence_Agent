@@ -5,6 +5,7 @@ import com.infosys.realestate.entity.Notification;
 import com.infosys.realestate.entity.User;
 import com.infosys.realestate.repository.NotificationRepository;
 import com.infosys.realestate.repository.UserRepository;
+import com.infosys.realestate.service.AuditLogService;
 import com.infosys.realestate.service.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,9 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private AuditLogService auditLogService;
 
     @Override
     @Transactional
@@ -40,7 +44,18 @@ public class NotificationServiceImpl implements NotificationService {
                     + " could not be generated. Please try again or contact support.";
 
         Notification n = buildNotification(report.getRequestedBy(), title, message, type, report.getId());
-        notificationRepository.save(n);
+        Notification saved = notificationRepository.save(n);
+
+        auditLogService.log(
+                report.getRequestedBy().getEmail(),
+                report.getRequestedBy().getRole() != null ? report.getRequestedBy().getRole().getName() : "USER",
+                "CREATE_NOTIFICATION",
+                "Notification",
+                String.valueOf(saved.getId()),
+                "Notification created: " + title,
+                null,
+                "SUCCESS"
+        );
     }
 
     @Override
@@ -50,7 +65,20 @@ public class NotificationServiceImpl implements NotificationService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found: " + userEmail));
         Notification n = buildNotification(user, title, message, type, reportId);
-        return notificationRepository.save(n);
+        Notification saved = notificationRepository.save(n);
+
+        auditLogService.log(
+                userEmail,
+                user.getRole() != null ? user.getRole().getName() : "USER",
+                "CREATE_NOTIFICATION",
+                "Notification",
+                String.valueOf(saved.getId()),
+                "Notification created: " + title,
+                null,
+                "SUCCESS"
+        );
+
+        return saved;
     }
 
     @Override
@@ -74,6 +102,11 @@ public class NotificationServiceImpl implements NotificationService {
         notificationRepository.findById(notificationId).ifPresent(n -> {
             n.setRead(true);
             notificationRepository.save(n);
+
+            String userEmail = n.getUser() != null ? n.getUser().getEmail() : "system";
+            String userRole = n.getUser() != null && n.getUser().getRole() != null ? n.getUser().getRole().getName() : "USER";
+            auditLogService.log(userEmail, userRole, "MARK_NOTIFICATION_READ", "Notification",
+                    String.valueOf(notificationId), "Notification #" + notificationId + " marked as read", null, "SUCCESS");
         });
     }
 
@@ -84,6 +117,12 @@ public class NotificationServiceImpl implements NotificationService {
                 .findByUserUserIdAndIsReadFalseOrderByCreatedAtDesc(userId);
         unread.forEach(n -> n.setRead(true));
         notificationRepository.saveAll(unread);
+
+        User user = userRepository.findById(userId).orElse(null);
+        String userEmail = user != null ? user.getEmail() : "user_" + userId;
+        String userRole = user != null && user.getRole() != null ? user.getRole().getName() : "USER";
+        auditLogService.log(userEmail, userRole, "MARK_ALL_NOTIFICATIONS_READ", "User",
+                String.valueOf(userId), "All notifications marked as read for user " + userId, null, "SUCCESS");
     }
 
     // ---- helpers --------------------------------------------------------
@@ -99,3 +138,4 @@ public class NotificationServiceImpl implements NotificationService {
         return n;
     }
 }
+

@@ -1,7 +1,10 @@
 package com.infosys.realestate.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "users")
@@ -22,8 +25,20 @@ public class User {
     private String password;
 
     @ManyToOne
-@JoinColumn(name = "role_id")
-private Role role;
+    @JoinColumn(name = "role_id")
+    private Role role;
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "requestedBy", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<DueDiligenceReport> reports = new ArrayList<>();
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Notification> notifications = new ArrayList<>();
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<ReportHistory> reportHistories = new ArrayList<>();
 
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -68,6 +83,30 @@ private Role role;
         this.role = role;
     }
 
+    public List<DueDiligenceReport> getReports() {
+        return reports;
+    }
+
+    public void setReports(List<DueDiligenceReport> reports) {
+        this.reports = reports;
+    }
+
+    public List<Notification> getNotifications() {
+        return notifications;
+    }
+
+    public void setNotifications(List<Notification> notifications) {
+        this.notifications = notifications;
+    }
+
+    public List<ReportHistory> getReportHistories() {
+        return reportHistories;
+    }
+
+    public void setReportHistories(List<ReportHistory> reportHistories) {
+        this.reportHistories = reportHistories;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -75,4 +114,4 @@ private Role role;
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
-}
+}

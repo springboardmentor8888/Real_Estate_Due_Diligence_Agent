@@ -1,0 +1,278 @@
+/* ===========================
+   AUDIT LOGS PAGE
+   (Styled to match Report History page)
+=========================== */
+
+body{
+    margin:0;
+    background:#f5f7fb;
+    font-family:Arial, Helvetica, sans-serif;
+}
+
+.audit-container{
+    width: 95%;
+    max-width:1500px;
+    margin:35px;
+    padding:18px;
+    animation:fadeIn .6s ease;
+}
+
+@keyframes fadeIn{
+    from{
+        opacity:0;
+        transform:translateY(20px);
+    }
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
+}
+
+/* ===========================
+   TITLE
+=========================== */
+
+.audit-container h1{
+    font-size:52px;
+    color:#1e3a8a;
+    margin-bottom:8px;
+    font-weight:700;
+}
+
+.audit-description{
+    color:#6b7280;
+    font-size:17px;
+    margin-bottom:30px;
+}
+
+/* ===========================
+   SEARCH
+=========================== */
+
+.search-container{
+    position:relative;
+    width:100%;
+    max-width:900px;
+    margin-bottom:30px;
+}
+
+.search-icon{
+    position:absolute;
+    left:18px;
+    top:38%;
+    transform:translateY(-50%);
+    width:20px;
+    height:20px;
+    color:#2563eb;
+    pointer-events:none;
+    z-index:2;
+}
+
+.search-box{
+    width:100%;
+    height:56px;
+    padding:0 20px 0 52px;
+    border-radius:15px;
+    border:1px solid #dbe4f0;
+    background:#fff;
+    font-size:15px;
+    outline:none;
+    transition:.3s;
+    box-shadow:0 3px 10px rgba(0,0,0,.05);
+}
+
+.search-box:focus{
+    border-color:#2563eb;
+    box-shadow:0 0 0 4px rgba(37,99,235,.12);
+}
+
+.search-box::placeholder{
+    color:#9ca3af;
+}
+
+/* ===========================
+   SUMMARY CARDS
+=========================== */
+
+.stats-container{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(220px,1fr));
+    gap:25px;
+    margin-bottom:35px;
+}
+
+.stat-card{
+    background:#fff;
+    padding:28px 20px;
+    min-height:160px;
+    border-radius:18px;
+    text-align:center;
+    box-shadow:0 4px 14px rgba(0,0,0,.08);
+    transition:.3s;
+    cursor:pointer;
+}
+
+/* hover effect for summary cards */
+.stat-card:hover{
+    transform:translateY(-6px);
+    box-shadow:0 12px 24px rgba(0,0,0,.15);
+}
+
+.stat-card svg{
+    color:#2563eb;
+    margin-bottom:10px;
+}
+
+.stat-card h2{
+    font-size:42px;
+    color:#2563eb;
+    margin:8px 0;
+    font-weight:700;
+}
+
+.stat-card p{
+    color:#6b7280;
+    font-size:15px;
+    font-weight:600;
+}
+
+/* top accent colors per card type */
+.total{
+    border-top:5px solid #2563eb;
+}
+
+.success{
+    border-top:5px solid #22c55e;
+}
+
+.failed{
+    border-top:5px solid #ef4444;
+}
+
+.today{
+    border-top:5px solid #f59e0b;
+}
+
+/* ===========================
+   TABLE
+=========================== */
+
+.audit-table{
+    width:100%;
+    border-collapse:collapse;
+    background:#fff;
+    border-radius:16px;
+    overflow:hidden;
+    box-shadow:0 8px 20px rgba(0,0,0,.08);
+}
+
+.audit-table thead{
+    background:#2563eb;
+}
+
+.audit-table th{
+    color:#fff;
+    text-align:left;
+    padding:18px;
+    font-size:15px;
+    font-weight:600;
+}
+
+.audit-table td{
+    padding:18px;
+    border-bottom:1px solid #eef2f7;
+    font-size:15px;
+}
+
+/* zebra striping */
+.audit-table tbody tr:nth-child(even){
+    background:#f9fbff;
+}
+
+/* hover effect for table rows */
+.audit-table tbody tr:hover{
+    background:#eef5ff;
+}
+
+/* ===========================
+   STATUS BADGES
+=========================== */
+
+.status{
+    display:inline-block;
+    min-width:95px;
+    text-align:center;
+    padding:8px 14px;
+    border-radius:50px;
+    color:#fff;
+    font-size:13px;
+    font-weight:600;
+}
+
+.status.success{
+    background:#22c55e;
+}
+
+.status.failed{
+    background:#ef4444;
+}
+
+.status.warning{
+    background:#f59e0b;
+}
+
+/* ===========================
+   BUTTONS (shared style, hover effect)
+=========================== */
+
+.view-btn{
+    background:#2563eb;
+    color:#fff;
+    border:none;
+    padding:10px 20px;
+    border-radius:8px;
+    font-weight:600;
+    cursor:pointer;
+    transition:.3s;
+}
+
+.view-btn:hover{
+    background:#1d4ed8;
+    transform:translateY(-2px);
+    box-shadow:0 6px 16px rgba(37,99,235,.30);
+}
+
+/* ===========================
+   RESPONSIVE
+=========================== */
+
+@media(max-width:992px){
+
+    .stats-container{
+        grid-template-columns:repeat(2,1fr);
+    }
+
+    .search-container{
+        width:100%;
+    }
+}
+
+@media(max-width:768px){
+
+    .stats-container{
+        grid-template-columns:1fr;
+    }
+
+    .audit-table{
+        display:block;
+        overflow-x:auto;
+    }
+
+    .audit-container h1{
+        font-size:38px;
+    }
+
+    .audit-description{
+        font-size:15px;
+    }
+}

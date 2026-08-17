@@ -1,7 +1,10 @@
 package com.infosys.realestate.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "due_diligence_reports")
@@ -24,6 +27,10 @@ public class DueDiligenceReport {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "requested_by")
     private User requestedBy;
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "report", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<ReportHistory> histories = new ArrayList<>();
 
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -57,6 +64,9 @@ public class DueDiligenceReport {
     public User getRequestedBy() { return requestedBy; }
     public void setRequestedBy(User requestedBy) { this.requestedBy = requestedBy; }
 
+    public List<ReportHistory> getHistories() { return histories; }
+    public void setHistories(List<ReportHistory> histories) { this.histories = histories; }
+
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
@@ -69,3 +79,4 @@ public class DueDiligenceReport {
     public String getErrorMessage() { return errorMessage; }
     public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
 }
+
