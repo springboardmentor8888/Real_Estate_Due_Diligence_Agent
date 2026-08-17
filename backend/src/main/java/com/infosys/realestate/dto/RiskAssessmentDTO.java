@@ -1,71 +1,36 @@
-package com.infosys.realestate.entity;
+package com.infosys.realestate.dto;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "risk_assessments")
-public class RiskAssessment {
+public class RiskAssessmentDTO {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "property_id", nullable = false)
-    private Property property;
-
-    @Column(nullable = false)
-    private String riskLevel; // LOW, MEDIUM, HIGH
-
+    private Long propertyId;
+    private String riskLevel;
     private Integer riskScore;
-
-    @Column(length = 1000)
-    private String comments;
-
-    @Column(name = "title_risk_score")
-    private Integer titleRiskScore = 10;
-
-    @Column(name = "tax_risk_score")
-    private Integer taxRiskScore = 10;
-
-    @Column(name = "zoning_risk_score")
-    private Integer zoningRiskScore = 10;
-
-    @Column(name = "flood_risk_score")
-    private Integer floodRiskScore = 10;
-
-    @Column(name = "environmental_risk_score")
-    private Integer environmentalRiskScore = 10;
-
-    @Column(name = "overall_risk_score")
-    private Integer overallRiskScore = 15;
-
-    @Column(name = "mitigation_recommendations", length = 2000)
+    private Integer titleRiskScore;
+    private Integer taxRiskScore;
+    private Integer zoningRiskScore;
+    private Integer floodRiskScore;
+    private Integer environmentalRiskScore;
+    private Integer overallRiskScore;
     private String mitigationRecommendations;
+    private String comments;
+    private LocalDateTime assessedAt;
 
-    @Column(name = "assessed_at")
-    private LocalDateTime assessedAt = LocalDateTime.now();
-
-    @Column(name = "created_at")
-    private LocalDateTime createdAt = LocalDateTime.now();
-
-    public RiskAssessment() {}
+    public RiskAssessmentDTO() {}
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
-    public Property getProperty() { return property; }
-    public void setProperty(Property property) { this.property = property; }
+    public Long getPropertyId() { return propertyId; }
+    public void setPropertyId(Long propertyId) { this.propertyId = propertyId; }
 
     public String getRiskLevel() { return riskLevel; }
     public void setRiskLevel(String riskLevel) { this.riskLevel = riskLevel; }
 
     public Integer getRiskScore() { return riskScore; }
-    public void setRiskScore(Integer riskScore) { 
-        this.riskScore = riskScore; 
-        this.overallRiskScore = riskScore;
-    }
+    public void setRiskScore(Integer riskScore) { this.riskScore = riskScore; }
 
     public Integer getTitleRiskScore() { return titleRiskScore; }
     public void setTitleRiskScore(Integer titleRiskScore) { this.titleRiskScore = titleRiskScore; }
@@ -93,7 +58,4 @@ public class RiskAssessment {
 
     public LocalDateTime getAssessedAt() { return assessedAt; }
     public void setAssessedAt(LocalDateTime assessedAt) { this.assessedAt = assessedAt; }
-
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

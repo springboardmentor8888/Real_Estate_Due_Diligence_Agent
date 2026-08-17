@@ -34,6 +34,18 @@ public class Property {
     @JoinColumn(name = "created_by")
     private User createdBy;
 
+    @OneToMany(mappedBy = "property", cascade = CascadeType.ALL, orphanRemoval = true)
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private java.util.List<RiskAssessment> riskAssessments = new java.util.ArrayList<>();
+
+    @OneToMany(mappedBy = "subjectProperty", cascade = CascadeType.ALL, orphanRemoval = true)
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private java.util.List<ComparableProperty> comparableProperties = new java.util.ArrayList<>();
+
+    @OneToMany(mappedBy = "property", cascade = CascadeType.ALL, orphanRemoval = true)
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private java.util.List<PropertyValuation> valuations = new java.util.ArrayList<>();
+
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -99,6 +111,30 @@ public class Property {
 
     public void setCreatedBy(User createdBy) {
         this.createdBy = createdBy;
+    }
+
+    public java.util.List<RiskAssessment> getRiskAssessments() {
+        return riskAssessments;
+    }
+
+    public void setRiskAssessments(java.util.List<RiskAssessment> riskAssessments) {
+        this.riskAssessments = riskAssessments;
+    }
+
+    public java.util.List<ComparableProperty> getComparableProperties() {
+        return comparableProperties;
+    }
+
+    public void setComparableProperties(java.util.List<ComparableProperty> comparableProperties) {
+        this.comparableProperties = comparableProperties;
+    }
+
+    public java.util.List<PropertyValuation> getValuations() {
+        return valuations;
+    }
+
+    public void setValuations(java.util.List<PropertyValuation> valuations) {
+        this.valuations = valuations;
     }
 
     public LocalDateTime getCreatedAt() {
