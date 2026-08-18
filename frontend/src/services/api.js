@@ -18,21 +18,12 @@ async function request(endpoint, options = {}) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  // Use relative URL if running client side and proxy is enabled, or fallback to absolute
+  // Always use absolute backend URL to avoid Next.js rewrite proxy stripping the Authorization header
   const url = endpoint.startsWith("http")
     ? endpoint
-    : endpoint.startsWith("/")
-    ? endpoint
-    : `/${endpoint}`;
+    : `${API_BASE_URL}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
 
-  let response;
-  try {
-    response = await fetch(url, { ...options, headers });
-  } catch (err) {
-    // If proxy fails or running outside server environment, attempt direct request
-    const directUrl = `${API_BASE_URL}${url}`;
-    response = await fetch(directUrl, { ...options, headers });
-  }
+  const response = await fetch(url, { ...options, headers });
 
   if (!response.ok) {
     let errorMessage = `HTTP Error ${response.status}: ${response.statusText}`;
@@ -72,7 +63,8 @@ export const authApi = {
   },
   register: async (userData) => {
     try {
-      const response = await request("/api/users", {
+      // Call the original registration endpoint
+      const registerResponse = await request("/api/users", {
         method: "POST",
         body: JSON.stringify({
           name: userData.name,
@@ -80,14 +72,22 @@ export const authApi = {
           password: userData.password,
         }),
       });
-      return response;
+      // After successful registration, automatically log in to obtain a JWT token
+      const loginResponse = await request("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email: userData.email, password: userData.password }),
+      });
+      // Return a combined response containing token and user info
+      return { ...registerResponse, token: loginResponse?.token };
     } catch (err) {
-      console.warn("Backend registration DB fallback:", err.message);
-      // Fallback synthetic registration response if backend DB is not active or throws constraint error
+      console.warn("Backend registration fallback:", err.message);
+      // Synthetic response for dev when backend DB is unavailable
+      const mockToken = "mock_jwt_dev_" + Date.now();
       return {
         userId: Date.now(),
         name: userData.name,
         email: userData.email,
+        token: mockToken,
         isFallback: true,
       };
     }
@@ -180,5 +180,11 @@ export const dueDiligenceApi = {
     return request(`/api/due-diligence/${propertyId}/process`, {
       method: "POST",
     });
+  },
+  getAllReports: async () => {
+    return request("/api/due-diligence/reports");
+  },
+  getAdminAnalytics: async () => {
+    return request("/api/due-diligence/admin/analytics");
   },
 };

@@ -42,7 +42,9 @@ const SEVERITY_CONFIG = {
 
 const RISK_CONFIG = {
   HIGH_RISK: { cls: "risk-high", label: "High Risk Property", icon: <XCircle size={16} /> },
+  HIGH: { cls: "risk-high", label: "High Risk Property", icon: <XCircle size={16} /> },
   CONCERNS_FOUND: { cls: "risk-medium", label: "Under Legal Review", icon: <AlertTriangle size={16} /> },
+  MEDIUM: { cls: "risk-medium", label: "Under Legal Review", icon: <AlertTriangle size={16} /> },
   LOW: { cls: "risk-low", label: "Verified Title", icon: <CheckCircle2 size={16} /> },
   CLEAR: { cls: "risk-low", label: "Verified Title", icon: <CheckCircle2 size={16} /> },
 };

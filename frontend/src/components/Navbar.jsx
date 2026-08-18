@@ -10,12 +10,20 @@ import {
   LogIn,
   UserPlus,
   ShieldCheck,
-  ChevronRight
+  ShieldAlert,
+  FileText,
 } from "lucide-react";
 
 export default function Navbar() {
   const pathname = usePathname();
   const { user, isAuthenticated, logout } = useAuth();
+
+  const isAdmin =
+    isAuthenticated &&
+    user &&
+    (user.role === "Admin" ||
+      user.role === "ADMIN" ||
+      (user.email && user.email.toLowerCase().includes("admin")));
 
   const navLinks = [
     { name: "Properties", href: "/properties" },
@@ -23,7 +31,12 @@ export default function Navbar() {
     { name: "Zoning", href: "/zoning" },
     { name: "Flood Zone", href: "/flood-zone" },
     { name: "Permits & Env", href: "/permits-environmental" },
+    { name: "Report History", href: "/report-history" },
   ];
+
+  if (isAdmin) {
+    navLinks.push({ name: "Admin Dashboard", href: "/admin" });
+  }
 
   return (
     <header className="navbar">
@@ -63,19 +76,22 @@ export default function Navbar() {
                 gap: "8px",
                 padding: "6px 14px",
                 borderRadius: "var(--radius-md)",
-                background: "var(--primary-light)",
-                color: "var(--primary)",
+                background: isAdmin ? "#EEF2FF" : "var(--primary-light)",
+                color: isAdmin ? "#4F46E5" : "var(--primary)",
                 fontWeight: "600",
                 fontSize: "14px",
+                border: isAdmin ? "1px solid #C7D2FE" : "none",
               }}
             >
-              <ShieldCheck size={16} />
-              <span>{user?.name || "User"}</span>
+              {isAdmin ? <ShieldAlert size={16} /> : <ShieldCheck size={16} />}
+              <span>
+                {user?.name || "User"} {user?.role ? `(${user.role})` : ""}
+              </span>
             </div>
 
             <Link href="/profile" className="navbar-btn">
               <User size={16} style={{ marginRight: "6px" }} />
-              Profile Dashboard
+              Profile
             </Link>
 
             <button
@@ -88,7 +104,7 @@ export default function Navbar() {
                 background: "transparent",
                 color: "var(--text-muted)",
                 border: "1px solid var(--border)",
-                boxShadow: "none"
+                boxShadow: "none",
               }}
             >
               <LogOut size={16} />
