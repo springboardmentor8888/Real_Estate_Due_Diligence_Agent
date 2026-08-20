@@ -33,8 +33,8 @@ public class DueDiligenceReportController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'LEGAL_REVIEWER', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Generate a due diligence report", description = "Generates a new property due diligence report. Only Administrators, Legal Reviewers, and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT', 'BUYER', 'SELLER', 'BANK')")
+    @Operation(summary = "Generate a due diligence report", description = "Generates a new property due diligence report.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Report created successfully",
                     content = @Content(schema = @Schema(implementation = DueDiligenceReportResponse.class))),
@@ -47,6 +47,16 @@ public class DueDiligenceReportController {
     ) {
         DueDiligenceReportResponse response = reportService.generateReport(request, userDetails.getUsername());
         return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @GetMapping
+    @Operation(summary = "Get all reports", description = "Retrieves all due diligence reports in the database.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Reports retrieved successfully")
+    })
+    public ResponseEntity<List<DueDiligenceReportResponse>> getAllReports() {
+        List<DueDiligenceReportResponse> response = reportService.getAllReports();
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
@@ -73,8 +83,8 @@ public class DueDiligenceReportController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'LEGAL_REVIEWER', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Update report details", description = "Updates details of an existing report. Only Administrators, Legal Reviewers, and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT', 'BUYER', 'SELLER', 'BANK')")
+    @Operation(summary = "Update report details", description = "Updates details of an existing report.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Report updated successfully",
                     content = @Content(schema = @Schema(implementation = DueDiligenceReportResponse.class))),
@@ -89,8 +99,8 @@ public class DueDiligenceReportController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'LEGAL_REVIEWER', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Delete report", description = "Deletes a report by ID. Only Administrators, Legal Reviewers, and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT', 'BUYER', 'SELLER', 'BANK')")
+    @Operation(summary = "Delete report", description = "Deletes a report by ID.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Report deleted successfully"),
             @ApiResponse(responseCode = "404", description = "Report not found")

@@ -31,8 +31,8 @@ public class OwnerController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Register a new owner", description = "Creates a new owner registry. Only Administrators and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Register a new owner", description = "Creates a new owner registry. Only Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Owner created successfully",
                     content = @Content(schema = @Schema(implementation = OwnerResponse.class))),
@@ -65,8 +65,8 @@ public class OwnerController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Update owner details", description = "Updates details of an existing owner. Only Administrators and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Update owner details", description = "Updates details of an existing owner. Only Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Owner details updated",
                     content = @Content(schema = @Schema(implementation = OwnerResponse.class))),
@@ -82,8 +82,8 @@ public class OwnerController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Delete an owner", description = "Deletes an owner from the registry. Fails if they have active ownership records linked. Only Administrators and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Delete an owner", description = "Deletes an owner from the registry. Fails if they have active ownership records linked. Only Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Owner deleted successfully"),
             @ApiResponse(responseCode = "400", description = "Owner has linked ownership records"),

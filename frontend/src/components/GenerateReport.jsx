@@ -1,24 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
-import { Download, FileText, Loader2, CheckCircle } from 'lucide-react';
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
+import { FileText, Info } from 'lucide-react';
 
 export default function GenerateReport({ propertyId, propertyDetails }) {
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-
-  const handleGenerateReport = () => {
-    setLoading(true);
-    setSuccess(false);
-
-    setTimeout(() => {
-      setLoading(false);
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 4000);
-    }, 2500);
-  };
-
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
       <div className="rounded-xl border border-gray-200 bg-blue-500/5 p-6">
@@ -32,30 +16,12 @@ export default function GenerateReport({ propertyId, propertyDetails }) {
               This will compile all data into a downloadable PDF document.
             </p>
           </div>
-          <Badge className="bg-blue-500">Milestone 3</Badge>
+          <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-medium text-slate-600">Unavailable</span>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-3 text-sm text-gray-500">
-          <div className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-emerald-500" /> Property Summary</div>
-          <div className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-emerald-500" /> Risk Assessment</div>
-          <div className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-emerald-500" /> 3 Comparables</div>
-        </div>
-
-        <div className="mt-8 flex items-center gap-4">
-          <Button 
-            onClick={handleGenerateReport} 
-            disabled={loading}
-            className="min-w-[180px] bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            {loading ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...</>
-            ) : success ? (
-              <><CheckCircle className="mr-2 h-4 w-4" /> Downloaded!</>
-            ) : (
-              <><Download className="mr-2 h-4 w-4" /> Download Report</>
-            )}
-          </Button>
-          {success && <span className="text-emerald-600 font-medium">PDF generated successfully!</span>}
+        <div className="mt-6 flex items-start gap-2 rounded-lg bg-slate-100 p-4 text-sm text-slate-600">
+          <Info className="mt-0.5 h-4 w-4 shrink-0" />
+          Server-side report generation and file downloads are not implemented yet. Existing report records can be viewed from the Reports page.
         </div>
       </div>
     </motion.div>

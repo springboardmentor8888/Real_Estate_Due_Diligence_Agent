@@ -11,13 +11,15 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class LoginResponse {
     private String token;
-    
+
     @Builder.Default
     private String tokenType = "Bearer";
-    
+
     private Long userId;
     private String firstName;
     private String lastName;
+    private String fullName;
     private String email;
     private String role;
+    private Boolean active;
 }

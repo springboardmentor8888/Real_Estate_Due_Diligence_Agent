@@ -1,59 +1,82 @@
 // src/routes/legal/documents.jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { PageHeader } from '../../components/app-shell';
-import { FileText, CheckCircle, XCircle, Clock, Download, Eye, Search, Users } from 'lucide-react';
+import { FileText, CheckCircle, XCircle, Clock, Download, Eye, Search, Users, Building2 } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
-
-const documents = [
-  {
-    id: 1,
-    name: 'Title Deed - 123 Main Street',
-    type: 'PDF',
-    uploaded: '2 days ago',
-    status: 'Pending Review',
-    submittedBy: 'Swaraj Pakhale'
-  },
-  {
-    id: 2,
-    name: 'Flood Zone Certification - 456 Oak Ave',
-    type: 'PDF',
-    uploaded: '1 week ago',
-    status: 'Verified',
-    submittedBy: 'Archana Pakhale'
-  },
-  {
-    id: 3,
-    name: 'Property Tax History - P-10243',
-    type: 'Excel',
-    uploaded: '3 hours ago',
-    status: 'Needs Correction',
-    submittedBy: 'Swaraj Pakhale'
-  }
-];
+import { Button } from '../../components/ui/button';
+import { documentService } from '../../services/api';
+import { useNavigate } from 'react-router-dom';
 
 export default function VerifyDocuments() {
+  const navigate = useNavigate();
+  const [documents, setDocuments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
+
+  const fetchDocuments = async () => {
+    try {
+      setLoading(true);
+      const res = await documentService.getAll();
+      const list = Array.isArray(res.data) ? res.data : [];
+      setDocuments(list);
+    } catch (err) {
+      console.error('Error fetching legal documents:', err);
+      setDocuments([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredDocs = documents.filter(doc => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (doc.documentName && doc.documentName.toLowerCase().includes(q)) ||
+           (doc.propertyName && doc.propertyName.toLowerCase().includes(q)) ||
+           (doc.documentType && doc.documentType.toLowerCase().includes(q));
+  });
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'Recently';
+    try {
+      return new Date(dateStr).toLocaleDateString();
+    } catch {
+      return 'Recently';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+      </div>
+    );
+  }
+
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-      
       <PageHeader 
-        title="Verify Documents" 
-        subtitle="Review and verify legal property documents"
+        title="Verify Legal Documents" 
+        subtitle="Review, audit, and verify property titles, zoning permits, and environmental reports from PostgreSQL"
         actions={
-          // ✅ FIXED: Flex row with equal height items
           <div className="flex flex-row items-center gap-3 w-full md:w-auto">
             <div className="relative flex-1 md:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input 
                 type="text" 
                 placeholder="Search documents..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-9 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white text-sm"
               />
             </div>
             
-            {/* ✅ GREEN BUTTON - Same height as search bar */}
             <button 
-              onClick={() => alert('Upload New workflow clicked!')}
+              onClick={() => navigate('/properties')}
               style={{
                 backgroundColor: '#10b981',
                 color: '#ffffff',
@@ -72,52 +95,63 @@ export default function VerifyDocuments() {
               onMouseOver={(e) => e.target.style.backgroundColor = '#059669'}
               onMouseOut={(e) => e.target.style.backgroundColor = '#10b981'}
             >
-              <FileText size={16} /> 
-              Upload New
+              <Building2 size={16} /> 
+              Browse Properties
             </button>
           </div>
         }
       />
 
       <div className="space-y-4">
-        {documents.map((doc) => (
-          <div key={doc.id} className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-slate-100 text-slate-600">
-                <FileText className="h-6 w-6" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-semibold text-slate-900">{doc.name}</h3>
-                  <Badge variant="outline" className="text-xs bg-slate-100">{doc.type}</Badge>
+        {filteredDocs.length > 0 ? (
+          filteredDocs.map((doc) => (
+            <div 
+              key={doc.documentId || doc.id} 
+              className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+            >
+              <div className="flex items-start gap-4 flex-1">
+                <div className="p-3 rounded-xl bg-purple-50 text-purple-600 shrink-0">
+                  <FileText className="h-6 w-6" />
                 </div>
-                <div className="flex items-center gap-4 mt-1 text-xs text-slate-500">
-                  <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {doc.submittedBy}</span>
-                  <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {doc.uploaded}</span>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-semibold text-slate-900 text-sm">{doc.documentName}</h3>
+                    <Badge variant="outline" className="text-xs bg-slate-100">{doc.fileFormat || doc.documentType || 'PDF'}</Badge>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Property: <strong className="text-slate-700">{doc.propertyName || 'Verified Asset'}</strong></p>
+                  <div className="flex items-center gap-4 mt-1.5 text-xs text-slate-400">
+                    {doc.uploadedByUserEmail && (
+                      <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {doc.uploadedByUserEmail}</span>
+                    )}
+                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> Uploaded {formatDate(doc.uploadedAt)}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-            
-            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-              <Badge className={`${doc.status === 'Verified' ? 'bg-emerald-500' : doc.status === 'Needs Correction' ? 'bg-red-500' : 'bg-amber-500'} text-white`}>
-                {doc.status}
-              </Badge>
-              <button className="p-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50"><Eye className="h-4 w-4" /></button>
-              <button className="p-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50"><Download className="h-4 w-4" /></button>
               
-              {doc.status === 'Pending Review' && (
-                <div className="flex gap-2">
-                  <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1">
-                    <CheckCircle className="h-3 w-3" /> Approve
-                  </button>
-                  <button className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1">
-                    <XCircle className="h-3 w-3" /> Reject
-                  </button>
-                </div>
-              )}
+              <div className="flex flex-wrap items-center gap-3 w-full md:w-auto self-end md:self-center">
+                <Badge className="bg-emerald-500 text-white">
+                  {doc.reportId ? 'Audited & Verified' : 'Pending Review'}
+                </Badge>
+                {doc.propertyId && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => navigate(`/properties/${doc.propertyId}`)}
+                    className="border-slate-300 text-slate-700 hover:bg-slate-50"
+                  >
+                    <Eye className="h-3.5 w-3.5 mr-1" /> View Property
+                  </Button>
+                )}
+              </div>
             </div>
+          ))
+        ) : (
+          <div className="bg-white rounded-2xl p-12 text-center border border-slate-100 shadow-sm">
+            <FileText className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+            <h3 className="text-base font-semibold text-slate-800">No legal documents found</h3>
+            <p className="text-xs text-slate-500 mt-1">Uploaded titles, permits, and surveys in the database will appear here.</p>
           </div>
-        ))}
+        )}
       </div>
     </motion.div>
   );

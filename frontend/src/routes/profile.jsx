@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { Badge } from '../components/ui/badge';
 import { 
   User, Mail, Building2, Shield, Calendar, Edit2, Save, X, Camera,
-  Phone, MapPin, Briefcase, Scale, Landmark, Crown, Lock, Key,
+  Phone, MapPin, Briefcase, Scale, Landmark, Lock, Key,
   FileText, TrendingUp, Activity, Users, CheckCircle2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -30,19 +30,22 @@ export default function ProfilePage() {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    // REMOVED API CALL - Loading mock data from localStorage instead
     const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    const name = userData.fullName || (userData.firstName ? `${userData.firstName} ${userData.lastName || ''}`.trim() : '') || 'User';
+    const email = userData.email || '';
+    const role = (userData.role || 'BUYER').toUpperCase();
+
     setUser({
-      fullName: userData.fullName || 'Swaraj Pakhale',
-      email: userData.email || 'swaraj@example.com',
-      role: userData.role || 'BUYER',
-      createdAt: new Date().toISOString(),
+      fullName: name,
+      email: email,
+      role: role,
+      createdAt: userData.createdAt || new Date().toISOString(),
     });
     setFormData({
-      fullName: userData.fullName || 'Swaraj Pakhale',
-      email: userData.email || 'swaraj@example.com',
-      role: userData.role || 'BUYER',
-      phoneNumber: '',
+      fullName: name,
+      email: email,
+      role: role,
+      phoneNumber: userData.phone || '',
       address: '',
       companyName: '',
       licenseNumber: '',
@@ -77,8 +80,8 @@ export default function ProfilePage() {
 
   const getRoleIcon = (role) => {
     switch(role?.toUpperCase()) {
-      case 'ADMIN': return <Crown className="h-4 w-4" />;
       case 'AGENT': return <Briefcase className="h-4 w-4" />;
+      case 'SELLER': return <Briefcase className="h-4 w-4" />;
       case 'LEGAL_REVIEWER': return <Scale className="h-4 w-4" />;
       case 'BANK': return <Landmark className="h-4 w-4" />;
       default: return <User className="h-4 w-4" />;
@@ -87,8 +90,8 @@ export default function ProfilePage() {
 
   const getRoleColor = (role) => {
     switch(role?.toUpperCase()) {
-      case 'ADMIN': return 'bg-purple-100 text-purple-700';
       case 'AGENT': return 'bg-blue-100 text-blue-700';
+      case 'SELLER': return 'bg-rose-100 text-rose-700';
       case 'LEGAL_REVIEWER': return 'bg-indigo-100 text-indigo-700';
       case 'BANK': return 'bg-amber-100 text-amber-700';
       default: return 'bg-emerald-100 text-emerald-700';
@@ -262,7 +265,7 @@ export default function ProfilePage() {
                   disabled
                   className="bg-gray-50 border-gray-200"
                 />
-                <p className="text-xs text-gray-400 mt-1">Contact admin to change role</p>
+                <p className="text-xs text-gray-400 mt-1">Role is assigned during registration</p>
               </div>
 
               {/* Role-specific fields */}

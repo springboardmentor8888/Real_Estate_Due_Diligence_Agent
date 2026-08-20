@@ -46,6 +46,14 @@ public class ReportServiceImpl implements ReportService {
 
     // REPORT CRUD
     @Override
+    @Transactional(readOnly = true)
+    public List<DueDiligenceReportResponse> getAllReports() {
+        return reportRepository.findAll().stream()
+                .map(reportMapper::toReportResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     @Transactional
     public DueDiligenceReportResponse generateReport(DueDiligenceReportRequest request, String userEmail) {
         Property property = propertyRepository.findById(request.getPropertyId())
@@ -104,6 +112,14 @@ public class ReportServiceImpl implements ReportService {
     }
 
     // PROPERTY DOCUMENT CRUD
+    @Override
+    @Transactional(readOnly = true)
+    public List<PropertyDocumentResponse> getAllDocuments() {
+        return documentRepository.findAll().stream()
+                .map(reportMapper::toDocumentResponse)
+                .collect(Collectors.toList());
+    }
+
     @Override
     @Transactional
     public PropertyDocumentResponse uploadDocument(PropertyDocumentRequest request, String userEmail) {

@@ -25,16 +25,12 @@ export default function Inquiries() {
 
   const fetchInquiries = async () => {
     try {
+      setLoading(true);
       const response = await api.get('/agent/inquiries');
-      setInquiries(response.data.inquiries || []);
+      setInquiries(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
-      console.error('Error fetching inquiries:', error);
-      // Mock data
-      setInquiries([
-        { id: 1, user: { fullName: 'John Buyer', email: 'john@buyer.com' }, property: { id: 1, address: '425 Market Street, SF' }, message: 'I am very interested in this property. Can I schedule a viewing?', status: 'PENDING', createdAt: '2024-01-15' },
-        { id: 2, user: { fullName: 'Sarah Smith', email: 'sarah@email.com' }, property: { id: 2, address: '1200 Brickell Avenue, Miami' }, message: 'Is this property still available? What is the minimum offer price?', status: 'PENDING', createdAt: '2024-01-14' },
-        { id: 3, user: { fullName: 'Mike Johnson', email: 'mike@email.com' }, property: { id: 1, address: '425 Market Street, SF' }, message: 'I would like to make an offer. Please send me the details.', status: 'RESPONDED', createdAt: '2024-01-12', response: 'Thank you for your interest. Please submit your offer through the platform.', respondedAt: '2024-01-13' }
-      ]);
+      console.error('Error fetching inquiries from backend:', error);
+      setInquiries([]);
     } finally {
       setLoading(false);
     }
@@ -49,29 +45,29 @@ export default function Inquiries() {
     try {
       await api.post(`/agent/inquiries/${id}/respond`, { response: responseText });
       setInquiries(inquiries.map(i => 
-        i.id === id ? { ...i, status: 'RESPONDED', response: responseText, respondedAt: new Date() } : i
+        i.id === id ? { ...i, status: 'RESPONDED', response: responseText, respondedAt: new Date().toISOString() } : i
       ));
       setSelectedInquiry(null);
       setResponseText('');
     } catch (error) {
       console.error('Error responding to inquiry:', error);
-      alert('Failed to respond');
+      alert('Failed to submit response to backend');
     }
   };
 
   const getStatusBadge = (status) => {
-    switch(status) {
-      case 'PENDING': return <Badge className="bg-amber-500 text-white"><Clock className="h-3 w-3 mr-1" /> Pending</Badge>;
+    switch(status?.toUpperCase()) {
+      case 'NEW': return <Badge className="bg-amber-500 text-white"><Clock className="h-3 w-3 mr-1" /> New</Badge>;
       case 'RESPONDED': return <Badge className="bg-emerald-500 text-white"><CheckCircle className="h-3 w-3 mr-1" /> Responded</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
     }
   };
 
   const filteredInquiries = inquiries.filter(i => 
-    statusFilter === 'ALL' || i.status === statusFilter
+    statusFilter === 'ALL' || (i.status && i.status.toUpperCase() === statusFilter)
   );
 
-  const pendingCount = inquiries.filter(i => i.status === 'PENDING').length;
+  const pendingCount = inquiries.filter(i => i.status === 'NEW').length;
 
   if (loading) {
     return (
@@ -84,20 +80,19 @@ export default function Inquiries() {
   return (
     <>
       <PageHeader 
-        title="Inquiries" 
-        subtitle={pendingCount > 0 ? `${pendingCount} pending inquiries` : 'All inquiries responded'}
+        title="Agent Inquiries" 
+        subtitle={pendingCount > 0 ? `${pendingCount} pending client inquiries from PostgreSQL` : 'All client inquiries answered'}
         actions={
           <div className="flex gap-2">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm bg-white"
             >
               <option value="ALL">All Inquiries</option>
-              <option value="PENDING">Pending</option>
+              <option value="NEW">New</option>
               <option value="RESPONDED">Responded</option>
             </select>
-            {/* ✅ FIXED: Visible Refresh Button */}
             <Button variant="outline" onClick={fetchInquiries} className="border-slate-300 text-slate-700 hover:bg-slate-50">
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
@@ -110,61 +105,66 @@ export default function Inquiries() {
         {filteredInquiries.length === 0 ? (
           <div className="bg-white rounded-2xl p-12 text-center border border-gray-100 shadow-sm">
             <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">No inquiries found</p>
+            <h3 className="text-base font-semibold text-gray-800">No buyer inquiries found in database</h3>
+            <p className="text-xs text-gray-500 mt-1">Inquiries submitted on your property listings will appear here.</p>
           </div>
         ) : (
           filteredInquiries.map((inquiry, index) => (
             <motion.div
-              key={inquiry.id}
+              key={inquiry.id || index}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
               className={`bg-white rounded-2xl p-6 border shadow-sm hover:shadow-md transition-shadow ${
-                inquiry.status === 'PENDING' ? 'border-amber-200' : 'border-gray-100'
+                 inquiry.status === 'NEW' ? 'border-amber-200' : 'border-gray-100'
               }`}
             >
               <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                 <div className="flex items-start gap-4 flex-1">
                   <div className={`p-3 rounded-xl ${
-                    inquiry.status === 'PENDING' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'
+                     inquiry.status === 'NEW' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'
                   }`}>
                     <Mail className="h-5 w-5" />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-gray-900">{inquiry.user?.fullName || 'Anonymous'}</h3>
+                       <h3 className="font-semibold text-gray-900">{inquiry.senderName || 'Buyer'}</h3>
                       <span className="text-sm text-gray-400">•</span>
-                      <span className="text-sm text-gray-500">{inquiry.user?.email}</span>
+                       <span className="text-sm text-gray-500">{inquiry.senderEmail}</span>
                       {getStatusBadge(inquiry.status)}
                     </div>
                     <div className="flex items-center gap-2 mt-1">
-                      <Home className="h-3 w-3 text-gray-400" />
-                      <span className="text-sm text-gray-600">{inquiry.property?.address || 'Property'}</span>
-                      <Button 
-                        variant="link" 
-                        size="sm" 
-                        className="text-blue-600 p-0 h-auto"
-                        onClick={() => navigate(`/properties/${inquiry.property?.id}`)}
-                      >
-                        View Property
-                      </Button>
+                      <Home className="h-3.5 w-3.5 text-gray-400" />
+                      <span className="text-sm text-gray-600">{inquiry.property?.address || inquiry.propertyAddress || 'Property Listing'}</span>
+                      {(inquiry.property?.id || inquiry.propertyId) && (
+                        <Button 
+                          variant="link" 
+                          size="sm" 
+                          className="text-blue-600 p-0 h-auto font-medium"
+                          onClick={() => navigate(`/properties/${inquiry.property?.id || inquiry.propertyId}`)}
+                        >
+                          View Property
+                        </Button>
+                      )}
                     </div>
                     <div className="mt-2 p-3 bg-gray-50 rounded-lg">
                       <p className="text-sm text-gray-700">{inquiry.message}</p>
                     </div>
                     {inquiry.response && (
                       <div className="mt-3 p-3 bg-emerald-50 rounded-lg border border-emerald-100">
-                        <p className="text-sm font-medium text-emerald-700">Your Response:</p>
+                        <p className="text-xs font-semibold text-emerald-800">Your Response:</p>
                         <p className="text-sm text-gray-700 mt-1">{inquiry.response}</p>
-                        <p className="text-xs text-gray-400 mt-1">Responded {new Date(inquiry.respondedAt).toLocaleDateString()}</p>
+                        {inquiry.respondedAt && (
+                          <p className="text-[11px] text-gray-400 mt-1">Responded {new Date(inquiry.respondedAt).toLocaleDateString()}</p>
+                        )}
                       </div>
                     )}
                     <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
-                      <span>Received {new Date(inquiry.createdAt).toLocaleDateString()}</span>
+                      <span>Received {inquiry.createdAt ? new Date(inquiry.createdAt).toLocaleDateString() : 'Recently'}</span>
                     </div>
                   </div>
                 </div>
-                {inquiry.status === 'PENDING' && (
+                {inquiry.status === 'NEW' && (
                   <Button 
                     onClick={() => setSelectedInquiry(inquiry)}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white whitespace-nowrap"
@@ -201,23 +201,23 @@ export default function Inquiries() {
             </div>
             <div className="space-y-4">
               <div>
-                <p className="text-sm font-medium text-gray-700">From</p>
-                <p className="text-gray-900">{selectedInquiry.user?.fullName} ({selectedInquiry.user?.email})</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase">From</p>
+                 <p className="text-sm text-gray-900 font-medium">{selectedInquiry.senderName || 'Buyer'} ({selectedInquiry.senderEmail})</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-700">Property</p>
-                <p className="text-gray-900">{selectedInquiry.property?.address}</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase">Property</p>
+                <p className="text-sm text-gray-900 font-medium">{selectedInquiry.property?.address || selectedInquiry.propertyAddress}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-700">Message</p>
-                <p className="text-gray-600 bg-gray-50 p-3 rounded-lg">{selectedInquiry.message}</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase">Message</p>
+                <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg mt-1">{selectedInquiry.message}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700">Your Response</label>
+                <label className="text-xs font-semibold text-gray-700 uppercase">Your Response</label>
                 <textarea
                   value={responseText}
                   onChange={(e) => setResponseText(e.target.value)}
-                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
                   rows={4}
                   placeholder="Type your response here..."
                 />
@@ -235,7 +235,7 @@ export default function Inquiries() {
                 </Button>
                 <Button 
                   onClick={() => respondToInquiry(selectedInquiry.id)}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
                 >
                   <Reply className="h-4 w-4 mr-2" />
                   Send Response

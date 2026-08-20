@@ -86,7 +86,7 @@ const PropertyDetails = () => {
         <div className="p-6 -mt-16">
           <div className="flex flex-col md:flex-row items-start md:items-end justify-between">
             <div className="bg-white rounded-2xl p-4 shadow-lg w-full md:w-auto">
-              <h1 className="text-2xl font-bold text-gray-900">{property?.address}</h1>
+              <h1 className="text-2xl font-bold text-gray-900">{typeof property?.address === 'string' ? property.address : property?.address?.addressLine1 || property?.propertyName || 'Address unavailable'}</h1>
               <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500">
                 <span className="flex items-center gap-1">
                   <MapPin size={16} />

@@ -31,8 +31,8 @@ public class MarketAnalysisController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Add comparable property relation", description = "Maps a comparable property link to a primary property. Only Administrators and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Add comparable property relation", description = "Maps a comparable property link to a primary property. Only Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Relationship created successfully",
                     content = @Content(schema = @Schema(implementation = ComparablePropertyResponse.class))),
@@ -73,8 +73,8 @@ public class MarketAnalysisController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Update comparable property relation", description = "Modifies a comparable property relation link. Only Administrators and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Update comparable property relation", description = "Modifies a comparable property relation link. Only Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Relationship updated successfully",
                     content = @Content(schema = @Schema(implementation = ComparablePropertyResponse.class))),
@@ -91,8 +91,8 @@ public class MarketAnalysisController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Delete comparable property relation", description = "Deletes a comparable property relationship mapping. Only Administrators and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Delete comparable property relation", description = "Deletes a comparable property relationship mapping. Only Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Relationship deleted successfully"),
             @ApiResponse(responseCode = "404", description = "Record not found")

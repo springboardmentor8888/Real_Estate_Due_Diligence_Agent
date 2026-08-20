@@ -31,8 +31,8 @@ public class RiskCategoryController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMINISTRATOR')")
-    @Operation(summary = "Create risk category", description = "Registers a new risk category. Only Administrators can perform this action.")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Create risk category", description = "Registers a new risk category.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Category created successfully",
                     content = @Content(schema = @Schema(implementation = RiskCategoryResponse.class))),
@@ -65,8 +65,8 @@ public class RiskCategoryController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMINISTRATOR')")
-    @Operation(summary = "Update risk category details", description = "Updates details of an existing risk category. Only Administrators can perform this action.")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Update risk category details", description = "Updates details of an existing risk category.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Category updated successfully",
                     content = @Content(schema = @Schema(implementation = RiskCategoryResponse.class))),
@@ -82,8 +82,8 @@ public class RiskCategoryController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMINISTRATOR')")
-    @Operation(summary = "Delete risk category", description = "Deletes a risk category. Fails if linked to assessments. Only Administrators can perform this action.")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Delete risk category", description = "Deletes a risk category. Fails if linked to assessments.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Category deleted successfully"),
             @ApiResponse(responseCode = "400", description = "Category is linked to existing property risk assessments"),

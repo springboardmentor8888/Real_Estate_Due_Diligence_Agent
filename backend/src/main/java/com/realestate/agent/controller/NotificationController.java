@@ -33,8 +33,8 @@ public class NotificationController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Send notification", description = "Generates and sends a notification to a specific user. Only Administrators and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Send notification", description = "Generates and sends a notification to a specific user. Only Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Notification sent successfully",
                     content = @Content(schema = @Schema(implementation = NotificationResponse.class))),

@@ -33,8 +33,8 @@ public class ApiIntegrationController {
 
     // PROVIDER ENDPOINTS
     @PostMapping("/providers")
-    @PreAuthorize("hasRole('ADMINISTRATOR')")
-    @Operation(summary = "Register API Provider", description = "Registers a new external API provider. Only Administrators can perform this action.")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Register API Provider", description = "Registers a new external API provider.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Provider registered successfully",
                     content = @Content(schema = @Schema(implementation = ApiProviderResponse.class))),
@@ -47,8 +47,8 @@ public class ApiIntegrationController {
     }
 
     @GetMapping("/providers/{id}")
-    @PreAuthorize("hasRole('ADMINISTRATOR')")
-    @Operation(summary = "Get API Provider by ID", description = "Retrieves details of a registered API Provider. Only Administrators can perform this action.")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get API Provider by ID", description = "Retrieves details of a registered API Provider.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Provider details retrieved",
                     content = @Content(schema = @Schema(implementation = ApiProviderResponse.class))),
@@ -60,8 +60,8 @@ public class ApiIntegrationController {
     }
 
     @GetMapping("/providers")
-    @PreAuthorize("hasRole('ADMINISTRATOR')")
-    @Operation(summary = "Get all API Providers", description = "Lists all registered external API providers. Only Administrators can perform this action.")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get all API Providers", description = "Lists all registered external API providers.")
     @ApiResponse(responseCode = "200", description = "Providers list retrieved")
     public ResponseEntity<List<ApiProviderResponse>> getAllProviders() {
         List<ApiProviderResponse> response = apiIntegrationService.getAllProviders();
@@ -69,8 +69,8 @@ public class ApiIntegrationController {
     }
 
     @PutMapping("/providers/{id}")
-    @PreAuthorize("hasRole('ADMINISTRATOR')")
-    @Operation(summary = "Update API Provider details", description = "Updates settings of an existing API provider. Only Administrators can perform this action.")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Update API Provider details", description = "Updates settings of an existing API provider.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Provider updated successfully",
                     content = @Content(schema = @Schema(implementation = ApiProviderResponse.class))),
@@ -86,8 +86,8 @@ public class ApiIntegrationController {
     }
 
     @DeleteMapping("/providers/{id}")
-    @PreAuthorize("hasRole('ADMINISTRATOR')")
-    @Operation(summary = "Delete API Provider", description = "Removes a provider. Fails if provider is linked to existing logs. Only Administrators can perform this action.")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Delete API Provider", description = "Removes a provider. Fails if provider is linked to existing logs.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Provider deleted successfully"),
             @ApiResponse(responseCode = "400", description = "Provider contains active logs"),
@@ -100,8 +100,8 @@ public class ApiIntegrationController {
 
     // LOG ENDPOINTS
     @GetMapping("/logs/provider/{providerId}")
-    @PreAuthorize("hasRole('ADMINISTRATOR')")
-    @Operation(summary = "Get execution logs by provider", description = "Retrieves all API execution logs linked to a provider ID. Only Administrators can perform this action.")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get execution logs by provider", description = "Retrieves all API execution logs linked to a provider ID.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Logs list retrieved"),
             @ApiResponse(responseCode = "404", description = "Provider not found")
@@ -112,8 +112,8 @@ public class ApiIntegrationController {
     }
 
     @GetMapping("/logs/property/{propertyId}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Get execution logs for a property", description = "Retrieves API logs triggered for a specific property. Only Administrators and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Get execution logs for a property", description = "Retrieves API logs triggered for a specific property. Only Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Logs list retrieved"),
             @ApiResponse(responseCode = "404", description = "Property not found")
@@ -124,8 +124,8 @@ public class ApiIntegrationController {
     }
 
     @GetMapping("/logs/failed")
-    @PreAuthorize("hasRole('ADMINISTRATOR')")
-    @Operation(summary = "Get all failed logs", description = "Retrieves a list of all failed API execution requests. Only Administrators can perform this action.")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get all failed logs", description = "Retrieves a list of all failed API execution requests.")
     @ApiResponse(responseCode = "200", description = "Failed logs list retrieved")
     public ResponseEntity<List<ApiLogResponse>> getFailedLogs() {
         List<ApiLogResponse> response = apiIntegrationService.getFailedLogs();
@@ -134,8 +134,8 @@ public class ApiIntegrationController {
 
     // EXECUTION ENDPOINT
     @PostMapping("/execute")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Execute external API query", description = "Triggers an external REST call to a provider's endpoint, performing retry checks and saving logs. Only Administrators and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Execute external API query", description = "Triggers an external REST call to a provider's endpoint, performing retry checks and saving logs. Only Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "REST call executed and logged successfully",
                     content = @Content(schema = @Schema(implementation = ApiLogResponse.class))),

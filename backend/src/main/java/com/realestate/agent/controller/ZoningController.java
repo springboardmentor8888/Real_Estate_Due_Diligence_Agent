@@ -31,7 +31,7 @@ public class ZoningController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Create zoning record", description = "Creates a new zoning compliance record. Only Administrators and Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Zoning record created successfully",
@@ -68,7 +68,7 @@ public class ZoningController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Update zoning record details", description = "Updates details of an existing zoning record. Only Administrators and Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Zoning record updated successfully",
@@ -84,7 +84,7 @@ public class ZoningController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Delete zoning record", description = "Deletes a zoning record. Only Administrators and Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Zoning record deleted successfully"),

@@ -69,6 +69,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     );
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                    logger.info("🔐 [JWT Filter] Authenticated user: {} | Authorities: {} | Request: {} {}", 
+                            userEmail, userDetails.getAuthorities(), request.getMethod(), request.getRequestURI());
+                } else {
+                    logger.warn("⚠️ [JWT Filter] Token invalid for user: {} | Request: {}", userEmail, request.getRequestURI());
                 }
             }
         } catch (io.jsonwebtoken.ExpiredJwtException e) {

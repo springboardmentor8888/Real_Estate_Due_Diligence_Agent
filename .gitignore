@@ -1,0 +1,25 @@
+# Runtime secrets and local configuration
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+application-local.yaml
+application-local.yml
+
+# Dependency and build output
+node_modules/
+frontend/node_modules/
+frontend/build/
+backend/target/
+backend/.mvn-user/
+
+# IDE, logs, and OS files
+.idea/
+*.iml
+.vscode/
+*.log
+*.tmp
+.DS_Store
+Thumbs.db

@@ -20,6 +20,61 @@ import PropertyRisk from '../components/PropertyRisk';
 import PropertyComparables from '../components/PropertyComparables';
 import GenerateReport from '../components/GenerateReport';
 
+const getAddressDisplay = (property) => {
+  const address = property?.address;
+
+  // Keep compatibility with the page's existing fallback data while safely
+  // handling the nested AddressResponse returned by the backend.
+  if (typeof address === 'string') {
+    const location = [property?.city, property?.state, property?.zipCode]
+      .filter(Boolean)
+      .join(', ');
+
+    return {
+      street: address || 'Address unavailable',
+      location,
+      full: [address, location].filter(Boolean).join(', '),
+      city: property?.city || '',
+      state: property?.state || '',
+    };
+  }
+
+  const street = [address?.addressLine1, address?.addressLine2]
+    .filter(Boolean)
+    .join(', ') || property?.propertyName || 'Address unavailable';
+  const location = [
+    address?.district,
+    address?.city,
+    address?.state,
+    address?.country,
+    address?.postalCode,
+  ].filter(Boolean).join(', ');
+
+  return {
+    street,
+    location,
+    full: [street, location].filter(Boolean).join(', '),
+    city: address?.city || '',
+    state: address?.state || '',
+  };
+};
+
+const normalizeProperty = (property) => ({
+  ...property,
+  id: property?.propertyId ?? property?.id,
+  parcelId: property?.propertyCode ?? property?.parcelId,
+  price: property?.marketValue ?? property?.price ?? 0,
+  size: property?.totalArea != null ? `${property.totalArea} sq ft` : property?.size || 'N/A',
+  listingStatus: property?.status ?? property?.listingStatus ?? 'UNDER_REVIEW',
+  listingDescription: property?.description ?? property?.listingDescription ?? 'No description available.',
+  riskScore: property?.riskScore ?? 0,
+  risk: property?.risk ?? 'Not assessed',
+  ownerName: property?.ownerName ?? 'Not available',
+  zoningCode: property?.zoningCode ?? 'Not available',
+  floodZone: property?.floodZone ?? 'Not available',
+  titleStatus: property?.titleStatus ?? 'Not available',
+});
+
 export default function PropertyDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -37,20 +92,23 @@ export default function PropertyDetails() {
 
   useEffect(() => {
     loadProperty();
-    checkWatchlistStatus();
-  }, [id]);
+    if (isBuyer) {
+      checkWatchlistStatus();
+    }
+  }, [id, isBuyer]);
 
   const loadProperty = async () => {
     try {
       setLoading(true);
       const response = await propertyService.getById(id);
-      setProperty(response.data);
-      if (response.data.price) {
-        setOfferAmount(response.data.price.toString());
+      const normalizedProperty = normalizeProperty(response.data);
+      setProperty(normalizedProperty);
+      if (normalizedProperty.price) {
+        setOfferAmount(normalizedProperty.price.toString());
       }
     } catch (error) {
       console.error('Error loading property:', error);
-      setProperty({
+      setProperty(normalizeProperty({
         id: id,
         parcelId: `P-${id}`,
         address: '123 Main Street, San Francisco, CA',
@@ -75,7 +133,7 @@ export default function PropertyDetails() {
         zoningCode: 'Residential R-1',
         titleStatus: 'Clear',
         createdAt: '2024-01-10'
-      });
+      }));
     } finally {
       setLoading(false);
     }
@@ -113,7 +171,7 @@ export default function PropertyDetails() {
 
     setSubmittingOffer(true);
     try {
-      const response = await api.post(`/buyer/properties/${id}/offer`, null, {
+      const response = await api.post(`/buyer/offers/${id}/offer`, null, {
         params: { amount: parseFloat(offerAmount) }
       });
       
@@ -139,6 +197,7 @@ export default function PropertyDetails() {
     try {
       const { default: jsPDF } = await import('jspdf');
       const doc = new jsPDF();
+      const addressDisplay = getAddressDisplay(property);
       
       doc.setFontSize(20);
       doc.text('Due Diligence Report', 20, 20);
@@ -148,9 +207,9 @@ export default function PropertyDetails() {
       const lineHeight = 8;
       
       const lines = [
-        ['Property:', property.address],
-        ['City:', property.city],
-        ['State:', property.state],
+        ['Property:', addressDisplay.full],
+        ['City:', addressDisplay.city],
+        ['State:', addressDisplay.state],
         ['Price:', `$${property.price?.toLocaleString()}`],
         ['Size:', property.size],
         ['Year Built:', property.yearBuilt],
@@ -207,6 +266,8 @@ export default function PropertyDetails() {
     );
   }
 
+  const addressDisplay = getAddressDisplay(property);
+
   return (
     <>
       <PageHeader 
@@ -220,14 +281,16 @@ export default function PropertyDetails() {
             >
               <ArrowLeft className="mr-2 h-4 w-4" />Back
             </Button>
-            <Button 
-              variant="outline"
-              onClick={toggleWatchlist}
-              className={isWatchlisted ? 'text-amber-500 border-amber-500' : ''}
-            >
-              <Star className={`h-4 w-4 mr-2 ${isWatchlisted ? 'fill-amber-500' : ''}`} />
-              {isWatchlisted ? 'Watchlisted' : 'Add to Watchlist'}
-            </Button>
+            {isBuyer && (
+              <Button 
+                variant="outline"
+                onClick={toggleWatchlist}
+                className={isWatchlisted ? 'text-amber-500 border-amber-500' : ''}
+              >
+                <Star className={`h-4 w-4 mr-2 ${isWatchlisted ? 'fill-amber-500' : ''}`} />
+                {isWatchlisted ? 'Watchlisted' : 'Add to Watchlist'}
+              </Button>
+            )}
             <Button 
               variant="outline"
               onClick={handleDownloadReport}
@@ -235,7 +298,7 @@ export default function PropertyDetails() {
               <Download className="h-4 w-4 mr-2" />
               Download Report
             </Button>
-            {isBuyer && property.listingStatus === 'Available' && (
+            {isBuyer && property.listingStatus === 'AVAILABLE' && (
               <Button 
                 onClick={() => setShowOfferModal(true)}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -254,8 +317,8 @@ export default function PropertyDetails() {
           <div className="absolute inset-0 bg-black/10"></div>
           <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full">
             <span className={`text-sm font-semibold ${
-              property.listingStatus === 'Available' ? 'text-emerald-600' :
-              property.listingStatus === 'Under Contract' ? 'text-amber-600' :
+              property.listingStatus === 'AVAILABLE' || property.listingStatus === 'VERIFIED' ? 'text-emerald-600' :
+              property.listingStatus === 'UNDER_REVIEW' ? 'text-amber-600' :
               'text-gray-600'
             }`}>
               {property.listingStatus}
@@ -265,11 +328,11 @@ export default function PropertyDetails() {
         <div className="p-6 -mt-16">
           <div className="flex flex-col md:flex-row items-start md:items-end justify-between">
             <div className="bg-white rounded-2xl p-4 shadow-lg w-full md:w-auto">
-              <h1 className="text-2xl font-bold text-gray-900">{property.address}</h1>
+              <h1 className="text-2xl font-bold text-gray-900">{addressDisplay.street}</h1>
               <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500">
                 <span className="flex items-center gap-1">
                   <MapPin size={16} />
-                  {property.city}, {property.state}
+                  {addressDisplay.location || 'Location unavailable'}
                 </span>
                 <span className="flex items-center gap-1">
                   <Calendar size={16} />
@@ -453,7 +516,7 @@ export default function PropertyDetails() {
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm font-medium text-gray-700">Property</label>
-                    <p className="text-gray-900">{property.address}</p>
+                    <p className="text-gray-900">{addressDisplay.full}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-700">List Price</label>

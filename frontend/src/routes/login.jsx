@@ -1,26 +1,125 @@
 // src/routes/login.jsx
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { AuthLayout, GoogleButton } from '../components/auth-layout';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Checkbox } from '../components/ui/checkbox';
 import api from '../services/api';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+
+// Role → dashboard mapping (must match App.js routes)
+const ROLE_DASHBOARD = {
+  BUYER:          '/dashboard',
+  SELLER:         '/dashboard',
+  AGENT:          '/agent/dashboard',
+  LEGAL_REVIEWER: '/legal/dashboard',
+  BANK:           '/bank/dashboard',
+};
+
+// Shared styled input component (inline styles — immune to Tailwind purge)
+function Field({ label, icon: Icon, rightSlot, ...inputProps }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <label style={{ fontSize: '11px', fontWeight: '600', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#475569' }}>
+          {label}
+        </label>
+        {rightSlot}
+      </div>
+      <div style={{ position: 'relative' }}>
+        {Icon && (
+          <Icon style={{
+            position: 'absolute', left: '11px', top: '50%', transform: 'translateY(-50%)',
+            width: '15px', height: '15px', color: focused ? '#059669' : '#94a3b8',
+            pointerEvents: 'none', transition: 'color 0.2s',
+          }} />
+        )}
+        <input
+          {...inputProps}
+          onFocus={e => { setFocused(true); inputProps.onFocus?.(e); }}
+          onBlur={e  => { setFocused(false); inputProps.onBlur?.(e); }}
+          style={{
+            width: '100%', boxSizing: 'border-box',
+            paddingLeft: Icon ? '34px' : '12px',
+            paddingRight: inputProps.type === 'password' ? '38px' : '12px',
+            paddingTop: '9px', paddingBottom: '9px',
+            border: `1.5px solid ${focused ? '#059669' : '#e2e8f0'}`,
+            borderRadius: '10px', fontSize: '13.5px',
+            background: '#f8fafc', color: '#1e293b', outline: 'none',
+            boxShadow: focused ? '0 0 0 3px rgba(5,150,105,0.10)' : 'none',
+            transition: 'border-color 0.2s, box-shadow 0.2s',
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// Password field with show/hide toggle
+function PasswordField({ label, value, onChange, placeholder, rightSlot }) {
+  const [show, setShow]     = useState(false);
+  const [focused, setFocused] = useState(false);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <label style={{ fontSize: '11px', fontWeight: '600', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#475569' }}>
+          {label}
+        </label>
+        {rightSlot}
+      </div>
+      <div style={{ position: 'relative' }}>
+        <Lock style={{
+          position: 'absolute', left: '11px', top: '50%', transform: 'translateY(-50%)',
+          width: '15px', height: '15px', color: focused ? '#059669' : '#94a3b8',
+          pointerEvents: 'none', transition: 'color 0.2s',
+        }} />
+        <input
+          type={show ? 'text' : 'password'}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          required
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          style={{
+            width: '100%', boxSizing: 'border-box',
+            paddingLeft: '34px', paddingRight: '38px',
+            paddingTop: '9px', paddingBottom: '9px',
+            border: `1.5px solid ${focused ? '#059669' : '#e2e8f0'}`,
+            borderRadius: '10px', fontSize: '13.5px',
+            background: '#f8fafc', color: '#1e293b', outline: 'none',
+            boxShadow: focused ? '0 0 0 3px rgba(5,150,105,0.10)' : 'none',
+            transition: 'border-color 0.2s, box-shadow 0.2s',
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => setShow(s => !s)}
+          style={{
+            position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+            background: 'none', border: 'none', cursor: 'pointer', padding: '2px',
+            color: '#94a3b8', display: 'flex', alignItems: 'center',
+          }}
+          tabIndex={-1}
+        >
+          {show ? <EyeOff size={14} /> : <Eye size={14} />}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function LoginPage() {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [email, setEmail] = useState('');
+  const [error, setError]     = useState('');
+  const [email, setEmail]     = useState('');
   const [password, setPassword] = useState('');
-  const [remember, setRemember] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    if (!email || !password) {
-      setError('Please enter both email and password');
+
+    if (!email.trim() || !password) {
+      setError('Please enter your email and password.');
       return;
     }
 
@@ -28,42 +127,51 @@ export default function LoginPage() {
     setError('');
 
     try {
-      console.log('🔐 Login attempt for:', email);
-      
       const response = await api.post('/auth/login', {
-        email: email.trim(),
-        password: password
+        email:    email.trim().toLowerCase(),
+        password: password,
       });
-      
-      console.log('✅ Login response:', response.data);
-      
+
       const data = response.data;
-      
+
+      // ── Normalise role (guard against legacy ADMIN ───────────────────────────
+      let role = (data.role || '').toUpperCase().trim();
+      if (!role || role === 'ADMIN') role = 'BUYER'; // safe fallback
+
+      const fullName =
+        data.fullName ||
+        `${data.firstName || ''} ${data.lastName || ''}`.trim() ||
+        email;
+
+      // ── Persist session in localStorage ─────────────────────────────────────
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify({
-        fullName: data.fullName,
-        email: data.email,
-        role: data.role,
-        userId: data.userId,
-        active: data.active
+        userId:   data.userId,
+        fullName: fullName,
+        email:    data.email || email.trim(),
+        role:     role,
+        active:   data.active !== undefined ? Boolean(data.active) : true,
       }));
-      
-      console.log('👤 User role:', data.role);
-      
-      if (data.role === 'ADMIN') {
-        window.location.href = '/admin';
-      } else {
-        window.location.href = '/dashboard';
-      }
-      
+
+      // ── Redirect to role-specific dashboard ──────────────────────────────────
+      const destination = ROLE_DASHBOARD[role] || '/dashboard';
+      window.location.href = destination;
+
     } catch (err) {
-      console.error('❌ Login error:', err);
-      
-      let errorMessage = 'Login failed. Please try again.';
-      if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
+      console.error('Login error:', err);
+
+      let msg = 'Sign in failed. Please check your credentials and try again.';
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        msg = 'Incorrect email or password.';
+      } else if (err.response?.data?.message) {
+        msg = err.response.data.message;
+      } else if (err.response?.data?.error) {
+        msg = err.response.data.error;
+      } else if (!err.response) {
+        msg = 'Cannot connect to server. Please make sure the backend is running.';
       }
-      setError(errorMessage);
+
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -71,115 +179,118 @@ export default function LoginPage() {
 
   return (
     <AuthLayout
-      // ✅ FIX: Title is now Emerald Green
-      title={<span style={{ color: '#10b981' }}>Welcome back</span>}
-      subtitle="Sign in to your Parcel workspace."
-      footer={<>New to Parcel? <Link to="/register" style={{ color: '#10b981' }} className="hover:underline">Create an account</Link></>}
-      // ✅ FIX: Added the Real Estate Logo here
-      logo={
-        <div className="flex items-center gap-3">
-          <img 
-            src="/logo.png" 
-            alt="RealEstate" 
-            className="h-10 w-auto object-contain"
-            onError={(e) => {
-              e.target.style.display = 'none';
-              e.target.nextSibling.style.display = 'flex';
-            }}
-          />
-          <div className="flex flex-col">
-            <span className="text-lg font-bold text-white">RealEstate</span>
-            <span className="text-[10px] text-emerald-400 font-medium">Due Diligence</span>
-          </div>
-        </div>
+      title="Welcome back"
+      subtitle="Sign in to your RealEstate Due Diligence account."
+      footer={
+        <>
+          New to RealEstate?{' '}
+          <Link
+            to="/register"
+            style={{ color: '#059669', fontWeight: '600', textDecoration: 'none' }}
+          >
+            Create an account
+          </Link>
+        </>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <GoogleButton />
-        
-        <div className="flex items-center gap-3 text-[11px] uppercase tracking-widest text-muted-foreground">
-          <div className="h-px flex-1 bg-border" /> or <div className="h-px flex-1 bg-border" />
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+        {/* Google sign-in */}
+        <GoogleButton>Sign in with Google</GoogleButton>
+
+        {/* Divider */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#94a3b8' }}>
+          <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+          or
+          <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
         </div>
-        
+
+        {/* Error banner */}
         {error && (
-          <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
+          <div style={{
+            background: '#fef2f2', border: '1px solid #fecaca',
+            borderRadius: '10px', padding: '10px 12px',
+            fontSize: '13px', color: '#dc2626',
+          }}>
             {error}
           </div>
         )}
-        
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="email" className="text-[12px]">Work email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@company.com"
-              className="bg-gray-50 border-gray-200 focus:ring-2 focus:ring-emerald-500"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password" className="text-[12px]">Password</Label>
-              <Link to="/forgot-password" style={{ color: '#10b981' }} className="hover:underline">Forgot?</Link>
-            </div>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              className="bg-gray-50 border-gray-200 focus:ring-2 focus:ring-emerald-500"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          
-          <label className="flex cursor-pointer items-center gap-2 text-[12.5px] text-muted-foreground">
-            <Checkbox
-              checked={remember}
-              onCheckedChange={(checked) => setRemember(checked)}
-            />
-            Remember me for 30 days
-          </label>
-          
-          {/* ✅ FIX: REPLACED GHOST BUTTON WITH VISIBLE GREEN BUTTON */}
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              backgroundColor: '#10b981',
-              color: '#ffffff',
-              fontWeight: 'bold',
-              width: '100%',
-              padding: '12px 0',
-              borderRadius: '12px',
-              boxShadow: '0 4px 14px 0 rgba(16, 185, 129, 0.39)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              cursor: 'pointer',
-              border: 'none',
-              transition: 'all 0.2s ease-in-out',
-              marginTop: '16px'
-            }}
-            onMouseOver={(e) => e.target.style.backgroundColor = '#059669'}
-            onMouseOut={(e) => e.target.style.backgroundColor = '#10b981'}
-          >
-            {loading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                Signing in...
-              </>
-            ) : (
-              'Sign in'
-            )}
-          </button>
-        </div>
+
+        {/* Email */}
+        <Field
+          label="Email"
+          icon={Mail}
+          type="email"
+          placeholder="you@company.com"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          required
+          autoComplete="email"
+        />
+
+        {/* Password with forgot link */}
+        <PasswordField
+          label="Password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          placeholder="Your password"
+          rightSlot={
+            <Link
+              to="/forgot-password"
+              style={{ fontSize: '12px', color: '#059669', fontWeight: '500', textDecoration: 'none' }}
+            >
+              Forgot password?
+            </Link>
+          }
+        />
+
+        {/* Sign in button — explicit inline styles, uses e.currentTarget not e.target */}
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            width: '100%', padding: '11px 0', marginTop: '2px',
+            background: loading ? '#d1fae5' : '#059669',
+            color: '#ffffff', fontWeight: '700', fontSize: '14px',
+            border: 'none', borderRadius: '12px',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            boxShadow: loading ? 'none' : '0 4px 14px rgba(5,150,105,0.30)',
+            transition: 'background 0.2s, box-shadow 0.2s, transform 0.15s',
+            opacity: loading ? 0.75 : 1,
+          }}
+          onMouseOver={e => {
+            if (!loading) {
+              e.currentTarget.style.background  = '#047857';
+              e.currentTarget.style.boxShadow   = '0 6px 20px rgba(4,120,87,0.35)';
+              e.currentTarget.style.transform   = 'translateY(-1px)';
+            }
+          }}
+          onMouseOut={e => {
+            if (!loading) {
+              e.currentTarget.style.background  = '#059669';
+              e.currentTarget.style.boxShadow   = '0 4px 14px rgba(5,150,105,0.30)';
+              e.currentTarget.style.transform   = 'translateY(0)';
+            }
+          }}
+        >
+          {loading ? (
+            <>
+              <div style={{
+                width: '14px', height: '14px', borderRadius: '50%',
+                border: '2px solid rgba(255,255,255,0.4)',
+                borderTopColor: '#fff',
+                animation: 'spin 0.7s linear infinite',
+              }} />
+              Signing in…
+            </>
+          ) : (
+            'Sign in'
+          )}
+        </button>
       </form>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </AuthLayout>
   );
 }

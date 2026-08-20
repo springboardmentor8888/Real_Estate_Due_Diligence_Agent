@@ -31,8 +31,8 @@ public class PropertyTaxController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Create property tax record", description = "Creates a new property tax record. Only Administrators and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Create property tax record", description = "Creates a new property tax record. Only Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Tax record created successfully",
                     content = @Content(schema = @Schema(implementation = PropertyTaxResponse.class))),
@@ -68,8 +68,8 @@ public class PropertyTaxController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Update tax record details", description = "Updates details of an existing property tax record. Only Administrators and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Update tax record details", description = "Updates details of an existing property tax record. Only Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Tax record updated successfully",
                     content = @Content(schema = @Schema(implementation = PropertyTaxResponse.class))),
@@ -84,8 +84,8 @@ public class PropertyTaxController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Delete tax record", description = "Deletes a property tax record. Only Administrators and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Delete tax record", description = "Deletes a property tax record. Only Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Tax record deleted successfully"),
             @ApiResponse(responseCode = "404", description = "Tax record not found")

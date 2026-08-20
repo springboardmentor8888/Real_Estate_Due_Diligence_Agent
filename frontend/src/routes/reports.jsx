@@ -1,56 +1,67 @@
 // src/routes/reports.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PageHeader } from '../components/app-shell';
 import { Badge } from '../components/ui/badge';
-import { FileText, Download, Eye, Clock, CheckCircle } from 'lucide-react';
+import { FileText, Download, Eye, Clock, CheckCircle, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { dueDiligenceService } from '../services/api';
 
 export default function ReportsPage() {
-  const [reports] = useState([
-    {
-      id: 1,
-      property: '425 Market Street, SF',
-      type: 'Due Diligence Report',
-      date: '2024-01-15',
-      status: 'Completed',
-      riskScore: 18,
-    },
-    {
-      id: 2,
-      property: '1200 Brickell Avenue, Miami',
-      type: 'Risk Assessment',
-      date: '2024-01-12',
-      status: 'In Progress',
-      riskScore: 42,
-    },
-    {
-      id: 3,
-      property: '500 W 33rd Street, NY',
-      type: 'Comparables Report',
-      date: '2024-01-10',
-      status: 'Completed',
-      riskScore: 12,
-    },
-  ]);
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchReports();
+  }, []);
+
+  const fetchReports = async () => {
+    try {
+      setLoading(true);
+      const res = await dueDiligenceService.getReports();
+      const list = Array.isArray(res.data) ? res.data : [];
+      setReports(list);
+    } catch (err) {
+      console.error('Error fetching reports:', err);
+      setReports([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusBadge = (status) => {
-    if (status === 'Completed') {
-      return <Badge className="bg-emerald-500"><CheckCircle className="h-3 w-3 mr-1" /> Completed</Badge>;
-    } else if (status === 'In Progress') {
-      return <Badge className="bg-amber-500"><Clock className="h-3 w-3 mr-1" /> In Progress</Badge>;
+    if (status === 'COMPLETED' || status === 'GENERATED') {
+      return <Badge className="bg-emerald-500 text-white"><CheckCircle className="h-3 w-3 mr-1" /> Completed</Badge>;
+    } else if (status === 'IN_PROGRESS' || status === 'PENDING') {
+      return <Badge className="bg-amber-500 text-white"><Clock className="h-3 w-3 mr-1" /> In Progress</Badge>;
     }
-    return <Badge variant="outline">{status}</Badge>;
+    return <Badge variant="outline">{status || 'Draft'}</Badge>;
   };
+
+  const formatDate = (dStr) => {
+    if (!dStr) return 'Recent';
+    try {
+      return new Date(dStr).toLocaleDateString();
+    } catch {
+      return 'Recent';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+      </div>
+    );
+  }
 
   return (
     <>
       <PageHeader 
         title="Due Diligence Reports" 
-        subtitle="View and manage all your property reports"
+        subtitle={`Total reports generated: ${reports.length}`}
         actions={
-          // ✅ GUARANTEED GREEN BUTTON
           <button
-            onClick={() => alert('New Report workflow clicked!')}
+            onClick={() => window.location.href = '/properties'}
             style={{
               backgroundColor: '#10b981',
               color: '#ffffff',
@@ -68,8 +79,8 @@ export default function ReportsPage() {
             onMouseOver={(e) => e.target.style.backgroundColor = '#059669'}
             onMouseOut={(e) => e.target.style.backgroundColor = '#10b981'}
           >
-            <FileText className="h-4 w-4" />
-            New Report
+            <Plus className="h-4 w-4" />
+            Generate from Property
           </button>
         }
       />
@@ -77,10 +88,10 @@ export default function ReportsPage() {
       <div className="space-y-4">
         {reports.map((report, index) => (
           <motion.div
-            key={report.id}
+            key={report.reportId || report.id || index}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
+            transition={{ delay: index * 0.05 }}
             className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all"
           >
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -89,28 +100,39 @@ export default function ReportsPage() {
                   <FileText className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-slate-900">{report.property}</h3>
-                  <p className="text-sm text-slate-500">{report.type}</p>
+                  <h3 className="font-semibold text-slate-900">{report.reportName || report.propertyName || 'Due Diligence Report'}</h3>
+                  <p className="text-sm text-slate-500">{report.propertyName ? `Property: ${report.propertyName}` : (report.executiveSummary || 'Real estate risk analysis')}</p>
                   <div className="flex flex-wrap items-center gap-3 mt-2">
-                    <span className="text-xs text-slate-500">{report.date}</span>
-                    {getStatusBadge(report.status)}
-                    <Badge variant="outline" className="text-xs bg-slate-100">
-                      Risk Score: {report.riskScore}
-                    </Badge>
+                    <span className="text-xs text-slate-500">{formatDate(report.generatedAt || report.createdAt)}</span>
+                    {getStatusBadge(report.reportStatus || report.status)}
+                    {report.overallRiskScore !== undefined && report.overallRiskScore !== null && (
+                      <Badge variant="outline" className="text-xs bg-slate-100">
+                        Risk Score: {report.overallRiskScore}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button className="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                  <Eye className="h-4 w-4" /> View
-                </button>
-                <button className="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                  <Download className="h-4 w-4" /> PDF
+              <div className="flex items-center gap-2 self-end md:self-center">
+                <button 
+                  onClick={() => report.propertyId && (window.location.href = `/properties/${report.propertyId}`)}
+                  className="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors flex items-center gap-1.5"
+                >
+                  <Eye className="h-4 w-4" />
+                  View Details
                 </button>
               </div>
             </div>
           </motion.div>
         ))}
+
+        {reports.length === 0 && (
+          <div className="bg-white rounded-2xl p-12 text-center border border-slate-100 shadow-sm">
+            <FileText className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-slate-800">No reports generated yet</h3>
+            <p className="text-slate-500 mt-1">Select a property to generate its first due diligence report.</p>
+          </div>
+        )}
       </div>
     </>
   );

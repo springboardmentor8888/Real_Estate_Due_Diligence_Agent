@@ -1,6 +1,10 @@
+-- Seed roles: BUYER, SELLER, AGENT, LEGAL_REVIEWER, BANK
+-- NOTE: ADMIN role has been intentionally removed from this application.
+-- Use ON CONFLICT DO NOTHING so this can be re-run safely.
 INSERT INTO roles (role_name) VALUES
 ('BUYER'),
-('REAL_ESTATE_AGENT'),
+('SELLER'),
+('AGENT'),
 ('LEGAL_REVIEWER'),
-('FINANCIAL_INSTITUTION'),
-('ADMINISTRATOR');
+('BANK')
+ON CONFLICT (role_name) DO NOTHING;

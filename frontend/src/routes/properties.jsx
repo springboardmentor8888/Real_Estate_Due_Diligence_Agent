@@ -1,11 +1,13 @@
 // src/routes/properties.jsx
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../components/app-shell';
 import { Input } from '../components/ui/input';
-import { Search, Building2 } from 'lucide-react';
+import { Search, Building2, Eye, ShieldCheck, MapPin, DollarSign } from 'lucide-react';
 import { propertyService } from '../services/api';
 
 export default function PropertiesPage() {
+  const navigate = useNavigate();
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -17,10 +19,12 @@ export default function PropertiesPage() {
   const fetchProperties = async () => {
     setLoading(true);
     try {
-      const response = await propertyService.getAll();
-      setProperties(response.data);
+      const response = await propertyService.getAll({ size: 30 });
+      const list = response.data?.content || (Array.isArray(response.data) ? response.data : []);
+      setProperties(list);
     } catch (error) {
-      console.error('Error fetching properties:', error);
+      console.error('Error fetching properties from backend:', error);
+      setProperties([]);
     } finally {
       setLoading(false);
     }
@@ -33,10 +37,24 @@ export default function PropertiesPage() {
     }
     setLoading(true);
     try {
-      const response = await propertyService.search(searchQuery);
-      setProperties(response.data);
+      // The API exposes structured search criteria only. Fetch the catalogue and
+      // filter the fields displayed by this directory instead of sending an
+      // unsupported `query` parameter that the backend would ignore.
+      const response = await propertyService.getAll({ size: 100 });
+      const list = response.data?.content || (Array.isArray(response.data) ? response.data : []);
+      const query = searchQuery.trim().toLowerCase();
+      setProperties(list.filter((property) => [
+        property.propertyName,
+        property.propertyCode,
+        property.address?.addressLine1,
+        property.address?.addressLine2,
+        property.address?.city,
+        property.address?.state,
+        property.address?.postalCode,
+      ].filter(Boolean).some((value) => String(value).toLowerCase().includes(query))));
     } catch (error) {
       console.error('Error searching properties:', error);
+      setProperties([]);
     } finally {
       setLoading(false);
     }
@@ -44,26 +62,30 @@ export default function PropertiesPage() {
 
   const formatCurrency = (amount) => {
     if (!amount) return '$0';
-    return amount >= 1000000 ? `$${(amount / 1000000).toFixed(1)}M` : `$${amount.toLocaleString()}`;
+    return '$' + Number(amount).toLocaleString();
   };
 
-  const getRiskColor = (risk) => {
-    if (!risk) return 'text-gray-500 bg-gray-100';
-    switch(risk.toLowerCase()) {
-      case 'low': return 'text-emerald-600 bg-emerald-500/10';
-      case 'medium': return 'text-amber-500 bg-amber-500/10';
-      case 'high': return 'text-red-500 bg-red-500/10';
-      default: return 'text-gray-500 bg-gray-100';
+  const getRiskColor = (status) => {
+    switch (status?.toUpperCase()) {
+      case 'AVAILABLE':
+      case 'VERIFIED':
+        return 'text-emerald-700 bg-emerald-50 border-emerald-200';
+      case 'UNDER_REVIEW':
+      case 'PENDING':
+        return 'text-amber-700 bg-amber-50 border-amber-200';
+      case 'SOLD':
+        return 'text-blue-700 bg-blue-50 border-blue-200';
+      default:
+        return 'text-slate-700 bg-slate-50 border-slate-200';
     }
   };
 
   return (
     <>
       <PageHeader 
-        title="Property Search" 
-        subtitle="Find and analyze properties across the US"
+        title="Property Directory" 
+        subtitle="Explore real properties and due diligence assets retrieved live from PostgreSQL"
         actions={
-          // ✅ MOVED SEARCH BAR AND BUTTON SIDE-BY-SIDE HERE
           <div className="flex items-center gap-3 w-full md:w-auto">
             <div className="relative flex-1 md:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -100,81 +122,102 @@ export default function PropertiesPage() {
           </div>
         }
       />
-
-      {/* ✅ REMOVED THE INPUT FROM HERE BECAUSE IT'S NOW IN THE HEADER */}
       
       <div className="space-y-4">
         {loading ? (
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-12 text-center">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto"></div>
-            <p className="mt-4 text-gray-500">Loading properties...</p>
+            <p className="mt-4 text-gray-500 text-sm">Loading properties from PostgreSQL...</p>
           </div>
         ) : properties.length === 0 ? (
-          <div className="glass rounded-2xl p-12 text-center">
+          <div className="bg-white rounded-2xl p-12 text-center border border-slate-100 shadow-sm">
             <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium">No properties found</h3>
-            <p className="text-gray-500">Try adjusting your search criteria</p>
+            <h3 className="text-base font-semibold text-slate-900">No properties found in database</h3>
+            <p className="text-xs text-gray-500 mt-1">Try adjusting your search criteria or add new properties.</p>
           </div>
         ) : (
-          properties.map((property) => (
-            <div key={property.id} className="bg-white rounded-2xl shadow-md border border-gray-100 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">{property.address}</h3>
-                      <p className="text-gray-600">{property.city}, {property.state} {property.zipCode}</p>
-                      <p className="text-xs text-gray-400 mt-1">Parcel ID: {property.parcelId}</p>
+          properties.map((property) => {
+            const propId = property.propertyId || property.id;
+            const addressLine = property.address?.addressLine1 || property.propertyName || property.address || 'Property Address';
+            const city = property.address?.city || property.city || '';
+            const state = property.address?.state || property.state || '';
+            const postalCode = property.address?.postalCode || property.zipCode || '';
+            const locationStr = (city || state) ? `${city}${city && state ? ', ' : ''}${state} ${postalCode}` : '';
+            const price = property.marketValue || property.price || 0;
+            const code = property.propertyCode || property.parcelId || `P-${propId}`;
+            const size = property.totalArea ? `${property.totalArea} sq ft` : (property.size || 'N/A');
+            const propType = property.propertyType || 'Real Estate';
+            const status = property.status || 'AVAILABLE';
+
+            return (
+              <div key={propId} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all">
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-bold text-slate-900">{addressLine}</h3>
+                          <span className="text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono font-semibold">
+                            {code}
+                          </span>
+                        </div>
+                        {locationStr && <p className="text-xs text-slate-500 mt-1">{locationStr}</p>}
+                        {property.description && (
+                          <p className="text-xs text-slate-600 mt-2 line-clamp-2">{property.description}</p>
+                        )}
+                      </div>
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getRiskColor(status)}`}>
+                        {status}
+                      </span>
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRiskColor(property.risk)}`}>
-                      {property.risk || 'Unknown'} Risk
-                    </span>
+                    
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 pt-3 border-t border-slate-100">
+                      <div>
+                        <p className="text-[11px] text-slate-400 uppercase font-medium">Market Value</p>
+                        <p className="font-bold text-emerald-600 text-sm mt-0.5">{formatCurrency(price)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-slate-400 uppercase font-medium">Total Area</p>
+                        <p className="font-semibold text-slate-800 text-sm mt-0.5">{size}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-slate-400 uppercase font-medium">Property Type</p>
+                        <p className="font-semibold text-slate-800 text-sm mt-0.5">{propType}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-slate-400 uppercase font-medium">Built Year</p>
+                        <p className="font-semibold text-slate-800 text-sm mt-0.5">{property.builtYear || 'N/A'}</p>
+                      </div>
+                    </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
-                    <div>
-                      <p className="text-xs text-gray-500">Price</p>
-                      <p className="font-semibold text-gray-900">{formatCurrency(property.price)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Size</p>
-                      <p className="font-semibold text-gray-900">{property.size || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Type</p>
-                      <p className="font-semibold text-gray-900">{property.propertyType || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Cap Rate</p>
-                      <p className="font-semibold text-gray-900">{property.capRate || 'N/A'}%</p>
-                    </div>
-                  </div>
+                  <button
+                    onClick={() => navigate(`/properties/${propId}`)}
+                    style={{
+                      backgroundColor: '#10b981',
+                      color: '#ffffff',
+                      fontWeight: 'bold',
+                      padding: '10px 18px',
+                      borderRadius: '10px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      cursor: 'pointer',
+                      border: 'none',
+                      transition: 'all 0.2s ease-in-out',
+                      whiteSpace: 'nowrap',
+                      alignSelf: 'center'
+                    }}
+                    onMouseOver={(e) => e.target.style.backgroundColor = '#059669'}
+                    onMouseOut={(e) => e.target.style.backgroundColor = '#10b981'}
+                  >
+                    <Eye className="h-4 w-4" />
+                    Due Diligence
+                  </button>
                 </div>
-                
-                <button
-                  onClick={() => window.location.href = `/properties/${property.id}`}
-                  style={{
-                    backgroundColor: '#10b981',
-                    color: '#ffffff',
-                    fontWeight: 'bold',
-                    padding: '8px 16px',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    cursor: 'pointer',
-                    border: 'none',
-                    transition: 'all 0.2s ease-in-out',
-                    whiteSpace: 'nowrap'
-                  }}
-                  onMouseOver={(e) => e.target.style.backgroundColor = '#059669'}
-                  onMouseOut={(e) => e.target.style.backgroundColor = '#10b981'}
-                >
-                  View Details
-                </button>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </>

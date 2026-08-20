@@ -20,37 +20,13 @@ export default function OfferHistory() {
 
   const fetchOffers = async () => {
     try {
-      const response = await api.get('/buyer/offers');
-      setOffers(response.data.offers || []);
+      setLoading(true);
+      const res = await api.get('/buyer/offers');
+      const list = Array.isArray(res.data) ? res.data : [];
+      setOffers(list);
     } catch (error) {
       console.error('Error fetching offers:', error);
-      // Mock data
-      setOffers([
-        {
-          id: 1,
-          property: { address: '425 Market Street, SF', price: 48500000 },
-          amount: 45000000,
-          status: 'PENDING',
-          createdAt: '2024-01-15',
-          updatedAt: '2024-01-15'
-        },
-        {
-          id: 2,
-          property: { address: '1200 Brickell Avenue, Miami', price: 62000000 },
-          amount: 58000000,
-          status: 'ACCEPTED',
-          createdAt: '2024-01-10',
-          updatedAt: '2024-01-12'
-        },
-        {
-          id: 3,
-          property: { address: '500 W 33rd Street, NY', price: 145000000 },
-          amount: 140000000,
-          status: 'REJECTED',
-          createdAt: '2024-01-05',
-          updatedAt: '2024-01-07'
-        }
-      ]);
+      setOffers([]);
     } finally {
       setLoading(false);
     }

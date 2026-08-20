@@ -17,6 +17,7 @@ public interface RiskService {
     List<RiskCategoryResponse> getAllRiskCategories();
 
     // Risk Assessment Operations
+    List<RiskAssessmentResponse> getAllRiskAssessments();
     RiskAssessmentResponse createRiskAssessment(RiskAssessmentRequest request, String assessorEmail);
     RiskAssessmentResponse getRiskAssessmentById(Long id);
     List<RiskAssessmentResponse> getRiskAssessmentsByProperty(Long propertyId);

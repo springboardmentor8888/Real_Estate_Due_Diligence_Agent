@@ -10,8 +10,8 @@ import { Textarea } from '../../components/ui/textarea';
 import { Upload, X, Image, Plus, Loader2, MapPin, DollarSign, Home, Building2 } from 'lucide-react';
 import api from '../../services/api';
 
-const propertyTypes = ['Residential', 'Commercial', 'Office', 'Mixed-Use', 'Retail', 'Industrial', 'Land', 'Apartment', 'Condo'];
-const listingStatuses = ['AVAILABLE', 'UNDER_CONTRACT', 'SOLD', 'WITHDRAWN'];
+const propertyTypes = ['Residential', 'Commercial', 'Industrial', 'Mixed-Use'];
+const listingStatuses = ['AVAILABLE', 'UNDER_REVIEW', 'VERIFIED', 'SOLD', 'REJECTED'];
 const ownerTypes = ['INDIVIDUAL', 'CORPORATION', 'TRUST', 'LLC'];
 
 export default function ListProperty() {
@@ -54,8 +54,8 @@ export default function ListProperty() {
   };
 
   const handleImageUpload = (e) => {
-    const files = Array.from(e.target.files);
-    setImages([...images, ...files]);
+    e.target.value = '';
+    alert('Property image uploads are not available yet. Images are not stored by the current backend.');
   };
 
   const removeImage = (index) => {
@@ -67,49 +67,33 @@ export default function ListProperty() {
     setLoading(true);
 
     try {
-      const formDataToSend = new FormData();
-      
       const propertyData = {
-        parcelId: formData.parcelId,
-        address: formData.address,
-        city: formData.city,
-        state: formData.state,
-        zipCode: formData.zipCode,
+        propertyCode: formData.parcelId.trim(),
         propertyType: formData.propertyType,
-        price: formData.price ? parseFloat(formData.price) : null,
-        size: formData.size || null,
+        propertyName: formData.address.trim(),
+        description: [formData.listingDescription, formData.propertyFeatures]
+          .filter(Boolean)
+          .join('\n\n') || null,
         yearBuilt: formData.yearBuilt ? parseInt(formData.yearBuilt) : null,
-        bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : null,
-        bathrooms: formData.bathrooms ? parseFloat(formData.bathrooms) : null,
-        squareFootage: formData.squareFootage ? parseInt(formData.squareFootage) : null,
-        lotSize: formData.lotSize ? parseFloat(formData.lotSize) : null,
-        latitude: formData.latitude ? parseFloat(formData.latitude) : null,
-        longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-        ownerName: formData.ownerName,
-        ownerEmail: formData.ownerEmail || null,
-        ownerPhone: formData.ownerPhone || null,
-        ownerType: formData.ownerType,
-        listingPrice: formData.listingPrice ? parseFloat(formData.listingPrice) : null,
-        minimumOfferPrice: formData.minimumOfferPrice ? parseFloat(formData.minimumOfferPrice) : null,
-        listingDescription: formData.listingDescription || null,
-        propertyFeatures: formData.propertyFeatures || null,
-        listingStatus: formData.listingStatus
+        totalArea: formData.squareFootage || formData.size ? parseFloat(formData.squareFootage || formData.size) : null,
+        landArea: formData.lotSize ? parseFloat(formData.lotSize) : null,
+        marketValue: formData.listingPrice || formData.price ? parseFloat(formData.listingPrice || formData.price) : null,
+        address: {
+          addressType: 'PHYSICAL',
+          addressLine1: formData.address.trim(),
+          city: formData.city.trim(),
+          state: formData.state.trim(),
+          country: 'USA',
+          postalCode: formData.zipCode.trim(),
+          latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+          longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+        },
       };
 
-      formDataToSend.append('property', new Blob([JSON.stringify(propertyData)], {
-        type: 'application/json'
-      }));
+      const response = await api.post('/properties', propertyData);
 
-      images.forEach(image => {
-        formDataToSend.append('images', image);
-      });
-
-      const response = await api.post('/seller/list-property', formDataToSend, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-
-      if (response.data.success) {
-        navigate('/agent/my-properties');
+      if (response.data?.propertyId) {
+        navigate('/agent/properties');
       } else {
         alert(response.data.message || 'Failed to list property');
       }
@@ -130,7 +114,7 @@ export default function ListProperty() {
         actions={
           <Button 
             variant="outline" 
-            onClick={() => navigate('/agent/my-properties')} 
+            onClick={() => navigate('/agent/properties')} 
             className="border-slate-300 text-slate-700 hover:bg-slate-50"
           >
             Cancel
@@ -451,7 +435,7 @@ export default function ListProperty() {
 
         {/* Submit Buttons */}
         <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={() => navigate('/agent/my-properties')} className="border-slate-300 text-slate-700 hover:bg-slate-50">
+          <Button variant="outline" onClick={() => navigate('/agent/properties')} className="border-slate-300 text-slate-700 hover:bg-slate-50">
             Cancel
           </Button>
           <Button type="submit" disabled={loading} className="bg-emerald-600 hover:bg-emerald-700 text-white px-8">

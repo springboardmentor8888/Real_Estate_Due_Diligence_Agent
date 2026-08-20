@@ -1,8 +1,8 @@
 // src/routes/bank/loans.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
-import { PageHeader } from '../../components/app-shell';
-import { Button } from '../../components/ui/button';
+import { PageHeader } from '../components/app-shell';
+import { Button } from '../components/ui/button';
 import { FileText, Clock, CheckCircle, XCircle } from 'lucide-react';
 
 export default function LoanApplications() {

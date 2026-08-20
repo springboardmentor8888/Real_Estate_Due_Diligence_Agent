@@ -31,8 +31,8 @@ public class PermitController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Create permit record", description = "Creates a new building permit record. Only Administrators and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Create permit record", description = "Creates a new building permit record. Only Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Permit record created successfully",
                     content = @Content(schema = @Schema(implementation = PermitResponse.class))),
@@ -69,8 +69,8 @@ public class PermitController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Update permit record details", description = "Updates details of an existing building permit record. Only Administrators and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Update permit record details", description = "Updates details of an existing building permit record. Only Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Permit record updated successfully",
                     content = @Content(schema = @Schema(implementation = PermitResponse.class))),
@@ -86,8 +86,8 @@ public class PermitController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Delete permit record", description = "Deletes a permit record. Only Administrators and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Delete permit record", description = "Deletes a permit record. Only Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Permit record deleted successfully"),
             @ApiResponse(responseCode = "404", description = "Permit record not found")

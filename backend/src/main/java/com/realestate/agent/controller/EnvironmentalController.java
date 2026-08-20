@@ -31,8 +31,8 @@ public class EnvironmentalController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Create environmental record", description = "Creates a new environmental record for a property. Only Administrators and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Create environmental record", description = "Creates a new environmental record for a property. Only Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Environmental record created successfully",
                     content = @Content(schema = @Schema(implementation = EnvironmentalRecordResponse.class))),
@@ -72,8 +72,8 @@ public class EnvironmentalController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Update environmental record details", description = "Updates details of an existing environmental record. Only Administrators and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Update environmental record details", description = "Updates details of an existing environmental record. Only Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Environmental record updated successfully",
                     content = @Content(schema = @Schema(implementation = EnvironmentalRecordResponse.class))),
@@ -88,8 +88,8 @@ public class EnvironmentalController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Delete environmental record", description = "Deletes an environmental record. Only Administrators and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Delete environmental record", description = "Deletes an environmental record. Only Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Environmental record deleted successfully"),
             @ApiResponse(responseCode = "404", description = "Environmental record not found")

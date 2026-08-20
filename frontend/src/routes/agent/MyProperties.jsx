@@ -71,9 +71,10 @@ export default function MyProperties() {
   const getStatusColor = (status) => {
     switch(status) {
       case 'AVAILABLE': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-      case 'UNDER_CONTRACT': return 'bg-amber-100 text-amber-700 border-amber-200';
+      case 'UNDER_REVIEW': return 'bg-amber-100 text-amber-700 border-amber-200';
+      case 'VERIFIED': return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'SOLD': return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'WITHDRAWN': return 'bg-red-100 text-red-700 border-red-200';
+      case 'REJECTED': return 'bg-red-100 text-red-700 border-red-200';
       default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
@@ -81,7 +82,7 @@ export default function MyProperties() {
   const getStatusIcon = (status) => {
     switch(status) {
       case 'AVAILABLE': return <CheckCircle className="h-3 w-3" />;
-      case 'UNDER_CONTRACT': return <Clock className="h-3 w-3" />;
+      case 'UNDER_REVIEW': return <Clock className="h-3 w-3" />;
       case 'SOLD': return <CheckCircle className="h-3 w-3" />;
       case 'WITHDRAWN': return <XCircle className="h-3 w-3" />;
       default: return null;
@@ -182,9 +183,10 @@ export default function MyProperties() {
             >
               <option value="ALL">All Status</option>
               <option value="AVAILABLE">Available</option>
-              <option value="UNDER_CONTRACT">Under Contract</option>
+              <option value="UNDER_REVIEW">Under Review</option>
+              <option value="VERIFIED">Verified</option>
               <option value="SOLD">Sold</option>
-              <option value="WITHDRAWN">Withdrawn</option>
+              <option value="REJECTED">Rejected</option>
             </select>
           </div>
         </div>
@@ -278,9 +280,10 @@ export default function MyProperties() {
                       <Eye className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => navigate(`/agent/edit-property/${property.id}`)}
-                      className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors"
-                      title="Edit Property"
+                      type="button"
+                      disabled
+                      className="p-1.5 rounded-lg text-slate-300 cursor-not-allowed"
+                      title="Editing is not available yet"
                     >
                       <Edit className="h-4 w-4" />
                     </button>
@@ -294,31 +297,20 @@ export default function MyProperties() {
                   </div>
                 </div>
                 
-                {/* Quick Status Update */}
-                {property.listingStatus === 'AVAILABLE' && (
-                  <div className="mt-2 flex gap-2">
-                    <button
-                      onClick={() => updateStatus(property.id, 'UNDER_CONTRACT')}
-                      className="text-xs bg-amber-50 text-amber-600 px-2 py-1 rounded hover:bg-amber-100 transition-colors"
-                    >
-                      Mark Under Contract
-                    </button>
-                    <button
-                      onClick={() => updateStatus(property.id, 'WITHDRAWN')}
-                      className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded hover:bg-red-100 transition-colors"
-                    >
-                      Withdraw
-                    </button>
-                  </div>
-                )}
-                {property.listingStatus === 'UNDER_CONTRACT' && (
-                  <button
-                    onClick={() => updateStatus(property.id, 'SOLD')}
-                    className="mt-2 text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded hover:bg-blue-100 transition-colors"
+                <label className="mt-3 block text-xs text-slate-500">
+                  Status
+                  <select
+                    value={property.listingStatus || 'UNDER_REVIEW'}
+                    onChange={(event) => updateStatus(property.id, event.target.value)}
+                    className="mt-1 w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700"
                   >
-                    Mark as Sold
-                  </button>
-                )}
+                    <option value="UNDER_REVIEW">Under Review</option>
+                    <option value="AVAILABLE">Available</option>
+                    <option value="VERIFIED">Verified</option>
+                    <option value="SOLD">Sold</option>
+                    <option value="REJECTED">Rejected</option>
+                  </select>
+                </label>
               </div>
             </motion.div>
           ))

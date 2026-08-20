@@ -104,6 +104,14 @@ public class RiskServiceImpl implements RiskService {
 
     // RISK ASSESSMENT
     @Override
+    @Transactional(readOnly = true)
+    public List<RiskAssessmentResponse> getAllRiskAssessments() {
+        return riskAssessmentRepository.findAll().stream()
+                .map(riskMapper::toRiskAssessmentResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     @Transactional
     public RiskAssessmentResponse createRiskAssessment(RiskAssessmentRequest request, String assessorEmail) {
         Property property = propertyRepository.findById(request.getPropertyId())

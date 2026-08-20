@@ -10,6 +10,7 @@ import java.util.List;
 public interface ReportService {
 
     // Report CRUD Operations
+    List<DueDiligenceReportResponse> getAllReports();
     DueDiligenceReportResponse generateReport(DueDiligenceReportRequest request, String userEmail);
     DueDiligenceReportResponse getReportById(Long id);
     List<DueDiligenceReportResponse> getReportsByProperty(Long propertyId);
@@ -17,6 +18,7 @@ public interface ReportService {
     void deleteReport(Long id);
 
     // Property Document CRUD Operations
+    List<PropertyDocumentResponse> getAllDocuments();
     PropertyDocumentResponse uploadDocument(PropertyDocumentRequest request, String userEmail);
     PropertyDocumentResponse getDocumentById(Long id);
     List<PropertyDocumentResponse> getDocumentsByProperty(Long propertyId);

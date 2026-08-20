@@ -33,8 +33,8 @@ public class PropertyDocumentController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'LEGAL_REVIEWER', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Upload property document metadata", description = "Registers metadata for an uploaded supporting document. Only Administrators, Legal Reviewers, and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT', 'BUYER', 'SELLER', 'BANK')")
+    @Operation(summary = "Upload property document metadata", description = "Registers metadata for an uploaded supporting document. Only Legal Reviewers, Real Estate Agents, Buyers, Sellers, and Banks can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Document metadata created successfully",
                     content = @Content(schema = @Schema(implementation = PropertyDocumentResponse.class))),
@@ -47,6 +47,16 @@ public class PropertyDocumentController {
     ) {
         PropertyDocumentResponse response = reportService.uploadDocument(request, userDetails.getUsername());
         return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @GetMapping(value = {"", "/", "/all"})
+    @Operation(summary = "Get all documents", description = "Retrieves all property documents in the database.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Documents retrieved successfully")
+    })
+    public ResponseEntity<List<PropertyDocumentResponse>> getAllDocuments() {
+        List<PropertyDocumentResponse> response = reportService.getAllDocuments();
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
@@ -84,8 +94,8 @@ public class PropertyDocumentController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'LEGAL_REVIEWER', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Update document details", description = "Updates details of an existing document record. Only Administrators, Legal Reviewers, and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT', 'BUYER', 'SELLER', 'BANK')")
+    @Operation(summary = "Update document details", description = "Updates details of an existing document record. Only Legal Reviewers, Real Estate Agents, Buyers, Sellers, and Banks can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Document updated successfully",
                     content = @Content(schema = @Schema(implementation = PropertyDocumentResponse.class))),
@@ -100,8 +110,8 @@ public class PropertyDocumentController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'LEGAL_REVIEWER', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Delete document", description = "Deletes a property document record. Only Administrators, Legal Reviewers, and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT', 'BUYER', 'SELLER', 'BANK')")
+    @Operation(summary = "Delete document", description = "Deletes a property document record. Only Legal Reviewers, Real Estate Agents, Buyers, Sellers, and Banks can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Document deleted successfully"),
             @ApiResponse(responseCode = "404", description = "Document not found")

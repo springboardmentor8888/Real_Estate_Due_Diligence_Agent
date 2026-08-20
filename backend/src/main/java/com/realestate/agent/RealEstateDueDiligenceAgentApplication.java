@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class RealEstateDueDiligenceAgentApplication {
 
 	public static void main(String[] args) {
+
 		SpringApplication.run(RealEstateDueDiligenceAgentApplication.class, args);
 	}
 

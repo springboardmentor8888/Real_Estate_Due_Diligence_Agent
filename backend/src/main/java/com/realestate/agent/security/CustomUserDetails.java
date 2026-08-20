@@ -6,25 +6,35 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 public class CustomUserDetails implements UserDetails {
 
     private final User user;
-    private final Collection<? extends GrantedAuthority> authorities;
 
     public CustomUserDetails(User user) {
         this.user = user;
-        String roleName = user.getRole().getRoleName();
-        // Convert to standard Spring Security authority format: ROLE_ROLE_NAME
-        // e.g. "Real Estate Agent" -> "ROLE_REAL_ESTATE_AGENT"
-        String formattedRole = "ROLE_" + roleName.toUpperCase().replace(" ", "_");
-        this.authorities = List.of(new SimpleGrantedAuthority(formattedRole));
+    }
+
+    public User getUser() {
+        return user;
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return authorities;
+        if (user.getRole() == null || user.getRole().getRoleName() == null) {
+            System.out.println("⚠️ [CustomUserDetails] User " + getUsername() + " has NO role in DB!");
+            return Collections.emptyList();
+        }
+        String rawRole = user.getRole().getRoleName().trim().toUpperCase();
+        String baseRole = rawRole.startsWith("ROLE_") ? rawRole.substring(5) : rawRole;
+        String roleWithPrefix = "ROLE_" + baseRole;
+
+        return List.of(
+                new SimpleGrantedAuthority(roleWithPrefix),
+                new SimpleGrantedAuthority(baseRole)
+        );
     }
 
     @Override
@@ -55,13 +65,5 @@ public class CustomUserDetails implements UserDetails {
     @Override
     public boolean isEnabled() {
         return user.getIsActive() != null && user.getIsActive();
-    }
-
-    public Long getUserId() {
-        return user.getUserId();
-    }
-
-    public User getUser() {
-        return user;
     }
 }

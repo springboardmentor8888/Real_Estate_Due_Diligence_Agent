@@ -1,298 +1,314 @@
-// src/components/app-shell.jsx
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation, NavLink } from 'react-router-dom';
 import { 
-  Bell, LayoutDashboard, Building2, FileText, 
-  Bookmark, BellRing, GitCompareArrows, LineChart, Settings, User, 
-  Shield, LogOut, Menu, X, Users, BarChart3, Plus, Mail, Home,
-  DollarSign, Landmark, FileCheck, Scale
+  Home, 
+  Building2, 
+  FileText, 
+  BarChart3, 
+  Bell, 
+  User, 
+  Settings, 
+  LogOut,
+  Menu,
+  X,
+  ChevronDown,
+  LayoutDashboard,
+  Scale,
+  Briefcase,
+  Shield,
+  Users,
+  Search,
+  Plus,
+  Heart,
+  FileCheck,
+  Database
 } from 'lucide-react';
-import { Input } from './ui/input';
-import { Avatar, AvatarFallback } from './ui/avatar';
-import { Badge } from './ui/badge';
-import { 
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, 
-  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger 
-} from './ui/dropdown-menu';
 import { authService } from '../services/api';
 
-// Regular user navigation
-const USER_NAV = [
-  { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
-  { label: "Property Search", to: "/properties", icon: Building2 },
-  { label: "Reports", to: "/reports", icon: FileText },
-  { label: "Watchlist", to: "/watchlist", icon: Bookmark },
-  { label: "Alerts", to: "/notifications", icon: BellRing },
-  { label: "Comparables", to: "/comparables", icon: GitCompareArrows },
-  { label: "Analytics", to: "/analytics", icon: LineChart },
-];
+// =========================================================
+// NAVIGATION ITEMS BY ROLE
+// =========================================================
 
-// Agent navigation
-const AGENT_NAV = [
-  { label: "Dashboard", to: "/agent/dashboard", icon: LayoutDashboard },
-  { label: "My Properties", to: "/agent/properties", icon: Building2 },
-  { label: "List Property", to: "/agent/list-property", icon: Plus },
-  { label: "Inquiries", to: "/agent/inquiries", icon: Mail },
-  { label: "Analytics", to: "/analytics", icon: LineChart },
-];
+const getNavItems = (role) => {
+  // Common items for all roles
+  const commonItems = [
+    { path: '/dashboard', label: 'Dashboard', icon: Home },
+    { path: '/properties', label: 'Properties', icon: Building2 },
+    { path: '/reports', label: 'Reports', icon: FileText },
+    { path: '/comparables', label: 'Comparables', icon: Scale },
+    { path: '/notifications', label: 'Notifications', icon: Bell },
+  ];
 
-// Legal Reviewer Navigation
-const LEGAL_NAV = [
-  { label: "Dashboard", to: "/legal/dashboard", icon: LayoutDashboard },
-  { label: "Verify Documents", to: "/legal/documents", icon: FileCheck },
-  { label: "Review Transactions", to: "/legal/transactions", icon: Scale },
-  { label: "Reports", to: "/reports", icon: FileText },
-  { label: "Analytics", to: "/analytics", icon: LineChart },
-  { label: "Settings", to: "/settings", icon: Settings },
-];
+  // Role-specific items
+  const roleSpecific = {
+    'AGENT': [
+      { path: '/agent/dashboard', label: 'Agent Dashboard', icon: LayoutDashboard },
+      { path: '/agent/list-property', label: 'List Property', icon: Plus },
+      { path: '/agent/properties', label: 'My Properties', icon: Building2 },
+      { path: '/agent/inquiries', label: 'Inquiries', icon: Bell },
+      { path: '/users', label: 'User Directory', icon: Users },
+    ],
+    'BUYER': [
+      { path: '/analytics', label: 'Analytics', icon: BarChart3 },
+      { path: '/watchlist', label: 'Watchlist', icon: Heart },
+      { path: '/buyer/offers', label: 'My Offers', icon: FileCheck },
+    ],
+    'BANK': [
+      { path: '/bank/dashboard', label: 'Bank Dashboard', icon: LayoutDashboard },
+      { path: '/bank/loans', label: 'Loan Applications', icon: Briefcase },
+      { path: '/bank/risks', label: 'Risk Assessments', icon: Shield },
+      { path: '/bank/reports', label: 'Financial Reports', icon: FileText },
+    ],
+    'LEGAL_REVIEWER': [
+      { path: '/legal/dashboard', label: 'Legal Dashboard', icon: LayoutDashboard },
+      { path: '/legal/reports', label: 'Legal Reports', icon: FileText },
+      { path: '/legal/comparables', label: 'Comparables', icon: Scale },
+      { path: '/legal/property-search', label: 'Property Search', icon: Search },
+      { path: '/legal/documents', label: 'Verify Documents', icon: FileCheck },
+      { path: '/legal/transactions', label: 'Transactions', icon: Database },
+    ],
+    'SELLER': [
+      { path: '/agent/properties', label: 'My Properties', icon: Building2 },
+      { path: '/agent/inquiries', label: 'Inquiries', icon: Bell },
+    ],
+  };
 
-// Bank Navigation
-const BANK_NAV = [
-  { label: "Dashboard", to: "/bank/dashboard", icon: LayoutDashboard },
-  { label: "Loan Applications", to: "/bank/loans", icon: DollarSign },
-  { label: "Risk Assessments", to: "/bank/risks", icon: Shield },
-  { label: "Financial Reports", to: "/bank/reports", icon: FileCheck },
-  { label: "Settings", to: "/settings", icon: Settings },
-];
-
-// Admin navigation
-const ADMIN_NAV = [
-  { label: "Admin Dashboard", to: "/admin", icon: BarChart3 },
-  { label: "User Management", to: "/admin/users", icon: Users },
-];
-
-const SECONDARY = [
-  { label: "Settings", to: "/settings", icon: Settings },
-  { label: "Profile", to: "/profile", icon: User },
-];
-
-export function AppShell({ children }) {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
-  const pathname = location.pathname;
-  
-  const userData = JSON.parse(localStorage.getItem('user') || '{}');
-  const userName = userData.fullName || 'User';
-  const userEmail = userData.email || '';
-  const userRole = userData.role || '';
-  const isAdmin = userRole === 'ADMIN';
-  const isAgent = userRole === 'AGENT';
-  const isBank = userRole === 'BANK';
-  const isLegal = userRole === 'LEGAL_REVIEWER';
-
-  // Select navigation based on role
-  let NAV = USER_NAV;
-  if (isAdmin) {
-    NAV = ADMIN_NAV;
-  } else if (isAgent) {
-    NAV = AGENT_NAV;
-  } else if (isBank) {
-    NAV = BANK_NAV;
-  } else if (isLegal) {
-    NAV = LEGAL_NAV;
+  // Combine common items with role-specific items
+  let items = [...commonItems];
+  if (roleSpecific[role]) {
+    items = [...items, ...roleSpecific[role]];
   }
 
+  return items;
+};
+
+// =========================================================
+// APP SHELL COMPONENT
+// =========================================================
+
+export function AppShell({ children }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [user, setUser] = useState(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  // Get user data
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 1024);
-      if (window.innerWidth < 1024) setSidebarOpen(false);
-      else setSidebarOpen(true);
-    };
-    window.addEventListener('resize', handleResize);
-    handleResize();
-    return () => window.removeEventListener('resize', handleResize);
+    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    setUser(userData);
   }, []);
 
-  const getInitials = (name) => {
-    if (!name || name === 'User') return 'U';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = () => setDropdownOpen(false);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  // Get navigation items based on role
+  const navItems = getNavItems(user?.role || 'BUYER');
+
+  // Handle logout
+  const handleLogout = () => {
+    authService.logout();
+    navigate('/login');
   };
 
-  const handleLogout = async () => {
-    await authService.logout();
-    navigate('/');
-  };
-
-  // ✅ FIXED: getPageTitle now correctly shows 'User Management'
-  const getPageTitle = () => {
-    if (isAdmin) {
-      if (pathname === '/admin') return 'Admin Dashboard';
-      if (pathname === '/admin/users') return 'User Management';
-      return 'Admin';
-    }
-    if (isAgent) {
-      const current = AGENT_NAV.find(n => pathname === n.to || pathname.startsWith(n.to + '/'));
-      return current?.label || 'Dashboard';
-    }
-    if (isBank) {
-      const current = BANK_NAV.find(n => pathname === n.to || pathname.startsWith(n.to + '/'));
-      return current?.label || 'Bank Dashboard';
-    }
-    if (isLegal) {
-      const current = LEGAL_NAV.find(n => pathname === n.to || pathname.startsWith(n.to + '/'));
-      return current?.label || 'Legal Dashboard';
-    }
-    const current = USER_NAV.find(n => pathname === n.to || pathname.startsWith(n.to + '/'));
-    return current?.label || 'Dashboard';
+  // Toggle sidebar on mobile
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
-      {/* Sidebar */}
-      {sidebarOpen && (
-        <>
-          {isMobile && (
-            <div className="fixed inset-0 z-30 bg-black/30 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-          )}
-          <aside className={`fixed left-0 top-0 z-40 h-screen w-64 bg-white border-r border-gray-200 shadow-xl ${isMobile ? 'animate-slide-in' : ''}`}>
-            <div className="flex flex-col h-full">
-              
-              <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                <Link to={isLegal ? "/legal/dashboard" : isBank ? "/bank/dashboard" : "/dashboard"} className="flex items-center gap-3">
-                  <img 
-                    src="/logo.png" 
-                    alt="RealEstate" 
-                    className="h-10 w-10 object-contain rounded-xl"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'flex';
-                    }}
-                  />
-                  <div className="hidden h-10 w-10 bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25">
-                    <span className="text-white font-bold text-sm">RE</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-lg font-bold text-slate-900 leading-tight">RealEstate</span>
-                    <span className="text-[10px] text-emerald-600 font-medium">Due Diligence</span>
-                  </div>
-                </Link>
-                {isMobile && (
-                  <button onClick={() => setSidebarOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100">
-                    <X size={20} />
-                  </button>
-                )}
-              </div>
-
-              <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-                {NAV.map((navItem) => {
-                  const Icon = navItem.icon;
-                  const active = pathname === navItem.to;
-                  
-                  return (
-                    <Link
-                      key={navItem.to}
-                      to={navItem.to}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
-                        active 
-                          ? 'bg-emerald-50 text-emerald-700 border-r-2 border-emerald-500' 
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                      }`}
-                    >
-                      <Icon size={18} className={active ? 'text-emerald-600' : 'text-gray-400'} />
-                      <span className="font-medium text-sm">{navItem.label}</span>
-                    </Link>
-                  );
-                })}
-                
-                {/* Show secondary items only for non-admin non-agent non-bank non-legal users */}
-                {!isAdmin && !isAgent && !isBank && !isLegal && (
-                  <>
-                    <div className="my-3 h-px bg-gray-200" />
-                    {SECONDARY.map((navItem) => {
-                      const Icon = navItem.icon;
-                      const active = pathname === navItem.to;
-                      return (
-                        <Link
-                          key={navItem.to}
-                          to={navItem.to}
-                          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
-                            active 
-                              ? 'bg-emerald-50 text-emerald-700 border-r-2 border-emerald-500' 
-                              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                          }`}
-                        >
-                          <Icon size={18} className={active ? 'text-emerald-600' : 'text-gray-400'} />
-                          <span className="font-medium text-sm">{navItem.label}</span>
-                        </Link>
-                      );
-                    })}
-                  </>
-                )}
-              </nav>
-
-              <div className="border-t border-gray-200 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-emerald-700 font-bold text-sm">{getInitials(userName)}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{userName}</p>
-                    <p className="text-xs text-gray-500 truncate uppercase">{userRole || 'User'}</p>
-                  </div>
-                  <button onClick={handleLogout} className="p-2 text-gray-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50">
-                    <LogOut size={18} />
-                  </button>
-                </div>
-              </div>
+    <div className="min-h-screen bg-slate-50 flex">
+      {/* =========================================================
+          SIDEBAR
+          ========================================================= */}
+      
+      <aside 
+        className={`${
+          sidebarOpen ? 'w-64' : 'w-0'
+        } bg-white border-r border-slate-200 fixed h-full overflow-hidden transition-all duration-300 z-50 lg:relative lg:w-64 lg:translate-x-0`}
+      >
+        <div className="h-full flex flex-col">
+          {/* Logo */}
+          <div className="p-4 border-b border-slate-200 flex items-center gap-3">
+            <img 
+              src="/logo.png" 
+              alt="RealEstate Logo" 
+              className="h-10 w-auto object-contain"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.nextSibling.style.display = 'flex';
+              }}
+            />
+            <div className="hidden h-10 w-10 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/30">
+              <span className="text-white text-lg">🏠</span>
             </div>
-          </aside>
-        </>
-      )}
+            <div>
+              <span className="text-[16px] font-extrabold tracking-tight text-slate-900 block leading-tight">RealEstate</span>
+              <span className="text-[8px] font-medium text-emerald-600 tracking-widest uppercase">Due Diligence</span>
+            </div>
+          </div>
 
-      {/* Main Content */}
-      <div className={`transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
-        <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-lg border-b border-gray-200/80">
-          <div className="flex items-center justify-between px-4 md:px-6 py-3">
+          {/* Navigation */}
+          <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path || 
+                              (item.path !== '/' && location.pathname.startsWith(item.path));
+              
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all ${
+                      isActive
+                        ? 'bg-emerald-50 text-emerald-700 shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`
+                  }
+                >
+                  <Icon className={`h-5 w-5 ${isActive ? 'text-emerald-600' : ''}`} />
+                  <span className="text-sm font-medium">{item.label}</span>
+                </NavLink>
+              );
+            })}
+          </nav>
+
+          {/* User Profile */}
+          <div className="border-t border-slate-200 p-4">
             <div className="flex items-center gap-3">
-              <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 rounded-lg hover:bg-gray-100">
-                <Menu size={22} />
+              <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold">
+                {user?.fullName?.charAt(0) || user?.email?.charAt(0) || 'U'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-900 truncate">
+                  {user?.fullName || 'User'}
+                </p>
+                <p className="text-xs text-slate-500 truncate">
+                  {user?.role || 'BUYER'}
+                </p>
+              </div>
+              <button
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="p-1 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <ChevronDown className="h-4 w-4 text-slate-500" />
               </button>
-              <h1 className="text-lg md:text-xl font-semibold text-gray-900">
-                {getPageTitle()}
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* =========================================================
+          MAIN CONTENT
+          ========================================================= */}
+      
+      <div className="flex-1 flex flex-col min-h-screen lg:ml-0">
+        {/* Header */}
+        <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
+          <div className="flex items-center justify-between px-4 h-16">
+            {/* Left: Mobile menu button + Title */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={toggleSidebar}
+                className="lg:hidden p-2 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <Menu className="h-5 w-5 text-slate-600" />
+              </button>
+              <h1 className="text-lg font-semibold text-slate-900 hidden sm:block">
+                {navItems.find(item => item.path === location.pathname)?.label || 'Dashboard'}
               </h1>
             </div>
-            <div className="flex items-center gap-2">
-              {!isAdmin && (
-                <Link to="/notifications" className="relative p-2 rounded-lg hover:bg-gray-100">
-                  <Bell size={20} />
-                </Link>
-              )}
-              <Link to="/settings" className="p-2 rounded-lg hover:bg-gray-100">
-                <Settings size={20} />
-              </Link>
+
+            {/* Right: Actions */}
+            <div className="flex items-center gap-3">
+              {/* Notifications */}
+              <button className="p-2 rounded-lg hover:bg-slate-100 transition-colors relative">
+                <Bell className="h-5 w-5 text-slate-600" />
+                <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
+              </button>
+
+              {/* Settings */}
+              <button 
+                onClick={() => navigate('/settings')}
+                className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <Settings className="h-5 w-5 text-slate-600" />
+              </button>
+
+              {/* Logout */}
+              <button
+                onClick={handleLogout}
+                className="p-2 rounded-lg hover:bg-red-50 transition-colors"
+              >
+                <LogOut className="h-5 w-5 text-red-500" />
+              </button>
             </div>
           </div>
         </header>
-        <main className="p-4 md:p-6">{children}</main>
+
+        {/* Page Content */}
+        <main className="flex-1 p-6">
+          {children || <Outlet />}
+        </main>
+        {/* Mobile overlay */}
+        {sidebarOpen && (
+          <div 
+            className="lg:hidden fixed inset-0 bg-black/50 z-40"
+            onClick={toggleSidebar}
+          ></div>
+        )}
       </div>
     </div>
   );
 }
 
-export function RiskBadge({ level }) {
-  const cls = level === "Low"
-    ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/30"
-    : level === "Medium"
-      ? "bg-amber-500/15 text-amber-500 border-amber-500/30"
-      : "bg-red-500/15 text-red-500 border-red-500/30";
-  return (
-    <Badge variant="outline" className={`gap-1.5 rounded-full border px-2 py-0.5 text-[10.5px] font-medium ${cls}`}>
-      <span className="h-1.5 w-1.5 rounded-full bg-current" />
-      {level} risk
-    </Badge>
-  );
-}
+// =========================================================
+// PAGE HEADER COMPONENT
+// =========================================================
 
-export function PageHeader({ title, subtitle, actions }) {
+export function PageHeader({ title, subtitle, description, actions, children }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-gray-500">{subtitle}</p>}
+        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{title}</h1>
+        {(subtitle || description) && (
+          <p className="text-sm text-slate-500 mt-1">{subtitle || description}</p>
+        )}
       </div>
-      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+      {(actions || children) && (
+        <div className="flex items-center gap-3">
+          {actions}
+          {children}
+        </div>
+      )}
     </div>
   );
 }
+
+// =========================================================
+// RISK BADGE COMPONENT
+// =========================================================
+
+export function RiskBadge({ level = 'LOW', score }) {
+  const badgeStyles = {
+    LOW: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    MEDIUM: 'bg-amber-50 text-amber-700 border-amber-200',
+    HIGH: 'bg-rose-50 text-rose-700 border-rose-200',
+    CRITICAL: 'bg-red-100 text-red-800 border-red-300',
+  };
+
+  const style = badgeStyles[level?.toUpperCase()] || badgeStyles.LOW;
+
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${style}`}>
+      {level?.toUpperCase() || 'LOW'} {score !== undefined ? `(${score})` : ''}
+    </span>
+  );
+}
+
+export default AppShell;

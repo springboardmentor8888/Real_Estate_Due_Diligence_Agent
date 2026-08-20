@@ -31,8 +31,8 @@ public class FloodController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Create flood info record", description = "Creates a new flood information record. Only Administrators and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Create flood info record", description = "Creates a new flood information record. Only Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Flood record created successfully",
                     content = @Content(schema = @Schema(implementation = FloodInformationResponse.class))),
@@ -68,8 +68,8 @@ public class FloodController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Update flood info details", description = "Updates details of an existing flood record. Only Administrators and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Update flood info details", description = "Updates details of an existing flood record. Only Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Flood record updated successfully",
                     content = @Content(schema = @Schema(implementation = FloodInformationResponse.class))),
@@ -84,8 +84,8 @@ public class FloodController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Delete flood info record", description = "Deletes a flood info record. Only Administrators and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Delete flood info record", description = "Deletes a flood info record. Only Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Flood record deleted successfully"),
             @ApiResponse(responseCode = "404", description = "Flood record not found")

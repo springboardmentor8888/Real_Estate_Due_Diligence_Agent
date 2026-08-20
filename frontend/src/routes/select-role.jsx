@@ -1,41 +1,48 @@
-// src/routes/select-role.jsx
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Building2, Users, Shield, Scale, Briefcase, UserCheck, ChevronRight } from 'lucide-react';
+import { Building2, Users, Scale, Briefcase, UserCheck, ChevronRight } from 'lucide-react';
 import api from '../services/api';
 
 const ROLES = [
   { value: 'BUYER', label: 'Property Buyer', icon: Building2, description: 'Looking to purchase properties', iconColor: 'bg-blue-50 text-blue-600' },
+  { value: 'SELLER', label: 'Property Seller', icon: UserCheck, description: 'Looking to sell properties', iconColor: 'bg-rose-50 text-rose-600' },
   { value: 'AGENT', label: 'Real Estate Agent', icon: Users, description: 'Helping clients buy and sell properties', iconColor: 'bg-emerald-50 text-emerald-600' },
   { value: 'LEGAL_REVIEWER', label: 'Legal Reviewer', icon: Scale, description: 'Reviewing legal documents and contracts', iconColor: 'bg-purple-50 text-purple-600' },
-  { value: 'BANK', label: 'Bank / Lender', icon: Briefcase, description: 'Providing financing for real estate', iconColor: 'bg-amber-50 text-amber-600' },
-  { value: 'ADMIN', label: 'Admin', icon: Shield, description: 'System administrator', iconColor: 'bg-indigo-50 text-indigo-600' }
+  { value: 'BANK', label: 'Bank / Lender', icon: Briefcase, description: 'Providing financing for real estate', iconColor: 'bg-amber-50 text-amber-600' }
 ];
+
+const ROLE_DASHBOARD_MAP = {
+  'AGENT': '/agent/dashboard',
+  'BUYER': '/dashboard',
+  'SELLER': '/dashboard',
+  'BANK': '/bank/dashboard',
+  'LEGAL_REVIEWER': '/legal/dashboard',
+};
 
 export default function SelectRole() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [selectedRole, setSelectedRole] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [userData, setUserData] = useState({});
 
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const token = params.get('token');
-    const email = params.get('email');
-    const fullName = params.get('fullName');
-    const userId = params.get('userId');
+    const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const storedToken = localStorage.getItem('token');
 
-    if (!token || !email) {
+    if (!storedToken) {
       navigate('/login');
       return;
     }
 
-    localStorage.setItem('tempToken', token);
-    setUserData({ email, fullName, userId });
-  }, [location, navigate]);
+    if (storedUser.role && storedUser.role !== '') {
+      navigate(ROLE_DASHBOARD_MAP[storedUser.role] || '/dashboard', { replace: true });
+      return;
+    }
+
+    setUserData(storedUser);
+  }, [navigate]);
 
   const handleSubmit = async () => {
     if (!selectedRole) {
@@ -47,30 +54,29 @@ export default function SelectRole() {
     setError('');
 
     try {
-      const token = localStorage.getItem('tempToken');
-      const email = userData.email;
-      
-      const response = await api.put('/users/role', 
-        { role: selectedRole, email: email },
-        { headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } }
-      );
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const userId = user.userId;
 
-      localStorage.setItem('token', token);
-      localStorage.removeItem('tempToken');
-      
-      localStorage.setItem('user', JSON.stringify({
-        fullName: userData.fullName || 'User',
-        email: userData.email,
-        role: selectedRole,
-        userId: userData.userId,
-        active: true,
-        emailVerified: true
-      }));
+      if (!userId) {
+        setError('User ID not found. Please login again.');
+        setLoading(false);
+        return;
+      }
 
-      navigate('/dashboard');
-      
+      let response;
+      try {
+        response = await api.put(`/users/${userId}/role`, { role: selectedRole });
+      } catch (err) {
+        response = await api.put(`/auth/users/${userId}/role`, { role: selectedRole });
+      }
+
+      const updatedUser = { ...user, role: selectedRole, isNewUser: false };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+
+      navigate(ROLE_DASHBOARD_MAP[selectedRole] || '/dashboard', { replace: true });
     } catch (err) {
       let errorMessage = 'Failed to update role. Please try again.';
+      if (err.response?.data?.error) errorMessage = err.response.data.error;
       if (err.response?.data?.message) errorMessage = err.response.data.message;
       setError(errorMessage);
     } finally {
@@ -79,7 +85,6 @@ export default function SelectRole() {
   };
 
   return (
-    // ✅ RESTORED: Soft Slate Grey Background
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -88,31 +93,25 @@ export default function SelectRole() {
         className="w-full max-w-3xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden"
       >
         <div className="text-center pt-10 pb-6 px-6 border-b border-slate-200">
-          
-          {/* ✅ HARDCODED LOGO TO BYPASS IMPORT ERROR */}
-          <div className="flex items-center justify-center gap-2.5 mb-6">
-            <img 
-              src="/logo.png" 
-              alt="RealEstate Logo" 
-              className="h-10 w-auto object-contain"
-              onError={(e) => {
-                e.target.style.display = 'none';
-                e.target.nextSibling.style.display = 'flex';
-              }}
+          <div className="flex items-center justify-center gap-3 mb-6">
+            <img
+              src="/logo.png"
+              alt="RealEstate Logo"
+              className="h-12 w-auto object-contain"
+              onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
             />
-            {/* Fallback Box */}
-            <div className="hidden h-10 w-10 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/30">
-              <span className="text-white font-bold text-sm">RE</span>
+            <div className="hidden h-12 w-12 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl items-center justify-center shadow-lg">
+              <span className="text-white text-2xl">🏠</span>
             </div>
-            <div>
-              <span className="text-[18px] font-extrabold tracking-tight text-slate-900 block leading-none">RealEstate</span>
-              <span className="text-[9px] font-medium text-emerald-600 tracking-wider">Due Diligence</span>
+            <div className="text-left">
+              <span className="text-[22px] font-extrabold tracking-tight text-slate-900 block leading-tight">RealEstate</span>
+              <span className="text-[10px] font-medium text-emerald-600 tracking-widest uppercase">Due Diligence</span>
             </div>
           </div>
 
-          <h1 className="text-3xl font-bold text-slate-900 mt-6 tracking-tight">Choose Your Role</h1>
+          <h1 className="text-3xl font-bold text-slate-900 mt-4 tracking-tight">Choose Your Role</h1>
           <p className="text-slate-500 mt-2">
-            Welcome {userData.fullName || 'User'}! Select how you'll be using Parcel Intelligence
+            Welcome {userData.fullName || userData.email || 'User'}! Select how you'll be using this platform
           </p>
         </div>
 
@@ -126,7 +125,7 @@ export default function SelectRole() {
           {ROLES.map((role) => {
             const Icon = role.icon;
             const isSelected = selectedRole === role.value;
-            
+
             return (
               <motion.div
                 key={role.value}
@@ -134,29 +133,20 @@ export default function SelectRole() {
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setSelectedRole(role.value)}
                 className={`bg-white cursor-pointer rounded-2xl p-6 transition-all border-2 shadow-sm hover:shadow-md ${
-                  isSelected 
-                    ? 'border-emerald-500 shadow-lg shadow-emerald-500/20 bg-emerald-50/50' 
+                  isSelected
+                    ? 'border-emerald-500 shadow-lg shadow-emerald-500/20 bg-emerald-50/50'
                     : 'border-slate-200 hover:border-emerald-300'
                 }`}
               >
                 <div className="flex items-start gap-4">
-                  {/* ✅ COLORFUL ICON BACKGROUNDS */}
-                  <div className={`p-3 rounded-xl ${role.iconColor} ${
-                    isSelected 
-                      ? 'border border-emerald-200' 
-                      : ''
-                  }`}>
+                  <div className={`p-3 rounded-xl ${role.iconColor} ${isSelected ? 'border border-emerald-200' : ''}`}>
                     <Icon className="h-6 w-6" />
                   </div>
                   <div className="flex-1">
-                    <h3 className={`font-semibold text-base ${
-                      isSelected ? 'text-emerald-700' : 'text-slate-900'
-                    }`}>
+                    <h3 className={`font-semibold text-base ${isSelected ? 'text-emerald-700' : 'text-slate-900'}`}>
                       {role.label}
                     </h3>
-                    <p className="text-sm text-slate-500 mt-1">
-                      {role.description}
-                    </p>
+                    <p className="text-sm text-slate-500 mt-1">{role.description}</p>
                   </div>
                   {isSelected && (
                     <div className="text-emerald-500">
@@ -170,8 +160,6 @@ export default function SelectRole() {
         </div>
 
         <div className="border-t border-slate-200 mt-2 flex flex-col items-center justify-center pt-6 pb-8 px-6 bg-slate-50/30">
-          
-          {/* ✅ PERFECT GREEN BUTTON */}
           <button
             onClick={handleSubmit}
             disabled={!selectedRole || loading}
@@ -193,8 +181,6 @@ export default function SelectRole() {
               border: 'none',
               transition: 'all 0.2s ease-in-out'
             }}
-            onMouseOver={(e) => selectedRole && (e.target.style.backgroundColor = '#059669')}
-            onMouseOut={(e) => selectedRole && (e.target.style.backgroundColor = '#10b981')}
           >
             {loading ? (
               <div className="flex items-center justify-center gap-2">
@@ -202,9 +188,7 @@ export default function SelectRole() {
                 Setting up...
               </div>
             ) : (
-              <>
-                Continue to Dashboard <ChevronRight className="h-5 w-5" />
-              </>
+              <>Continue to Dashboard <ChevronRight className="h-5 w-5" /></>
             )}
           </button>
 

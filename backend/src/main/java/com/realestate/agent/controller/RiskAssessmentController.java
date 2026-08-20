@@ -33,8 +33,8 @@ public class RiskAssessmentController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'LEGAL_REVIEWER', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Perform risk assessment", description = "Creates a new property risk assessment. Only Administrators, Legal Reviewers, and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT', 'BUYER', 'SELLER', 'BANK')")
+    @Operation(summary = "Perform risk assessment", description = "Creates a new property risk assessment. Only Legal Reviewers, Real Estate Agents, Buyers, Sellers, and Banks can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Risk assessment created successfully",
                     content = @Content(schema = @Schema(implementation = RiskAssessmentResponse.class))),
@@ -47,6 +47,16 @@ public class RiskAssessmentController {
     ) {
         RiskAssessmentResponse response = riskService.createRiskAssessment(request, userDetails.getUsername());
         return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @GetMapping(value = {"", "/", "/all"})
+    @Operation(summary = "Get all risk assessments", description = "Retrieves all property risk assessments.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Risk assessments retrieved successfully")
+    })
+    public ResponseEntity<List<RiskAssessmentResponse>> getAllRiskAssessments() {
+        List<RiskAssessmentResponse> response = riskService.getAllRiskAssessments();
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
@@ -75,8 +85,8 @@ public class RiskAssessmentController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'LEGAL_REVIEWER', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Update risk assessment", description = "Updates details of an existing risk assessment. Only Administrators, Legal Reviewers, and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT', 'BUYER', 'SELLER', 'BANK')")
+    @Operation(summary = "Update risk assessment", description = "Updates details of an existing risk assessment. Only Legal Reviewers, Real Estate Agents, Buyers, Sellers, and Banks can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Risk assessment updated successfully",
                     content = @Content(schema = @Schema(implementation = RiskAssessmentResponse.class))),
@@ -91,8 +101,8 @@ public class RiskAssessmentController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'LEGAL_REVIEWER', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Delete risk assessment", description = "Deletes a risk assessment. Only Administrators, Legal Reviewers, and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT', 'BUYER', 'SELLER', 'BANK')")
+    @Operation(summary = "Delete risk assessment", description = "Deletes a risk assessment. Only Legal Reviewers, Real Estate Agents, Buyers, Sellers, and Banks can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Risk assessment deleted successfully"),
             @ApiResponse(responseCode = "404", description = "Risk assessment not found")

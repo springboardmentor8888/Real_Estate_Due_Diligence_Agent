@@ -1,7 +1,7 @@
 // src/routes/notifications.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PageHeader } from '../components/app-shell';
+import { PageHeader } from '../../components/app-shell';
 import { FileText, AlertTriangle, CheckCircle2, X, Clock, Bell } from 'lucide-react';
 
 export default function Notifications() {

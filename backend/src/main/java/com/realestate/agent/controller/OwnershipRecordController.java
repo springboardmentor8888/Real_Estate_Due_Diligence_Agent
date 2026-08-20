@@ -31,8 +31,8 @@ public class OwnershipRecordController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Assign ownership split", description = "Allocates a percentage share of a property to an owner. Total active percentage cannot exceed 100%. Only Administrators and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Assign ownership split", description = "Allocates a percentage share of a property to an owner. Total active percentage cannot exceed 100%. Only Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Ownership record created successfully",
                     content = @Content(schema = @Schema(implementation = OwnershipRecordResponse.class))),
@@ -72,8 +72,8 @@ public class OwnershipRecordController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Update ownership record details", description = "Updates details of a property ownership record. Only Administrators and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Update ownership record details", description = "Updates details of a property ownership record. Only Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Ownership record updated successfully",
                     content = @Content(schema = @Schema(implementation = OwnershipRecordResponse.class))),
@@ -89,8 +89,8 @@ public class OwnershipRecordController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REAL_ESTATE_AGENT')")
-    @Operation(summary = "Delete ownership record", description = "Removes an ownership record from a property. Only Administrators and Real Estate Agents can perform this action.")
+    @PreAuthorize("hasRole('AGENT')")
+    @Operation(summary = "Delete ownership record", description = "Removes an ownership record from a property. Only Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Ownership record deleted successfully"),
             @ApiResponse(responseCode = "404", description = "Ownership record not found")
