@@ -1,8 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from "react";
-import { authApi } from "../services/api";
-
+import { authApi, userApi } from "../services/api";
 const AuthContext = createContext({
   user: null,
   token: null,
@@ -18,75 +17,115 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Restore existing login
   useEffect(() => {
-    try {
-      const storedToken = localStorage.getItem("token");
-      const storedUser = localStorage.getItem("user");
-      if (storedToken) {
+    const restoreSession = async () => {
+      try {
+        const storedToken = localStorage.getItem("token");
+
+        if (!storedToken) {
+          setLoading(false);
+          return;
+        }
+
         setToken(storedToken);
+
+        // Get actual user details + role from backend
+        const response = await fetch(
+          "http://localhost:8080/api/users/me",
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${storedToken}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch user details");
+        }
+
+        const userData = await response.json();
+
+        setUser(userData);
+        localStorage.setItem("user", JSON.stringify(userData));
+      } catch (err) {
+        console.error("Failed to restore user session:", err);
+
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+
+        setToken(null);
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-    } catch (err) {
-      console.error("Failed to restore user session from localStorage:", err);
-    } finally {
-      setLoading(false);
-    }
+    };
+
+    restoreSession();
   }, []);
 
   const login = async (email, password) => {
     try {
       const data = await authApi.login(email, password);
-      if (data && data.token) {
-        const authToken = data.token;
-        setToken(authToken);
-        localStorage.setItem("token", authToken);
 
-        const userInfo = { email, name: email.split("@")[0] };
-        setUser(userInfo);
-        localStorage.setItem("user", JSON.stringify(userInfo));
-        return { success: true, data };
+      if (!data || !data.token) {
+        throw new Error("Invalid login response");
       }
+
+      const authToken = data.token;
+
+      setToken(authToken);
+      localStorage.setItem("token", authToken);
+
+      // Get actual logged-in user from backend
+      const response = await fetch(
+        "http://localhost:8080/api/users/me",
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch user details");
+      }
+
+      const userInfo = await response.json();
+
+      setUser(userInfo);
+      localStorage.setItem("user", JSON.stringify(userInfo));
+
+      return {
+        success: true,
+        data,
+        user: userInfo,
+      };
     } catch (err) {
-      console.warn("Backend auth error:", err.message);
-      // If server returned 500 (e.g. database not seeded or offline), fall back to client session token for dev testing
-      if (err.message.includes("500") || err.message.includes("Server 500")) {
-        const mockToken = "mock_jwt_dev_token_" + Date.now();
-        const userInfo = { email, name: email.split("@")[0] };
-        setToken(mockToken);
-        setUser(userInfo);
-        localStorage.setItem("token", mockToken);
-        localStorage.setItem("user", JSON.stringify(userInfo));
-        return { success: true, isDemoSession: true };
-      }
-      throw err;
+      console.error("Login error:", err);
+      throw new Error("Invalid email or password");
     }
   };
 
   const register = async (userData) => {
-    const response = await authApi.register(userData);
+    try {
+      const response = await authApi.register(userData);
 
-    // Set user session and generated token
-    const tokenVal = response?.token || ("jwt_token_" + Date.now());
-    const userInfo = {
-      email: userData.email,
-      name: userData.name || response?.name || userData.email.split("@")[0],
-      role: userData.role || "Buyer",
-      userId: response?.userId || Date.now(),
-    };
-
-    setToken(tokenVal);
-    setUser(userInfo);
-    localStorage.setItem("token", tokenVal);
-    localStorage.setItem("user", JSON.stringify(userInfo));
-
-    return response;
+      return response;
+    } catch (err) {
+      console.error("Registration error:", err);
+      throw err;
+    }
   };
 
   const logout = () => {
     setToken(null);
     setUser(null);
+
     localStorage.removeItem("token");
     localStorage.removeItem("user");
   };

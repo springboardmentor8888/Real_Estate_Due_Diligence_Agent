@@ -2,8 +2,10 @@ package com.infosys.realestate.service;
 
 import com.infosys.realestate.dto.UserRequestDTO;
 import com.infosys.realestate.dto.UserResponseDTO;
+import com.infosys.realestate.entity.Role;
 import com.infosys.realestate.entity.User;
 import com.infosys.realestate.exception.ResourceNotFoundException;
+import com.infosys.realestate.repository.RoleRepository;
 import com.infosys.realestate.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,6 +21,8 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private UserRepository userRepository;
     @Autowired
+    private RoleRepository roleRepository;
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Override
@@ -28,12 +32,23 @@ public class UserServiceImpl implements UserService {
         user.setEmail(userRequestDTO.getEmail());
         user.setPassword(passwordEncoder.encode(userRequestDTO.getPassword()));
 
+        Role userRole = roleRepository.findByRoleName("USER");
+
+        if (userRole == null) {
+            throw new RuntimeException("USER role not found");
+        }
+
+        user.setRole(userRole);
+
         User savedUser = userRepository.save(user);
 
         return new UserResponseDTO(
                 savedUser.getUserId(),
                 savedUser.getName(),
-                savedUser.getEmail()
+                savedUser.getEmail(),
+                savedUser.getRole() != null
+                        ? savedUser.getRole().getRoleName()
+                        : "USER"
         );
     }
 
@@ -44,7 +59,10 @@ public class UserServiceImpl implements UserService {
                 .map(user -> new UserResponseDTO(
                         user.getUserId(),
                         user.getName(),
-                        user.getEmail()
+                        user.getEmail(),
+                        user.getRole() != null
+                                ? user.getRole().getRoleName()
+                                : "USER"
                 ))
                 .collect(Collectors.toList());
     }
@@ -57,7 +75,10 @@ public class UserServiceImpl implements UserService {
         return new UserResponseDTO(
                 user.getUserId(),
                 user.getName(),
-                user.getEmail()
+                user.getEmail(),
+                user.getRole() != null
+                        ? user.getRole().getRoleName()
+                        : "USER"
         );
     }
 
@@ -76,7 +97,10 @@ public class UserServiceImpl implements UserService {
         return new UserResponseDTO(
                 user.getUserId(),
                 user.getName(),
-                user.getEmail()
+                user.getEmail(),
+                user.getRole() != null
+                        ? user.getRole().getRoleName()
+                        : "USER"
         );
     }
 }
