@@ -8,7 +8,7 @@ import com.infosys.realestate.exception.ResourceNotFoundException;
 import com.infosys.realestate.repository.RoleRepository;
 import com.infosys.realestate.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder;
+
 import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -31,14 +31,10 @@ public class UserServiceImpl implements UserService {
         user.setName(userRequestDTO.getName());
         user.setEmail(userRequestDTO.getEmail());
         user.setPassword(passwordEncoder.encode(userRequestDTO.getPassword()));
+        Role userRole = roleRepository.findByRoleName("USER")
+                .orElseThrow(() -> new RuntimeException("USER role not found"));
 
-        Role userRole = roleRepository.findByRoleName("USER");
-
-        if (userRole == null) {
-            throw new RuntimeException("USER role not found");
-        }
-
-        user.setRole(userRole);
+        user.setRole(userRole);;
 
         User savedUser = userRepository.save(user);
 
