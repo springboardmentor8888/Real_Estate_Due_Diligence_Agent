@@ -34,9 +34,12 @@ export default function Navbar() {
     { name: "Report History", href: "/report-history" },
   ];
 
-  if (isAdmin) {
-    navLinks.push({ name: "Admin Dashboard", href: "/admin" });
-  }
+ if (isAdmin) {
+   navLinks.push({
+     name: "Admin Dashboard",
+     href: "/admin/dashboard",
+   });
+ }
 
   return (
     <header className="navbar">
