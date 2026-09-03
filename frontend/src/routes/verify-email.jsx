@@ -31,33 +31,17 @@ export default function VerifyEmail() {
     }
     hasVerified.current = true;
 
-    // Call backend verification endpoint
-    const verifyUrl = `http://localhost:8080/api/auth/verify?token=${token}`;
-    console.log('📡 Calling verification URL:', verifyUrl);
-
-    fetch(verifyUrl, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-    })
-      .then(response => {
-        console.log('📥 Response status:', response.status);
-        return response.json();
-      })
+    api.post('/auth/verify-email', { token })
       .then(data => {
-        console.log('📊 Response data:', data);
-        
-        if (data && data.success === true) {
+        if (data?.status >= 200 && data?.status < 300) {
           setStatus('success');
-          setMessage(data.message || 'Email verified successfully! You can now login.');
+          setMessage(data.data?.message || 'Email verified successfully! You can now login.');
           setTimeout(() => {
             navigate('/login');
           }, 3000);
         } else {
           setStatus('error');
-          setMessage(data?.message || 'Verification failed. Please try again.');
+          setMessage(data?.data?.message || 'Verification failed. Please try again.');
           // Still redirect after 3 seconds even on error (if user is already verified)
           setTimeout(() => {
             navigate('/login');
@@ -65,9 +49,9 @@ export default function VerifyEmail() {
         }
       })
       .catch(error => {
-        console.error('❌ Fetch error details:', error);
+        console.error('Email verification failed:', error);
         setStatus('error');
-        setMessage('Failed to connect to verification server.');
+        setMessage(error.response?.data?.message || 'Failed to verify email. Please try again.');
         setTimeout(() => {
           navigate('/login');
         }, 3000);

@@ -10,6 +10,10 @@ public interface AuthService {
     RegisterResponse register(RegisterRequest request);
     LoginResponse login(LoginRequest request);
     LoginResponse googleLogin(String email, String firstName, String lastName);
+    void verifyEmail(String token);
+    void resendVerificationEmail(String email);
+    void requestPasswordReset(String email);
+    void resetPassword(String token, String newPassword);
 
     User updateUserRole(Long userId, String roleName);
     User getUserById(Long userId);

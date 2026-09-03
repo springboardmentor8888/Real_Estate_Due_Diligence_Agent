@@ -31,7 +31,7 @@ public class RiskCategoryController {
     }
 
     @PostMapping
-    @PreAuthorize("isAuthenticated()")
+        @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT')")
     @Operation(summary = "Create risk category", description = "Registers a new risk category.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Category created successfully",
@@ -65,7 +65,7 @@ public class RiskCategoryController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+        @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT')")
     @Operation(summary = "Update risk category details", description = "Updates details of an existing risk category.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Category updated successfully",
@@ -82,7 +82,7 @@ public class RiskCategoryController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+        @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT')")
     @Operation(summary = "Delete risk category", description = "Deletes a risk category. Fails if linked to assessments.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Category deleted successfully"),

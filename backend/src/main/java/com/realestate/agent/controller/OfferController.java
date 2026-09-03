@@ -19,7 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
+@CrossOrigin(origins = "${app.cors.allowed-origins}", allowCredentials = "true")
 @RestController
 @RequestMapping("/api/buyer/offers")
 @SecurityRequirement(name = "bearerAuth")
@@ -31,7 +31,7 @@ public class OfferController {
     private final PropertyRepository propertyRepository;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('BUYER', 'AGENT')")
+    @PreAuthorize("hasRole('BUYER')")
     public ResponseEntity<List<Map<String, Object>>> getOffers(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         
@@ -59,7 +59,7 @@ public class OfferController {
     }
 
     @PostMapping(value = {"/{propertyId}", "/{propertyId}/offer"})
-    @PreAuthorize("hasAnyRole('BUYER', 'AGENT')")
+    @PreAuthorize("hasRole('BUYER')")
     public ResponseEntity<Map<String, Object>> createOffer(
             @PathVariable Long propertyId,
             @RequestBody(required = false) Map<String, Object> payload,

@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
+@CrossOrigin(origins = "${app.cors.allowed-origins}", allowCredentials = "true")
 @RestController
 @RequestMapping("/api/buyer/watchlist")
 @SecurityRequirement(name = "bearerAuth")

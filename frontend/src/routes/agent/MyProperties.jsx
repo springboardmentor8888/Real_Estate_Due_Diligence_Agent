@@ -11,7 +11,7 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import api from '../../services/api';
+import api, { resolveBackendBaseUrl } from '../../services/api';
 
 export default function MyProperties() {
   const navigate = useNavigate();
@@ -221,7 +221,7 @@ export default function MyProperties() {
               <div className="h-48 bg-slate-200 relative">
                 {property.images && property.images.length > 0 ? (
                   <img 
-                    src={`http://localhost:8080${property.images[0]}`} 
+                    src={property.images[0].startsWith('http') ? property.images[0] : `${resolveBackendBaseUrl()}${property.images[0]}`}
                     alt={property.address}
                     className="w-full h-full object-cover"
                     onError={(e) => {

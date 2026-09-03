@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/addresses")
 @CrossOrigin(
-        origins = "http://localhost:3000",
+        origins = "${app.cors.allowed-origins}",
         allowCredentials = "true"
 )
 public class AddressController {

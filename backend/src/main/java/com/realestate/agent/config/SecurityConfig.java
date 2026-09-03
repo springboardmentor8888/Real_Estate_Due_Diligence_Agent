@@ -9,6 +9,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -32,6 +33,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -46,6 +48,12 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final CustomAccessDeniedHandler customAccessDeniedHandler;
+
+    @Value("${app.frontend.base-url:http://localhost:3000}")
+    private String frontendBaseUrl;
+
+    @Value("${app.cors.allowed-origins:http://localhost:3000}")
+    private String allowedOrigins;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -69,7 +77,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000"));
+        List<String> origins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+        configuration.setAllowedOrigins(origins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
@@ -132,7 +144,7 @@ public class SecurityConfig {
                                 if (lastName == null) lastName = "";
 
                                 if (email == null || email.isBlank()) {
-                                    response.sendRedirect("http://localhost:3000/login?error=google_email");
+                                    response.sendRedirect(frontendBaseUrl + "/login?error=google_email");
                                     return;
                                 }
 
@@ -146,7 +158,7 @@ public class SecurityConfig {
                                 String fullName = (firstName + " " + lastName).trim();
                                 if (fullName.isEmpty()) fullName = email;
 
-                                String redirectUrl = "http://localhost:3000/oauth2-callback"
+                                String redirectUrl = frontendBaseUrl + "/oauth2-callback"
                                         + "?token=" + URLEncoder.encode(token, StandardCharsets.UTF_8)
                                         + "&email=" + URLEncoder.encode(email, StandardCharsets.UTF_8)
                                         + "&fullName=" + URLEncoder.encode(fullName, StandardCharsets.UTF_8)
@@ -164,12 +176,12 @@ public class SecurityConfig {
 
                             } catch (Exception e) {
                                 e.printStackTrace();
-                                response.sendRedirect("http://localhost:3000/login?error=google");
+                                response.sendRedirect(frontendBaseUrl + "/login?error=google");
                             }
                         })
                         .failureHandler((request, response, exception) -> {
                             exception.printStackTrace();
-                            response.sendRedirect("http://localhost:3000/login?error=google");
+                            response.sendRedirect(frontendBaseUrl + "/login?error=google");
                         });
                 });
 

@@ -5,7 +5,7 @@ import { PageHeader } from '../components/app-shell';
 import { Badge } from '../components/ui/badge';
 import { 
   Star, Eye, Bell, X, Home, DollarSign, MapPin, Clock, 
-  AlertTriangle, CheckCircle, Shield 
+  AlertTriangle, CheckCircle, Shield, AlertCircle, RefreshCw
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import api from '../services/api';
@@ -14,6 +14,7 @@ export default function WatchlistPage() {
   const navigate = useNavigate();
   const [watchlist, setWatchlist] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     fetchWatchlist();
@@ -22,6 +23,7 @@ export default function WatchlistPage() {
   const fetchWatchlist = async () => {
     try {
       setLoading(true);
+      setError('');
       const response = await api.get('/buyer/watchlist');
       console.log('Watchlist response:', response.data);
       
@@ -33,6 +35,7 @@ export default function WatchlistPage() {
     } catch (error) {
       console.error('Error fetching watchlist:', error);
       setWatchlist([]);
+      setError(error.response?.data?.message || 'Watchlist could not be loaded.');
     } finally {
       setLoading(false);
     }
@@ -78,6 +81,12 @@ export default function WatchlistPage() {
       <div className="flex justify-center items-center h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-red-700"><div className="flex items-center justify-between gap-4"><span className="flex items-center gap-2"><AlertCircle className="h-5 w-5" />{error}</span><button type="button" onClick={fetchWatchlist} className="inline-flex items-center gap-2 rounded-lg border border-red-300 px-3 py-2 text-sm font-medium"><RefreshCw className="h-4 w-4" /> Retry</button></div></div>
     );
   }
 

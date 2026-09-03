@@ -31,7 +31,7 @@ public class UtilityController {
     }
 
     @PostMapping
-    @PreAuthorize("isAuthenticated()")
+        @PreAuthorize("hasRole('AGENT')")
     @Operation(summary = "Create utility info record", description = "Creates a new utility connection record. Only Administrators and Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Utility record created successfully",
@@ -68,7 +68,7 @@ public class UtilityController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+        @PreAuthorize("hasRole('AGENT')")
     @Operation(summary = "Update utility info details", description = "Updates details of an existing utility connection record. Only Administrators and Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Utility record updated successfully",
@@ -84,7 +84,7 @@ public class UtilityController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+        @PreAuthorize("hasRole('AGENT')")
     @Operation(summary = "Delete utility record", description = "Deletes a utility connection record. Only Administrators and Real Estate Agents can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Utility record deleted successfully"),

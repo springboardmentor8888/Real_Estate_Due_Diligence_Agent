@@ -19,8 +19,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
+import org.springframework.beans.factory.annotation.Value;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,6 +35,9 @@ public class ApiIntegrationServiceImpl implements ApiIntegrationService {
     private final ApiLogRepository logRepository;
     private final PropertyRepository propertyRepository;
     private final ApiIntegrationMapper mapper;
+
+    @Value("${app.external-api.allowed-hosts:}")
+    private String allowedHosts;
 
     public ApiIntegrationServiceImpl(
             ApiProviderRepository providerRepository,
@@ -48,6 +55,7 @@ public class ApiIntegrationServiceImpl implements ApiIntegrationService {
     @Override
     @Transactional
     public ApiProviderResponse createProvider(ApiProviderRequest request) {
+        validateBaseUrl(request.getBaseUrl());
         if (providerRepository.existsByProviderName(request.getProviderName())) {
             throw new DuplicateResourceException("API Provider with name " + request.getProviderName() + " already exists.");
         }
@@ -66,6 +74,7 @@ public class ApiIntegrationServiceImpl implements ApiIntegrationService {
     @Override
     @Transactional
     public ApiProviderResponse updateProvider(Long id, ApiProviderRequest request) {
+        validateBaseUrl(request.getBaseUrl());
         ApiProvider provider = providerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("API Provider not found with ID: " + id));
 
@@ -141,6 +150,8 @@ public class ApiIntegrationServiceImpl implements ApiIntegrationService {
         if (!provider.getIsActive()) {
             throw new BadRequestException("API Provider is currently inactive.");
         }
+        validateBaseUrl(provider.getBaseUrl());
+        validateSubEndpoint(subEndpoint);
 
         Property property = null;
         if (propertyId != null) {
@@ -216,5 +227,37 @@ public class ApiIntegrationServiceImpl implements ApiIntegrationService {
                 .build();
 
         return mapper.toLogResponse(logRepository.save(apiLog));
+    }
+
+    private void validateBaseUrl(String baseUrl) {
+        if (baseUrl == null || baseUrl.isBlank()) {
+            throw new BadRequestException("API provider base URL is required.");
+        }
+
+        try {
+            URI uri = new URI(baseUrl.trim());
+            if (!uri.isAbsolute() || uri.getUserInfo() != null || uri.getHost() == null
+                    || !("https".equalsIgnoreCase(uri.getScheme()) || "http".equalsIgnoreCase(uri.getScheme()))) {
+                throw new BadRequestException("API provider base URL must be an HTTP(S) URL without credentials.");
+            }
+
+            List<String> hosts = Arrays.stream(allowedHosts.split(","))
+                    .map(String::trim)
+                    .filter(host -> !host.isEmpty())
+                    .map(String::toLowerCase)
+                    .toList();
+            if (!hosts.contains(uri.getHost().toLowerCase())) {
+                throw new BadRequestException("API provider host is not in the configured allowlist.");
+            }
+        } catch (URISyntaxException ex) {
+            throw new BadRequestException("API provider base URL is invalid.");
+        }
+    }
+
+    private void validateSubEndpoint(String subEndpoint) {
+        if (subEndpoint == null || subEndpoint.isBlank() || !subEndpoint.startsWith("/")
+                || subEndpoint.startsWith("//") || subEndpoint.contains("://")) {
+            throw new BadRequestException("External API endpoint must be a relative path.");
+        }
     }
 }

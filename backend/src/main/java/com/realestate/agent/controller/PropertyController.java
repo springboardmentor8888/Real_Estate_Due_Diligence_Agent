@@ -15,12 +15,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "${app.cors.allowed-origins}")
 @RestController
 @RequestMapping("/api/properties")
 @SecurityRequirement(name = "bearerAuth")
@@ -33,30 +30,6 @@ public class PropertyController {
         this.propertyService = propertyService;
     }
 
-    // -------------------------------------------------------------
-    // EMERGENCY MOCK DATA FOR YOUR PRESENTATION (No missing file errors!)
-    // -------------------------------------------------------------
-    @GetMapping("/test-data")
-    public ResponseEntity<List<Map<String, Object>>> getMockData() {
-        List<Map<String, Object>> mockData = new ArrayList<>();
-
-        // Creating 3 dummy properties using standard Java Maps (No DTO class needed!)
-        for (int i = 1; i <= 3; i++) {
-            Map<String, Object> mock = new HashMap<>();
-            mock.put("id", (long) i);
-            mock.put("address", "456 Oak Ave, SF, CA " + i);
-            mock.put("price", 800000 + (i * 10000));
-            mock.put("sqft", 1800 + (i * 100));
-            mock.put("score", 85 + i);
-            mockData.add(mock);
-        }
-
-        return ResponseEntity.ok(mockData);
-    }
-
-    // -------------------------------------------------------------
-    // REAL BACKEND METHODS (Kept intact)
-    // -------------------------------------------------------------
     @PostMapping
     @PreAuthorize("hasRole('AGENT')")
     public ResponseEntity<PropertyResponse> createProperty(

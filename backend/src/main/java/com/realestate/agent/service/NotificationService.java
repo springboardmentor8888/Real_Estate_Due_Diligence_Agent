@@ -11,7 +11,7 @@ public interface NotificationService {
     List<NotificationResponse> getNotificationsForUser(String userEmail);
     List<NotificationResponse> getUnreadNotificationsForUser(String userEmail);
     long getUnreadCountForUser(String userEmail);
-    NotificationResponse markAsRead(Long id);
+    NotificationResponse markAsRead(Long id, String userEmail);
     void markAllAsRead(String userEmail);
-    void deleteNotification(Long id);
+    void deleteNotification(Long id, String userEmail);
 }

@@ -1,6 +1,15 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+export const resolveApiBaseUrl = (value = process.env.REACT_APP_API_URL || 'http://localhost:8080/api') => {
+    return String(value).replace(/\/$/, '');
+};
+
+export const resolveBackendBaseUrl = (value = process.env.REACT_APP_API_URL || 'http://localhost:8080/api') => {
+    const normalized = resolveApiBaseUrl(value);
+    return normalized.replace(/\/api$/, '');
+};
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 const api = axios.create({
     baseURL: API_BASE_URL,
@@ -76,8 +85,6 @@ export const authService = {
         localStorage.removeItem('user');
         return Promise.resolve({ data: { message: 'Logged out successfully' } });
     },
-    googleLogin: (email, firstName, lastName) =>
-        api.post('/auth/google-login', { email, firstName, lastName }),
     verifyEmail: (token) => api.post('/auth/verify-email', { token }),
     forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
     resetPassword: (token, newPassword) =>
@@ -128,7 +135,6 @@ export const documentService = {
 export const riskAssessmentService = {
     getAll: () => api.get('/risk-assessments'),
     getByProperty: (propertyId) => api.get(`/risk-assessments/property/${propertyId}`),
-    getSummary: () => api.get('/risk-assessments/summary'),
 };
 
 export const dashboardService = {

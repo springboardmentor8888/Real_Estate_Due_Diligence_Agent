@@ -3,8 +3,11 @@ package com.realestate.agent.exception;
 import com.realestate.agent.dto.ApiErrorResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.mail.MailException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -84,15 +87,72 @@ public class GlobalExceptionHandler {
             }
         });
 
+        String combinedMessage = errors.isEmpty()
+                ? "Validation failed"
+                : String.join(". ", errors.values());
+
         ApiErrorResponse body = ApiErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                .message("Validation failed")
+                .message(combinedMessage)
                 .path(getPath(request))
                 .validationErrors(errors)
                 .build();
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiErrorResponse> handleIllegalArgument(IllegalArgumentException ex, WebRequest request) {
+        ApiErrorResponse body = ApiErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message(ex.getMessage())
+                .path(getPath(request))
+                .build();
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiErrorResponse> handleHttpMessageNotReadable(
+            HttpMessageNotReadableException ex, WebRequest request) {
+        ApiErrorResponse body = ApiErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message("Malformed or invalid request body.")
+                .path(getPath(request))
+                .build();
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiErrorResponse> handleDataIntegrityViolation(
+            DataIntegrityViolationException ex, WebRequest request) {
+        logger.warn("Data integrity violation: {}", ex.getMessage());
+        ApiErrorResponse body = ApiErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.CONFLICT.value())
+                .error(HttpStatus.CONFLICT.getReasonPhrase())
+                .message("A record with the provided information already exists or violates a database constraint.")
+                .path(getPath(request))
+                .build();
+        return new ResponseEntity<>(body, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(MailException.class)
+    public ResponseEntity<ApiErrorResponse> handleMailException(
+            MailException ex, WebRequest request) {
+        logger.error("Mail service error: ", ex);
+        ApiErrorResponse body = ApiErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.SERVICE_UNAVAILABLE.value())
+                .error(HttpStatus.SERVICE_UNAVAILABLE.getReasonPhrase())
+                .message("Unable to send email. Mail service is currently unavailable.")
+                .path(getPath(request))
+                .build();
+        return new ResponseEntity<>(body, HttpStatus.SERVICE_UNAVAILABLE);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
@@ -143,6 +203,19 @@ public class GlobalExceptionHandler {
                 .path(getPath(request))
                 .build();
         return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(EmailDeliveryUnavailableException.class)
+    public ResponseEntity<ApiErrorResponse> handleEmailDeliveryUnavailable(
+            EmailDeliveryUnavailableException ex, WebRequest request) {
+        ApiErrorResponse body = ApiErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.SERVICE_UNAVAILABLE.value())
+                .error(HttpStatus.SERVICE_UNAVAILABLE.getReasonPhrase())
+                .message(ex.getMessage())
+                .path(getPath(request))
+                .build();
+        return new ResponseEntity<>(body, HttpStatus.SERVICE_UNAVAILABLE);
     }
 
     @ExceptionHandler(Exception.class)

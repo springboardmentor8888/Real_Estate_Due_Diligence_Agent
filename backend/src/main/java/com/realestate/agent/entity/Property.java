@@ -33,6 +33,9 @@ public class Property {
     @Column(name = "property_name", nullable = false, length = 200)
     private String propertyName;
 
+    @Column(name = "title", nullable = false, length = 255)
+    private String legacyTitle;
+
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
@@ -76,5 +79,11 @@ public class Property {
             return addresses.get(0);
         }
         return null;
+    }
+
+    @PrePersist
+    @PreUpdate
+    private void synchronizeLegacyTitle() {
+        legacyTitle = propertyName;
     }
 }

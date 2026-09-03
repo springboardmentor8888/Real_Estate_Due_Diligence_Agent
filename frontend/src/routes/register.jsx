@@ -126,11 +126,14 @@ function Field({ label, icon: Icon, ...inputProps }) {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function RegisterPage() {
-  useNavigate(); // keep for future navigate() calls if needed
+  const navigate = useNavigate();
 
-  const [step, setStep]       = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState('');
+  const [step, setStep]             = useState(1);
+  const [loading, setLoading]       = useState(false);
+  const [error, setError]           = useState('');
+  const [registeredUser, setRegisteredUser] = useState(null);
+  const [resending, setResending]   = useState(false);
+  const [resendStatus, setResendStatus] = useState('');
 
   const [formData, setFormData] = useState({
     fullName:        '',
@@ -189,28 +192,16 @@ export default function RegisterPage() {
       console.log('Token received from register:', !!token);
       console.log('Role resolved:', role);
 
-      // If backend did not issue token directly, perform login fallback
+      // Verification is required before login; registration does not issue a JWT.
       if (!token) {
-        console.log('No token from register, attempting login fallback...');
-        try {
-          const loginRes = await authService.login({
-            email:    formData.email.trim(),
-            password: formData.password,
-          });
-          token = loginRes.data.token;
-          console.log('Login fallback token received:', !!token);
-        } catch (loginErr) {
-          console.error('Login fallback failed:', loginErr);
-          // If login also fails, we can't proceed
-          setError('Account created but auto-login failed. Please sign in manually.');
-          setLoading(false);
-          return;
-        }
-      }
-
-      if (!token) {
-        console.error('No token available after registration + login fallback');
-        setError('Account created but no authentication token received. Please sign in.');
+        const userEmail = data.email || formData.email.trim();
+        setRegisteredUser({
+          email: userEmail,
+          role: role,
+          message: data.message || 'Registration successful. Check your email to verify your account before logging in.',
+        });
+        setError('');
+        setStep(3);
         setLoading(false);
         return;
       }
@@ -248,19 +239,45 @@ export default function RegisterPage() {
       console.error('Registration error:', err);
       console.error('Response status:', err.response?.status);
       console.error('Response data:', err.response?.data);
-      setError(
-        err.response?.data?.message ||
-        err.response?.data?.error   ||
-        'Registration failed. Please try again.'
-      );
+
+      const valErrors = err.response?.data?.validationErrors;
+      let errorMsg = '';
+      if (valErrors && typeof valErrors === 'object') {
+        errorMsg = Object.values(valErrors).join('. ');
+      }
+      if (!errorMsg) {
+        errorMsg = err.response?.data?.message ||
+                   err.response?.data?.error   ||
+                   'Registration failed. Please try again.';
+      }
+      setError(errorMsg);
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    const targetEmail = registeredUser?.email || formData.email?.trim();
+    if (!targetEmail) return;
+    setResending(true);
+    setResendStatus('');
+    try {
+      await authService.resendVerification(targetEmail);
+      setResendStatus('Verification link resent! Please check your inbox.');
+    } catch (err) {
+      setResendStatus(err.response?.data?.message || 'Could not resend email. Please try again.');
+    } finally {
+      setResending(false);
     }
   };
 
   // ── Shared step indicator ─────────────────────────────────────────────────────
   const StepIndicator = () => (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-      {[{ n: 1, label: 'Your Details' }, { n: 2, label: 'Select Role' }].map(({ n, label }, i) => (
+      {[
+        { n: 1, label: 'Your Details' },
+        { n: 2, label: 'Select Role' },
+        { n: 3, label: 'Verify Email' }
+      ].map(({ n, label }, i) => (
         <React.Fragment key={n}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <div style={{
@@ -282,10 +299,10 @@ export default function RegisterPage() {
               {label}
             </span>
           </div>
-          {i < 1 && (
+          {i < 2 && (
             <div style={{
               flex: 1, height: '1px', maxWidth: '36px',
-              background: step > 1 ? '#059669' : '#e2e8f0',
+              background: step > (i + 1) ? '#059669' : '#e2e8f0',
               transition: 'background 0.25s',
             }} />
           )}
@@ -312,11 +329,17 @@ export default function RegisterPage() {
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
     <AuthLayout
-      title={step === 1 ? 'Create your account' : 'Choose your role'}
+      title={
+        step === 1 ? 'Create your account' :
+        step === 2 ? 'Choose your role' :
+        'Registration Successful'
+      }
       subtitle={
         step === 1
           ? 'Start your real estate due diligence journey.'
-          : `Hi ${formData.fullName.split(' ')[0] || 'there'}! Select how you'll use this platform.`
+          : step === 2
+          ? `Hi ${formData.fullName.split(' ')[0] || 'there'}! Select how you'll use this platform.`
+          : 'Your account has been created. Check your email to verify before signing in.'
       }
       footer={
         step === 1 ? (
@@ -326,7 +349,7 @@ export default function RegisterPage() {
               Sign in
             </Link>
           </>
-        ) : (
+        ) : step === 2 ? (
           <button
             onClick={() => { setStep(1); setError(''); }}
             style={{
@@ -337,6 +360,10 @@ export default function RegisterPage() {
           >
             <ChevronLeft size={14} /> Back to details
           </button>
+        ) : (
+          <Link to="/login" style={{ color: '#059669', fontWeight: '600', fontSize: '13px' }}>
+            Back to Sign In
+          </Link>
         )
       }
     >
@@ -586,6 +613,89 @@ export default function RegisterPage() {
             <p style={{ textAlign: 'center', fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
               By creating an account you agree to our Terms and Privacy Policy.
             </p>
+          </motion.div>
+        )}
+
+        {/* ─────────────── STEP 3: Email Verification ─────────────── */}
+        {step === 3 && (
+          <motion.div
+            key="step3"
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.96 }}
+            transition={{ duration: 0.25 }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px' }}
+          >
+            <div style={{
+              width: '56px', height: '56px', borderRadius: '50%',
+              background: '#ecfdf5', border: '2px solid #a7f3d0',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#059669',
+            }}>
+              <Mail size={28} />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
+                Check your inbox
+              </h3>
+              <p style={{ fontSize: '13.5px', color: '#475569', marginTop: '6px', marginBottom: 0 }}>
+                We sent a verification link to:
+              </p>
+              <p style={{ fontSize: '14px', fontWeight: '600', color: '#059669', marginTop: '2px', marginBottom: 0 }}>
+                {registeredUser?.email || formData.email}
+              </p>
+            </div>
+
+            <div style={{
+              background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px',
+              padding: '12px 16px', fontSize: '12.5px', color: '#64748b', lineHeight: '1.5',
+              textAlign: 'left', width: '100%', boxSizing: 'border-box'
+            }}>
+              <p style={{ margin: 0 }}>
+                Click the link in the email to activate your account. If you don't see it within a few minutes, please check your spam folder.
+              </p>
+            </div>
+
+            {resendStatus && (
+              <div style={{
+                background: resendStatus.includes('resent') || resendStatus.includes('sent') ? '#ecfdf5' : '#fef2f2',
+                border: `1px solid ${resendStatus.includes('resent') || resendStatus.includes('sent') ? '#a7f3d0' : '#fecaca'}`,
+                borderRadius: '8px', padding: '8px 12px', fontSize: '12.5px',
+                color: resendStatus.includes('resent') || resendStatus.includes('sent') ? '#047857' : '#dc2626',
+                width: '100%', boxSizing: 'border-box'
+              }}>
+                {resendStatus}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => navigate('/login')}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                gap: '8px', width: '100%', padding: '11px 0',
+                background: '#059669', color: '#ffffff',
+                fontWeight: '700', fontSize: '14px',
+                border: 'none', borderRadius: '12px', cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(5,150,105,0.30)',
+                transition: 'background 0.2s, transform 0.15s',
+              }}
+            >
+              Proceed to Sign In <ChevronRight size={16} />
+            </button>
+
+            <button
+              type="button"
+              onClick={handleResendVerification}
+              disabled={resending}
+              style={{
+                background: 'none', border: 'none', cursor: resending ? 'not-allowed' : 'pointer',
+                color: '#64748b', fontSize: '12.5px', textDecoration: 'underline', padding: '4px',
+              }}
+            >
+              {resending ? 'Sending...' : "Didn't receive the email? Resend verification link"}
+            </button>
           </motion.div>
         )}
       </AnimatePresence>

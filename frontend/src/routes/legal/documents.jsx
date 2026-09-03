@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { PageHeader } from '../../components/app-shell';
-import { FileText, CheckCircle, XCircle, Clock, Download, Eye, Search, Users, Building2 } from 'lucide-react';
+import { FileText, CheckCircle, XCircle, Clock, Download, Eye, Search, Users, Building2, AlertCircle, RefreshCw } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { documentService } from '../../services/api';
@@ -12,6 +12,7 @@ export default function VerifyDocuments() {
   const navigate = useNavigate();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
@@ -21,12 +22,14 @@ export default function VerifyDocuments() {
   const fetchDocuments = async () => {
     try {
       setLoading(true);
+      setError('');
       const res = await documentService.getAll();
       const list = Array.isArray(res.data) ? res.data : [];
       setDocuments(list);
     } catch (err) {
       console.error('Error fetching legal documents:', err);
       setDocuments([]);
+      setError(err.response?.data?.message || 'Documents could not be loaded.');
     } finally {
       setLoading(false);
     }
@@ -54,6 +57,12 @@ export default function VerifyDocuments() {
       <div className="flex justify-center items-center h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-red-700"><div className="flex items-center justify-between gap-4"><span className="flex items-center gap-2"><AlertCircle className="h-5 w-5" />{error}</span><button type="button" onClick={fetchDocuments} className="inline-flex items-center gap-2 rounded-lg border border-red-300 px-3 py-2 text-sm font-medium"><RefreshCw className="h-4 w-4" /> Retry</button></div></div>
     );
   }
 

@@ -2,13 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { PageHeader } from '../components/app-shell';
 import { Badge } from '../components/ui/badge';
-import { FileText, Download, Eye, Clock, CheckCircle, Plus } from 'lucide-react';
+import { FileText, Download, Eye, Clock, CheckCircle, Plus, AlertCircle, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { dueDiligenceService } from '../services/api';
 
 export default function ReportsPage() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     fetchReports();
@@ -17,12 +18,14 @@ export default function ReportsPage() {
   const fetchReports = async () => {
     try {
       setLoading(true);
+      setError('');
       const res = await dueDiligenceService.getReports();
       const list = Array.isArray(res.data) ? res.data : [];
       setReports(list);
     } catch (err) {
       console.error('Error fetching reports:', err);
       setReports([]);
+      setError(err.response?.data?.message || 'Reports could not be loaded.');
     } finally {
       setLoading(false);
     }
@@ -50,6 +53,14 @@ export default function ReportsPage() {
     return (
       <div className="flex justify-center items-center h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-red-700">
+        <div className="flex items-center justify-between gap-4"><span className="flex items-center gap-2"><AlertCircle className="h-5 w-5" />{error}</span><button type="button" onClick={fetchReports} className="inline-flex items-center gap-2 rounded-lg border border-red-300 px-3 py-2 text-sm font-medium"><RefreshCw className="h-4 w-4" /> Retry</button></div>
       </div>
     );
   }

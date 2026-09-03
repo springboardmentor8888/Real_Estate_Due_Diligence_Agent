@@ -41,9 +41,12 @@ public class DashboardServiceImpl implements DashboardService {
             user = userRepository.findByEmail(userEmail).orElse(null);
         }
 
-        String role = (requestedRole != null && !requestedRole.isBlank())
-                ? requestedRole.toUpperCase().trim()
-                : (user != null && user.getRole() != null ? user.getRole().getRoleName().toUpperCase().trim() : "BUYER");
+        String role = user != null && user.getRole() != null
+            ? user.getRole().getRoleName().toUpperCase().trim()
+            : "BUYER";
+        if (role.startsWith("ROLE_")) {
+            role = role.substring(5);
+        }
 
         String fullName = user != null ? ((user.getFirstName() != null ? user.getFirstName() : "") + " " +
                 (user.getLastName() != null ? user.getLastName() : "")).trim() : "User";

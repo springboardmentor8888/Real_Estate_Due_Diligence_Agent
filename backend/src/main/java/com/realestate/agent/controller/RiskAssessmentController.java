@@ -33,7 +33,7 @@ public class RiskAssessmentController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT', 'BUYER', 'SELLER', 'BANK')")
+        @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT', 'BANK')")
     @Operation(summary = "Perform risk assessment", description = "Creates a new property risk assessment. Only Legal Reviewers, Real Estate Agents, Buyers, Sellers, and Banks can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Risk assessment created successfully",
@@ -85,7 +85,7 @@ public class RiskAssessmentController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT', 'BUYER', 'SELLER', 'BANK')")
+        @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT', 'BANK')")
     @Operation(summary = "Update risk assessment", description = "Updates details of an existing risk assessment. Only Legal Reviewers, Real Estate Agents, Buyers, Sellers, and Banks can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Risk assessment updated successfully",
@@ -101,7 +101,7 @@ public class RiskAssessmentController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT', 'BUYER', 'SELLER', 'BANK')")
+        @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT', 'BANK')")
     @Operation(summary = "Delete risk assessment", description = "Deletes a risk assessment. Only Legal Reviewers, Real Estate Agents, Buyers, Sellers, and Banks can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Risk assessment deleted successfully"),

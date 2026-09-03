@@ -90,14 +90,41 @@ export function AppShell({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(undefined);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   // Get user data
   useEffect(() => {
-    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    const token = localStorage.getItem('token');
+    const userData = JSON.parse(localStorage.getItem('user') || 'null');
+    if (!token || !userData) {
+      navigate('/login', { replace: true });
+      return;
+    }
     setUser(userData);
-  }, []);
+  }, [navigate]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const role = String(user.role || '').toUpperCase().replace(/^ROLE_/, '');
+    const path = location.pathname;
+    const requiredRoles = path.startsWith('/bank/')
+      ? ['BANK']
+      : path.startsWith('/buyer/') || path === '/watchlist' || path === '/analytics'
+        ? ['BUYER']
+        : path.startsWith('/legal/')
+          ? ['LEGAL_REVIEWER']
+          : path === '/users' || path === '/agent/dashboard' || path === '/agent/list-property'
+            ? ['AGENT']
+            : path === '/agent/properties' || path === '/agent/inquiries'
+              ? ['AGENT', 'SELLER']
+              : [];
+
+    if (requiredRoles.length > 0 && !requiredRoles.includes(role)) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [location.pathname, navigate, user]);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -108,6 +135,10 @@ export function AppShell({ children }) {
 
   // Get navigation items based on role
   const navItems = getNavItems(user?.role || 'BUYER');
+
+  if (user === undefined) {
+    return null;
+  }
 
   // Handle logout
   const handleLogout = () => {

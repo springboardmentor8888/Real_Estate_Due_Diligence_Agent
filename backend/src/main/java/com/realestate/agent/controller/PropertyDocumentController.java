@@ -33,7 +33,7 @@ public class PropertyDocumentController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT', 'BUYER', 'SELLER', 'BANK')")
+        @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT')")
     @Operation(summary = "Upload property document metadata", description = "Registers metadata for an uploaded supporting document. Only Legal Reviewers, Real Estate Agents, Buyers, Sellers, and Banks can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Document metadata created successfully",
@@ -94,7 +94,7 @@ public class PropertyDocumentController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT', 'BUYER', 'SELLER', 'BANK')")
+        @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT')")
     @Operation(summary = "Update document details", description = "Updates details of an existing document record. Only Legal Reviewers, Real Estate Agents, Buyers, Sellers, and Banks can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Document updated successfully",
@@ -110,7 +110,7 @@ public class PropertyDocumentController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT', 'BUYER', 'SELLER', 'BANK')")
+        @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT')")
     @Operation(summary = "Delete document", description = "Deletes a property document record. Only Legal Reviewers, Real Estate Agents, Buyers, Sellers, and Banks can perform this action.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Document deleted successfully"),

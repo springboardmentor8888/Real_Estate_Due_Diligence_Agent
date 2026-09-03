@@ -17,7 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
+@CrossOrigin(origins = "${app.cors.allowed-origins}", allowCredentials = "true")
 @RestController
 @RequestMapping("/api/agent/inquiries")
 @SecurityRequirement(name = "bearerAuth")
@@ -59,16 +59,18 @@ public class InquiryController {
     }
 
     @PostMapping("/{propertyId}")
+        @PreAuthorize("hasRole('BUYER')")
     public ResponseEntity<Map<String, Object>> createInquiry(
             @PathVariable Long propertyId,
-            @RequestBody Map<String, Object> payload) {
+            @RequestBody Map<String, Object> payload,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
             
         Property property = propertyRepository.findById(propertyId).orElseThrow();
         
         Inquiry inquiry = Inquiry.builder()
                 .property(property)
-                .senderName(payload.getOrDefault("name", "Unknown").toString())
-                .senderEmail(payload.getOrDefault("email", "unknown@example.com").toString())
+                .senderName(payload.getOrDefault("name", userDetails.getUsername()).toString())
+                .senderEmail(userDetails.getUsername())
                 .senderPhone(payload.getOrDefault("phone", "").toString())
                 .message(payload.getOrDefault("message", "").toString())
                 .status("NEW")

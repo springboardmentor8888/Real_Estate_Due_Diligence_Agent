@@ -45,6 +45,18 @@ public class User {
     @Column(name = "email_verified")
     private Boolean emailVerified;
 
+    @Column(name = "verification_token_hash", length = 64)
+    private String verificationTokenHash;
+
+    @Column(name = "verification_token_expires_at")
+    private LocalDateTime verificationTokenExpiresAt;
+
+    @Column(name = "password_reset_token_hash", length = 64)
+    private String passwordResetTokenHash;
+
+    @Column(name = "password_reset_token_expires_at")
+    private LocalDateTime passwordResetTokenExpiresAt;
+
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
 

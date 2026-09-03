@@ -3,6 +3,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Building2, ShieldCheck, TrendingUp } from 'lucide-react';
+import { resolveBackendBaseUrl } from '../services/api';
 
 export function AuthLayout({ title, subtitle, children, footer }) {
   return (
@@ -112,10 +113,12 @@ export function AuthLayout({ title, subtitle, children, footer }) {
 }
 
 export function GoogleButton({ children = 'Continue with Google' }) {
+  const backendUrl = resolveBackendBaseUrl();
+
   return (
     <button
       type="button"
-      onClick={() => { window.location.href = 'http://localhost:8080/oauth2/authorization/google?prompt=select_account'; }}
+      onClick={() => { window.location.href = `${backendUrl}/oauth2/authorization/google?prompt=select_account`; }}
       style={{
         display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center',
         gap: '8px', padding: '10px 16px', borderRadius: '10px',

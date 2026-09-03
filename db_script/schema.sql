@@ -15,6 +15,10 @@ CREATE TABLE IF NOT EXISTS users (
     role_id BIGINT REFERENCES roles(role_id),
     is_active BOOLEAN DEFAULT TRUE,
     email_verified BOOLEAN DEFAULT FALSE,
+    verification_token_hash VARCHAR(64),
+    verification_token_expires_at TIMESTAMP,
+    password_reset_token_hash VARCHAR(64),
+    password_reset_token_expires_at TIMESTAMP,
     last_login TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

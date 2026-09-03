@@ -24,7 +24,7 @@ import java.util.Map;
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @CrossOrigin(
-        origins = "http://localhost:3000",
+        origins = "${app.cors.allowed-origins}",
         allowCredentials = "true"
 )
 public class AuthController {
@@ -45,28 +45,30 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/google-login")
-    public ResponseEntity<LoginResponse> googleLogin(
-            @RequestBody Map<String, String> request) {
-        String email = request.get("email");
-        String firstName = request.get("firstName");
-        String lastName = request.get("lastName");
-        LoginResponse response = authService.googleLogin(email, firstName, lastName);
-        return ResponseEntity.ok(response);
-    }
-
     @PostMapping("/verify-email")
     public ResponseEntity<?> verifyEmail(@RequestBody Map<String, String> request) {
+        authService.verifyEmail(request != null ? request.get("token") : null);
         return ResponseEntity.ok(Map.of("message", "Email verified successfully"));
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<?> resendVerification(@RequestBody Map<String, String> request) {
+        authService.resendVerificationEmail(request != null ? request.get("email") : null);
+        return ResponseEntity.ok(Map.of("message", "If an unverified account exists with that email, a verification link has been sent."));
     }
 
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request) {
-        return ResponseEntity.ok(Map.of("message", "Password reset link sent to your email"));
+        authService.requestPasswordReset(request != null ? request.get("email") : null);
+        return ResponseEntity.ok(Map.of("message", "If the account exists, a password reset link has been sent."));
     }
 
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> request) {
+        authService.resetPassword(
+            request != null ? request.get("token") : null,
+            request != null ? request.get("newPassword") : null
+        );
         return ResponseEntity.ok(Map.of("message", "Password reset successfully"));
     }
 

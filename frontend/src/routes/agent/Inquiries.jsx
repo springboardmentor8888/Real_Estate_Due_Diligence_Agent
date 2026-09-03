@@ -15,6 +15,7 @@ export default function Inquiries() {
   const navigate = useNavigate();
   const [inquiries, setInquiries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedInquiry, setSelectedInquiry] = useState(null);
   const [responseText, setResponseText] = useState('');
@@ -26,11 +27,13 @@ export default function Inquiries() {
   const fetchInquiries = async () => {
     try {
       setLoading(true);
+      setError('');
       const response = await api.get('/agent/inquiries');
       setInquiries(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error fetching inquiries from backend:', error);
       setInquiries([]);
+      setError(error.response?.data?.message || 'Inquiries could not be loaded.');
     } finally {
       setLoading(false);
     }
@@ -74,6 +77,12 @@ export default function Inquiries() {
       <div className="flex justify-center items-center h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-red-700"><div className="flex items-center justify-between gap-4"><span className="flex items-center gap-2"><XCircle className="h-5 w-5" />{error}</span><button type="button" onClick={fetchInquiries} className="inline-flex items-center gap-2 rounded-lg border border-red-300 px-3 py-2 text-sm font-medium"><RefreshCw className="h-4 w-4" /> Retry</button></div></div>
     );
   }
 

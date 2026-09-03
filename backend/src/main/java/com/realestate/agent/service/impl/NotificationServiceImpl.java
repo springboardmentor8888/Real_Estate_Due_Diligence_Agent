@@ -111,9 +111,10 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional
-    public NotificationResponse markAsRead(Long id) {
+        public NotificationResponse markAsRead(Long id, String userEmail) {
         Notification notification = notificationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Notification not found with ID: " + id));
+                ensureOwnedByUser(notification, userEmail);
         notification.setIsRead(true);
         return notificationMapper.toResponse(notificationRepository.save(notification));
     }
@@ -130,9 +131,16 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional
-    public void deleteNotification(Long id) {
+        public void deleteNotification(Long id, String userEmail) {
         Notification notification = notificationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Notification not found with ID: " + id));
+                ensureOwnedByUser(notification, userEmail);
         notificationRepository.delete(notification);
     }
+
+        private void ensureOwnedByUser(Notification notification, String userEmail) {
+                if (notification.getUser() == null || !notification.getUser().getEmail().equalsIgnoreCase(userEmail)) {
+                        throw new org.springframework.security.access.AccessDeniedException("Notification does not belong to the current user");
+                }
+        }
 }

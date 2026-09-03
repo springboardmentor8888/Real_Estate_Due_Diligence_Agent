@@ -33,7 +33,7 @@ public class DueDiligenceReportController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT', 'BUYER', 'SELLER', 'BANK')")
+        @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT')")
     @Operation(summary = "Generate a due diligence report", description = "Generates a new property due diligence report.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Report created successfully",
@@ -83,7 +83,7 @@ public class DueDiligenceReportController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT', 'BUYER', 'SELLER', 'BANK')")
+        @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT')")
     @Operation(summary = "Update report details", description = "Updates details of an existing report.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Report updated successfully",
@@ -99,7 +99,7 @@ public class DueDiligenceReportController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT', 'BUYER', 'SELLER', 'BANK')")
+        @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT')")
     @Operation(summary = "Delete report", description = "Deletes a report by ID.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Report deleted successfully"),

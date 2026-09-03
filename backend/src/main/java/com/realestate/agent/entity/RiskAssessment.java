@@ -26,7 +26,7 @@ public class RiskAssessment {
     private Property property;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "risk_category_id", nullable = false)
+    @JoinColumn(name = "category_id", nullable = false)
     private RiskCategory riskCategory;
 
     @ManyToOne(fetch = FetchType.LAZY)

@@ -83,8 +83,10 @@ public class NotificationController {
                     content = @Content(schema = @Schema(implementation = NotificationResponse.class))),
             @ApiResponse(responseCode = "404", description = "Notification not found")
     })
-    public ResponseEntity<NotificationResponse> markAsRead(@PathVariable("id") Long id) {
-        NotificationResponse response = notificationService.markAsRead(id);
+    public ResponseEntity<NotificationResponse> markAsRead(
+            @PathVariable("id") Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        NotificationResponse response = notificationService.markAsRead(id, userDetails.getUsername());
         return ResponseEntity.ok(response);
     }
 
@@ -102,8 +104,10 @@ public class NotificationController {
             @ApiResponse(responseCode = "204", description = "Notification deleted successfully"),
             @ApiResponse(responseCode = "404", description = "Notification not found")
     })
-    public ResponseEntity<Void> deleteNotification(@PathVariable("id") Long id) {
-        notificationService.deleteNotification(id);
+    public ResponseEntity<Void> deleteNotification(
+            @PathVariable("id") Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        notificationService.deleteNotification(id, userDetails.getUsername());
         return ResponseEntity.noContent().build();
     }
 }

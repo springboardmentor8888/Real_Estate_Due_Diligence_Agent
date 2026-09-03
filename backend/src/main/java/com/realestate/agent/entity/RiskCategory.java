@@ -17,10 +17,10 @@ public class RiskCategory {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "risk_category_id")
+    @Column(name = "category_id")
     private Long riskCategoryId;
 
-    @Column(name = "category_name", nullable = false, unique = true, length = 100)
+    @Column(name = "name", nullable = false, unique = true, length = 100)
     private String categoryName;
 
     @Column(name = "description", columnDefinition = "TEXT")
