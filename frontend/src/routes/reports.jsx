@@ -2,14 +2,41 @@
 import React, { useState, useEffect } from 'react';
 import { PageHeader } from '../components/app-shell';
 import { Badge } from '../components/ui/badge';
-import { FileText, Download, Eye, Clock, CheckCircle, Plus, AlertCircle, RefreshCw } from 'lucide-react';
+import { FileText, Download, FileSpreadsheet, Eye, Clock, CheckCircle, Plus, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { dueDiligenceService } from '../services/api';
+import { dueDiligenceService, triggerBlobDownload } from '../services/api';
 
 export default function ReportsPage() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [downloadingId, setDownloadingId] = useState(null);
+
+  const handleDownloadPdf = async (reportId) => {
+    setDownloadingId(`pdf-${reportId}`);
+    try {
+      const res = await dueDiligenceService.downloadPdf(reportId);
+      triggerBlobDownload(res.data, `Due_Diligence_Report_${reportId}.pdf`);
+    } catch (err) {
+      console.error('Failed to download PDF:', err);
+      alert('Unable to download PDF. Please try again.');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const handleDownloadExcel = async (reportId) => {
+    setDownloadingId(`excel-${reportId}`);
+    try {
+      const res = await dueDiligenceService.downloadExcel(reportId);
+      triggerBlobDownload(res.data, `Due_Diligence_Report_${reportId}.xlsx`);
+    } catch (err) {
+      console.error('Failed to download Excel:', err);
+      alert('Unable to download Excel. Please try again.');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   useEffect(() => {
     fetchReports();
@@ -67,8 +94,8 @@ export default function ReportsPage() {
 
   return (
     <>
-      <PageHeader 
-        title="Due Diligence Reports" 
+      <PageHeader
+        title="Due Diligence Reports"
         subtitle={`Total reports generated: ${reports.length}`}
         actions={
           <button
@@ -124,13 +151,41 @@ export default function ReportsPage() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2 self-end md:self-center">
-                <button 
+              <div className="flex flex-wrap items-center gap-2 self-end md:self-center">
+                <button
                   onClick={() => report.propertyId && (window.location.href = `/properties/${report.propertyId}`)}
                   className="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors flex items-center gap-1.5"
                 >
                   <Eye className="h-4 w-4" />
-                  View Details
+                  View Property
+                </button>
+
+                <button
+                  onClick={() => handleDownloadPdf(report.reportId || report.id)}
+                  disabled={downloadingId === `pdf-${report.reportId || report.id}`}
+                  className="px-3 py-2 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                  title="Download Server-Side PDF"
+                >
+                  {downloadingId === `pdf-${report.reportId || report.id}` ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Download className="h-3.5 w-3.5" />
+                  )}
+                  PDF
+                </button>
+
+                <button
+                  onClick={() => handleDownloadExcel(report.reportId || report.id)}
+                  disabled={downloadingId === `excel-${report.reportId || report.id}`}
+                  className="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                  title="Download Excel Workbook"
+                >
+                  {downloadingId === `excel-${report.reportId || report.id}` ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
+                  )}
+                  Excel
                 </button>
               </div>
             </div>

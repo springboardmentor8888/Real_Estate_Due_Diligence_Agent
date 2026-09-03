@@ -69,4 +69,13 @@ public class Address {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    public String getFullAddress() {
+        StringBuilder sb = new StringBuilder();
+        if (addressLine1 != null && !addressLine1.isBlank()) sb.append(addressLine1);
+        if (city != null && !city.isBlank()) sb.append(sb.length() > 0 ? ", " : "").append(city);
+        if (state != null && !state.isBlank()) sb.append(sb.length() > 0 ? ", " : "").append(state);
+        if (postalCode != null && !postalCode.isBlank()) sb.append(sb.length() > 0 ? " " : "").append(postalCode);
+        return sb.length() > 0 ? sb.toString() : "Address not available";
+    }
 }

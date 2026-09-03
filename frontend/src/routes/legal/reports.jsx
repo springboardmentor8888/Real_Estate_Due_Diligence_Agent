@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { PageHeader } from '../../components/app-shell';
 import { Badge } from '../../components/ui/badge';
 import { FileText, Clock, AlertCircle, RefreshCw } from 'lucide-react';
-import { dueDiligenceService } from '../../services/api';
+import { dueDiligenceService, triggerBlobDownload } from '../../services/api';
 
 export default function LegalReports() {
   const [reports, setReports] = useState([]);
@@ -59,7 +59,39 @@ export default function LegalReports() {
                   </div>
                 </div>
               </div>
-              <Badge className={report.reportStatus === 'COMPLETED' || report.reportStatus === 'GENERATED' ? 'bg-emerald-500' : 'bg-amber-500'}>{report.reportStatus || 'UNKNOWN'}</Badge>
+              <div className="flex items-center gap-3">
+                <Badge className={report.reportStatus === 'COMPLETED' || report.reportStatus === 'GENERATED' ? 'bg-emerald-500' : 'bg-amber-500'}>{report.reportStatus || 'UNKNOWN'}</Badge>
+
+                <button
+                  onClick={async () => {
+                    try {
+                      const res = await dueDiligenceService.downloadPdf(report.reportId || report.id);
+                      triggerBlobDownload(res.data, `Due_Diligence_Report_${report.reportId || report.id}.pdf`);
+                    } catch {
+                      alert('Unable to download PDF report.');
+                    }
+                  }}
+                  className="px-2.5 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition"
+                  title="Download PDF"
+                >
+                  PDF
+                </button>
+
+                <button
+                  onClick={async () => {
+                    try {
+                      const res = await dueDiligenceService.downloadExcel(report.reportId || report.id);
+                      triggerBlobDownload(res.data, `Due_Diligence_Report_${report.reportId || report.id}.xlsx`);
+                    } catch {
+                      alert('Unable to download Excel report.');
+                    }
+                  }}
+                  className="px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition"
+                  title="Download Excel"
+                >
+                  Excel
+                </button>
+              </div>
             </div>
           ))}
         </div>

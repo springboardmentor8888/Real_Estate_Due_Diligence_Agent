@@ -3,6 +3,8 @@ package com.realestate.agent.controller;
 import com.realestate.agent.dto.DueDiligenceReportRequest;
 import com.realestate.agent.dto.DueDiligenceReportResponse;
 import com.realestate.agent.security.CustomUserDetails;
+import com.realestate.agent.service.ExcelReportService;
+import com.realestate.agent.service.PdfReportService;
 import com.realestate.agent.service.ReportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -12,7 +14,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -27,13 +32,21 @@ import java.util.List;
 public class DueDiligenceReportController {
 
     private final ReportService reportService;
+    private final PdfReportService pdfReportService;
+    private final ExcelReportService excelReportService;
 
-    public DueDiligenceReportController(ReportService reportService) {
+    public DueDiligenceReportController(
+            ReportService reportService,
+            PdfReportService pdfReportService,
+            ExcelReportService excelReportService
+    ) {
         this.reportService = reportService;
+        this.pdfReportService = pdfReportService;
+        this.excelReportService = excelReportService;
     }
 
     @PostMapping
-        @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT')")
+    @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT', 'BUYER', 'BANK', 'SELLER')")
     @Operation(summary = "Generate a due diligence report", description = "Generates a new property due diligence report.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Report created successfully",
@@ -43,9 +56,11 @@ public class DueDiligenceReportController {
     })
     public ResponseEntity<DueDiligenceReportResponse> generateReport(
             @Valid @RequestBody DueDiligenceReportRequest request,
-            @AuthenticationPrincipal CustomUserDetails userDetails
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            java.security.Principal principal
     ) {
-        DueDiligenceReportResponse response = reportService.generateReport(request, userDetails.getUsername());
+        String email = userDetails != null ? userDetails.getUsername() : (principal != null ? principal.getName() : null);
+        DueDiligenceReportResponse response = reportService.generateReport(request, email);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
@@ -99,7 +114,7 @@ public class DueDiligenceReportController {
     }
 
     @DeleteMapping("/{id}")
-        @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT')")
+    @PreAuthorize("hasAnyRole('LEGAL_REVIEWER', 'AGENT')")
     @Operation(summary = "Delete report", description = "Deletes a report by ID.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Report deleted successfully"),
@@ -108,5 +123,63 @@ public class DueDiligenceReportController {
     public ResponseEntity<Void> deleteReport(@PathVariable("id") Long id) {
         reportService.deleteReport(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // =====================================================
+    // PDF & EXCEL REPORT EXPORT ENDPOINTS
+    // =====================================================
+
+    @GetMapping(value = "/{id}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    @Operation(summary = "Download report as PDF", description = "Generates and streams a comprehensive due-diligence report in PDF format.")
+    public ResponseEntity<byte[]> downloadReportPdf(@PathVariable("id") Long id) {
+        DueDiligenceReportResponse report = reportService.getReportById(id);
+        byte[] pdfBytes = pdfReportService.generateDueDiligencePdf(report.getPropertyId(), id);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDisposition(ContentDisposition.attachment().filename("Due_Diligence_Report_" + id + ".pdf").build());
+        headers.setContentLength(pdfBytes.length);
+
+        return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+    }
+
+    @GetMapping(value = "/{id}/excel", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    @Operation(summary = "Download report as Excel", description = "Generates and streams a multi-sheet due-diligence report in Excel (.xlsx) format.")
+    public ResponseEntity<byte[]> downloadReportExcel(@PathVariable("id") Long id) {
+        DueDiligenceReportResponse report = reportService.getReportById(id);
+        byte[] excelBytes = excelReportService.generateDueDiligenceExcel(report.getPropertyId(), id);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        headers.setContentDisposition(ContentDisposition.attachment().filename("Due_Diligence_Report_" + id + ".xlsx").build());
+        headers.setContentLength(excelBytes.length);
+
+        return new ResponseEntity<>(excelBytes, headers, HttpStatus.OK);
+    }
+
+    @GetMapping(value = "/property/{propertyId}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    @Operation(summary = "Download property due-diligence PDF", description = "Generates and streams a comprehensive property due-diligence report in PDF format.")
+    public ResponseEntity<byte[]> downloadPropertyPdf(@PathVariable("propertyId") Long propertyId) {
+        byte[] pdfBytes = pdfReportService.generateDueDiligencePdf(propertyId, null);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDisposition(ContentDisposition.attachment().filename("Property_" + propertyId + "_Due_Diligence.pdf").build());
+        headers.setContentLength(pdfBytes.length);
+
+        return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+    }
+
+    @GetMapping(value = "/property/{propertyId}/excel", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    @Operation(summary = "Download property due-diligence Excel", description = "Generates and streams a property due-diligence report in Excel (.xlsx) format.")
+    public ResponseEntity<byte[]> downloadPropertyExcel(@PathVariable("propertyId") Long propertyId) {
+        byte[] excelBytes = excelReportService.generateDueDiligenceExcel(propertyId, null);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        headers.setContentDisposition(ContentDisposition.attachment().filename("Property_" + propertyId + "_Due_Diligence.xlsx").build());
+        headers.setContentLength(excelBytes.length);
+
+        return new ResponseEntity<>(excelBytes, headers, HttpStatus.OK);
     }
 }

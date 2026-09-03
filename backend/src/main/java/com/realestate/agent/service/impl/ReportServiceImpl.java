@@ -7,12 +7,14 @@ import com.realestate.agent.dto.PropertyDocumentResponse;
 import com.realestate.agent.entity.DueDiligenceReport;
 import com.realestate.agent.entity.PropertyDocument;
 import com.realestate.agent.entity.Property;
+import com.realestate.agent.entity.RiskAssessment;
 import com.realestate.agent.entity.User;
 import com.realestate.agent.exception.ResourceNotFoundException;
 import com.realestate.agent.mapper.ReportMapper;
 import com.realestate.agent.repository.DueDiligenceReportRepository;
 import com.realestate.agent.repository.PropertyDocumentRepository;
 import com.realestate.agent.repository.PropertyRepository;
+import com.realestate.agent.repository.RiskAssessmentRepository;
 import com.realestate.agent.repository.UserRepository;
 import com.realestate.agent.service.ReportService;
 import org.springframework.stereotype.Service;
@@ -28,6 +30,7 @@ public class ReportServiceImpl implements ReportService {
     private final PropertyDocumentRepository documentRepository;
     private final PropertyRepository propertyRepository;
     private final UserRepository userRepository;
+    private final RiskAssessmentRepository riskAssessmentRepository;
     private final ReportMapper reportMapper;
 
     public ReportServiceImpl(
@@ -35,12 +38,14 @@ public class ReportServiceImpl implements ReportService {
             PropertyDocumentRepository documentRepository,
             PropertyRepository propertyRepository,
             UserRepository userRepository,
+            RiskAssessmentRepository riskAssessmentRepository,
             ReportMapper reportMapper
     ) {
         this.reportRepository = reportRepository;
         this.documentRepository = documentRepository;
         this.propertyRepository = propertyRepository;
         this.userRepository = userRepository;
+        this.riskAssessmentRepository = riskAssessmentRepository;
         this.reportMapper = reportMapper;
     }
 
@@ -65,6 +70,27 @@ public class ReportServiceImpl implements ReportService {
         DueDiligenceReport report = reportMapper.toReportEntity(request);
         report.setProperty(property);
         report.setGeneratedBy(user);
+
+        if (report.getOverallRiskScore() == null) {
+            List<RiskAssessment> risks = riskAssessmentRepository.findByPropertyPropertyId(property.getPropertyId());
+            if (!risks.isEmpty()) {
+                java.math.BigDecimal sum = java.math.BigDecimal.ZERO;
+                int count = 0;
+                for (RiskAssessment ra : risks) {
+                    if (ra.getRiskScore() != null) {
+                        sum = sum.add(ra.getRiskScore());
+                        count++;
+                    }
+                }
+                if (count > 0) {
+                    report.setOverallRiskScore(sum.divide(java.math.BigDecimal.valueOf(count), 2, java.math.RoundingMode.HALF_UP));
+                } else {
+                    report.setOverallRiskScore(new java.math.BigDecimal("25.00"));
+                }
+            } else {
+                report.setOverallRiskScore(new java.math.BigDecimal("25.00"));
+            }
+        }
 
         return reportMapper.toReportResponse(reportRepository.save(report));
     }

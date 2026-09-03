@@ -2,17 +2,17 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
+import {
   ArrowLeft, Loader2, Home, Shield, GitCompare, FileText,
   MapPin, Calendar, DollarSign, Ruler, Building2, ShieldAlert,
-  Download, FileCheck, Eye, ShoppingCart, Heart, Share2,
+  Download, FileSpreadsheet, FileCheck, Eye, ShoppingCart, Heart, Share2,
   Clock, CheckCircle, AlertTriangle, Info, Phone, Mail,
   User, Briefcase, Scale, Landmark, Crown, Star
 } from 'lucide-react';
 import { PageHeader, RiskBadge } from '../components/app-shell';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-import { propertyService } from '../services/api';
+import { propertyService, dueDiligenceService, triggerBlobDownload } from '../services/api';
 import api from '../services/api';
 
 // Import components
@@ -174,7 +174,7 @@ export default function PropertyDetails() {
       const response = await api.post(`/buyer/offers/${id}/offer`, null, {
         params: { amount: parseFloat(offerAmount) }
       });
-      
+
       if (response.data.success) {
         setOfferSuccess(true);
         setTimeout(() => {
@@ -193,47 +193,57 @@ export default function PropertyDetails() {
     }
   };
 
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [downloadingExcel, setDownloadingExcel] = useState(false);
+
   const handleDownloadReport = async () => {
+    setDownloadingPdf(true);
     try {
-      const { default: jsPDF } = await import('jspdf');
-      const doc = new jsPDF();
-      const addressDisplay = getAddressDisplay(property);
-      
-      doc.setFontSize(20);
-      doc.text('Due Diligence Report', 20, 20);
-      
-      doc.setFontSize(12);
-      let y = 40;
-      const lineHeight = 8;
-      
-      const lines = [
-        ['Property:', addressDisplay.full],
-        ['City:', addressDisplay.city],
-        ['State:', addressDisplay.state],
-        ['Price:', `$${property.price?.toLocaleString()}`],
-        ['Size:', property.size],
-        ['Year Built:', property.yearBuilt],
-        ['Risk Level:', property.risk],
-        ['Risk Score:', `${property.riskScore}/100`],
-        ['Zoning:', property.zoningCode || 'N/A'],
-        ['Flood Zone:', property.floodZone || 'N/A'],
-        ['Title Status:', property.titleStatus || 'Clear'],
-      ];
-      
-      lines.forEach(([label, value]) => {
-        doc.text(`${label} ${value}`, 20, y);
-        y += lineHeight;
-      });
-      
-      doc.setFontSize(10);
-      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, y + 20);
-      doc.text('Parcel Intelligence - Due Diligence Report', 20, y + 28);
-      
-      doc.save(`Due_Diligence_Report_${property.parcelId || property.id}.pdf`);
-      
+      const res = await dueDiligenceService.downloadPropertyPdf(id);
+      triggerBlobDownload(res.data, `Due_Diligence_Report_${property?.parcelId || id}.pdf`);
     } catch (error) {
-      console.error('Error generating report:', error);
-      alert('Failed to generate report. Please try again.');
+      console.warn('Backend PDF endpoint error, using client-side jsPDF fallback:', error);
+      try {
+        const { default: jsPDF } = await import('jspdf');
+        const doc = new jsPDF();
+        const addressDisplay = getAddressDisplay(property);
+
+        doc.setFontSize(20);
+        doc.text('Due Diligence Report', 20, 20);
+        doc.setFontSize(12);
+        let y = 40;
+        const lines = [
+          ['Property:', addressDisplay.full],
+          ['Price:', `$${property?.price?.toLocaleString()}`],
+          ['Size:', property?.size],
+          ['Year Built:', property?.yearBuilt],
+          ['Risk Level:', property?.risk],
+          ['Risk Score:', `${property?.riskScore}/100`],
+          ['Zoning:', property?.zoningCode || 'N/A'],
+          ['Flood Zone:', property?.floodZone || 'N/A'],
+          ['Title Status:', property?.titleStatus || 'Clear'],
+        ];
+        lines.forEach(([l, v]) => { doc.text(`${l} ${v}`, 20, y); y += 8; });
+        doc.save(`Due_Diligence_Report_${property?.parcelId || id}.pdf`);
+      } catch (fallbackErr) {
+        console.error('Error generating report:', fallbackErr);
+        alert('Failed to generate report. Please try again.');
+      }
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
+  const handleDownloadExcel = async () => {
+    setDownloadingExcel(true);
+    try {
+      const res = await dueDiligenceService.downloadPropertyExcel(id);
+      triggerBlobDownload(res.data, `Due_Diligence_Report_${property?.parcelId || id}.xlsx`);
+    } catch (error) {
+      console.error('Error downloading Excel report:', error);
+      alert('Failed to download Excel report. Please try again.');
+    } finally {
+      setDownloadingExcel(false);
     }
   };
 
@@ -241,12 +251,12 @@ export default function PropertyDetails() {
     { id: 'overview', label: 'Overview', icon: Home },
     { id: 'risk', label: 'Risk Assessment', icon: Shield },
     { id: 'comparables', label: 'Comparables', icon: GitCompare },
-    { id: 'report', label: 'Generate Report', icon: FileText },
+    { id: 'report', label: 'Due Diligence Reports', icon: FileText },
   ];
 
   if (loading) {
     return (
-      <div className="flex h-[70vh] items-center justify-center">
+      <div className="flex h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-emerald-600" />
           <p className="text-gray-500">Loading property details...</p>
@@ -270,19 +280,19 @@ export default function PropertyDetails() {
 
   return (
     <>
-      <PageHeader 
-        title="Property Details" 
-        subtitle="Complete Due Diligence Report" 
+      <PageHeader
+        title="Property Details"
+        subtitle="Complete Due Diligence Report"
         actions={
           <div className="flex flex-wrap gap-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => navigate("/properties")}
             >
               <ArrowLeft className="mr-2 h-4 w-4" />Back
             </Button>
             {isBuyer && (
-              <Button 
+              <Button
                 variant="outline"
                 onClick={toggleWatchlist}
                 className={isWatchlisted ? 'text-amber-500 border-amber-500' : ''}
@@ -291,15 +301,24 @@ export default function PropertyDetails() {
                 {isWatchlisted ? 'Watchlisted' : 'Add to Watchlist'}
               </Button>
             )}
-            <Button 
+            <Button
               variant="outline"
               onClick={handleDownloadReport}
+              disabled={downloadingPdf}
             >
-              <Download className="h-4 w-4 mr-2" />
-              Download Report
+              {downloadingPdf ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+              Download PDF
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleDownloadExcel}
+              disabled={downloadingExcel}
+            >
+              {downloadingExcel ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileSpreadsheet className="h-4 w-4 mr-2 text-emerald-600" />}
+              Download Excel
             </Button>
             {isBuyer && property.listingStatus === 'AVAILABLE' && (
-              <Button 
+              <Button
                 onClick={() => setShowOfferModal(true)}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white"
               >
@@ -310,7 +329,6 @@ export default function PropertyDetails() {
           </div>
         }
       />
-
       {/* Property Header */}
       <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
         <div className="h-64 bg-gradient-to-r from-emerald-500 to-emerald-700 relative">
@@ -432,7 +450,7 @@ export default function PropertyDetails() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
               <h3 className="font-semibold text-gray-900 text-lg">Description</h3>
               <p className="text-gray-600 leading-relaxed">{property.listingDescription}</p>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                 <div className="p-4 bg-gray-50 rounded-xl">
                   <p className="text-sm text-gray-500">Owner</p>
@@ -485,7 +503,7 @@ export default function PropertyDetails() {
       {/* Offer Modal */}
       {showOfferModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <motion.div 
+          <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             className="bg-white rounded-2xl p-6 max-w-md w-full mx-4"
@@ -495,7 +513,7 @@ export default function PropertyDetails() {
                 <CheckCircle className="h-16 w-16 text-emerald-500 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-900">Offer Submitted!</h3>
                 <p className="text-gray-500 mt-2">Your offer has been sent to the seller.</p>
-                <Button 
+                <Button
                   onClick={() => setShowOfferModal(false)}
                   className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
@@ -506,7 +524,7 @@ export default function PropertyDetails() {
               <>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-semibold text-gray-900">Make an Offer</h3>
-                  <button 
+                  <button
                     onClick={() => setShowOfferModal(false)}
                     className="text-gray-400 hover:text-gray-600"
                   >
@@ -536,14 +554,14 @@ export default function PropertyDetails() {
                     </div>
                   </div>
                   <div className="flex gap-3 pt-4">
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       onClick={() => setShowOfferModal(false)}
                       className="flex-1"
                     >
                       Cancel
                     </Button>
-                    <Button 
+                    <Button
                       onClick={handleMakeOffer}
                       disabled={submittingOffer}
                       className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"

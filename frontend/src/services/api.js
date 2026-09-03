@@ -57,7 +57,7 @@ api.interceptors.response.use(
             localStorage.removeItem('user');
             window.location.href = '/login';
         }
-        
+
         // Handle 500 errors specifically
         if (error.response?.status === 500) {
             console.error('⚠️ SERVER ERROR (500):', error.response?.data);
@@ -117,6 +117,10 @@ export const dueDiligenceService = {
     createReport: (data) => api.post('/reports', data),
     updateReport: (id, data) => api.put(`/reports/${id}`, data),
     deleteReport: (id) => api.delete(`/reports/${id}`),
+    downloadPdf: (id) => api.get(`/reports/${id}/pdf`, { responseType: 'blob' }),
+    downloadExcel: (id) => api.get(`/reports/${id}/excel`, { responseType: 'blob' }),
+    downloadPropertyPdf: (propertyId) => api.get(`/reports/property/${propertyId}/pdf`, { responseType: 'blob' }),
+    downloadPropertyExcel: (propertyId) => api.get(`/reports/property/${propertyId}/excel`, { responseType: 'blob' }),
 };
 
 export const notificationService = {
@@ -135,6 +139,12 @@ export const documentService = {
 export const riskAssessmentService = {
     getAll: () => api.get('/risk-assessments'),
     getByProperty: (propertyId) => api.get(`/risk-assessments/property/${propertyId}`),
+    getCategories: () => api.get('/risk-categories'),
+};
+
+export const comparablesService = {
+    getByProperty: (propertyId) => api.get(`/market-analysis/property/${propertyId}`),
+    createComparable: (data) => api.post('/market-analysis', data),
 };
 
 export const dashboardService = {
@@ -144,6 +154,25 @@ export const dashboardService = {
     getRiskSummary: (role) => api.get('/dashboard/risk-summary', { params: role ? { role } : {} }),
     getRecentProperties: (role) => api.get('/dashboard/recent-properties', { params: role ? { role } : {} }),
     getRecentReports: (role) => api.get('/dashboard/recent-reports', { params: role ? { role } : {} }),
+};
+
+export const triggerBlobDownload = (data, filename, mimeType = 'application/octet-stream') => {
+    if (typeof window === 'undefined' || !window.URL) return;
+    const blob = data instanceof Blob ? data : new Blob([data], { type: mimeType });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.setAttribute('download', filename);
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => {
+        if (link.parentNode) {
+            link.parentNode.removeChild(link);
+        }
+        window.URL.revokeObjectURL(url);
+    }, 1500);
 };
 
 export default api;

@@ -3,8 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { PageHeader } from '../../components/app-shell';
 import { Button } from '../../components/ui/button';
-import { FileText, Download, Calendar, DollarSign, Eye, CheckCircle2 } from 'lucide-react';
-import { dueDiligenceService } from '../../services/api';
+import { FileText, Download, Calendar, DollarSign, Eye, CheckCircle2, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { dueDiligenceService, triggerBlobDownload } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
 
 export default function BankFinancialReports() {
@@ -12,9 +12,37 @@ export default function BankFinancialReports() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [downloadingId, setDownloadingId] = useState(null);
+
   useEffect(() => {
     fetchReports();
   }, []);
+
+  const handleDownloadPdf = async (reportId) => {
+    setDownloadingId(`pdf-${reportId}`);
+    try {
+      const res = await dueDiligenceService.downloadPdf(reportId);
+      triggerBlobDownload(res.data, `Bank_Due_Diligence_Report_${reportId}.pdf`);
+    } catch (err) {
+      console.error('Failed to download PDF:', err);
+      alert('Unable to download PDF. Please try again.');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const handleDownloadExcel = async (reportId) => {
+    setDownloadingId(`excel-${reportId}`);
+    try {
+      const res = await dueDiligenceService.downloadExcel(reportId);
+      triggerBlobDownload(res.data, `Bank_Due_Diligence_Report_${reportId}.xlsx`);
+    } catch (err) {
+      console.error('Failed to download Excel:', err);
+      alert('Unable to download Excel. Please try again.');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   const fetchReports = async () => {
     try {
@@ -49,11 +77,11 @@ export default function BankFinancialReports() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-      <PageHeader 
-        title="Financial & Due Diligence Reports" 
+      <PageHeader
+        title="Financial & Due Diligence Reports"
         subtitle="Compliance audits, risk reviews, and underwriting documentation from PostgreSQL"
         actions={
-          <Button 
+          <Button
             onClick={() => navigate('/properties')}
             className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
           >
@@ -61,11 +89,11 @@ export default function BankFinancialReports() {
           </Button>
         }
       />
-      
+
       <div className="space-y-4">
         {reports.length > 0 ? (
           reports.map((report) => (
-            <div 
+            <div
               key={report.reportId || report.id}
               className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
             >
@@ -92,17 +120,45 @@ export default function BankFinancialReports() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2 self-end md:self-center">
+              <div className="flex flex-wrap items-center gap-2 self-end md:self-center">
                 {report.propertyId && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => navigate(`/properties/${report.propertyId}`)}
-                    className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                    className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50 text-xs"
                   >
                     <Eye className="mr-1.5 h-3.5 w-3.5" /> View Property
                   </Button>
                 )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDownloadPdf(report.reportId || report.id)}
+                  disabled={downloadingId === `pdf-${report.reportId || report.id}`}
+                  className="bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100 text-xs"
+                >
+                  {downloadingId === `pdf-${report.reportId || report.id}` ? (
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Download className="mr-1.5 h-3.5 w-3.5" />
+                  )}
+                  PDF
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDownloadExcel(report.reportId || report.id)}
+                  disabled={downloadingId === `excel-${report.reportId || report.id}`}
+                  className="bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 text-xs"
+                >
+                  {downloadingId === `excel-${report.reportId || report.id}` ? (
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5 text-emerald-600" />
+                  )}
+                  Excel
+                </Button>
               </div>
             </div>
           ))
