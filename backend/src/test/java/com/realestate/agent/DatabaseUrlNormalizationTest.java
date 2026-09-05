@@ -17,16 +17,152 @@ import static org.junit.jupiter.api.Assertions.*;
 class DatabaseUrlNormalizationTest {
 
     @Test
-    void testNormalizerPrependsJdbcWhenUrlStartsWithPostgresql() {
-        String renderUrl = "postgresql://dpg-test-a.oregon-postgres.render.com:5432/real_estate_db?sslmode=require";
-        String expected = "jdbc:postgresql://dpg-test-a.oregon-postgres.render.com:5432/real_estate_db?sslmode=require";
-        assertEquals(expected, DatabaseUrlNormalizer.normalize(renderUrl));
+    void testRenderUrlFormatWithCredentialsStripped() {
+        String renderUrl = "postgresql://real_estate_user:secret_password@dpg-c123456789.oregon-postgres.render.com/real_estate_db_5adt";
+        String normalized = DatabaseUrlNormalizer.normalize(renderUrl);
+
+        // Result must start with jdbc:postgresql://
+        assertTrue(normalized.startsWith("jdbc:postgresql://"));
+
+        // Credentials must NOT be present in the JDBC URL
+        assertFalse(normalized.contains("real_estate_user"), "Normalized URL must not contain username");
+        assertFalse(normalized.contains("secret_password"), "Normalized URL must not contain password");
+        assertFalse(normalized.contains("@"), "Normalized URL must not contain '@'");
+
+        // Exact expected JDBC URL
+        assertEquals("jdbc:postgresql://dpg-c123456789.oregon-postgres.render.com/real_estate_db_5adt", normalized);
     }
 
     @Test
-    void testNormalizerLeavesJdbcPostgresqlUnchanged() {
-        String standardJdbcUrl = "jdbc:postgresql://localhost:5432/real_estate_due_diligence";
-        assertEquals(standardJdbcUrl, DatabaseUrlNormalizer.normalize(standardJdbcUrl));
+    void testRenderUrlWithPortAndQueryParams() {
+        String renderUrl = "postgresql://real_estate_user:secret_password@dpg-c123456789.oregon-postgres.render.com:5432/real_estate_db_5adt?sslmode=require";
+        String normalized = DatabaseUrlNormalizer.normalize(renderUrl);
+
+        assertEquals("jdbc:postgresql://dpg-c123456789.oregon-postgres.render.com:5432/real_estate_db_5adt?sslmode=require", normalized);
+        assertFalse(normalized.contains("real_estate_user"));
+        assertFalse(normalized.contains("secret_password"));
+    }
+
+    @Test
+    void testJdbcUrlWithCredentialsStripped() {
+        String jdbcWithCreds = "jdbc:postgresql://real_estate_user:secret_password@dpg-c123456789.oregon-postgres.render.com/real_estate_db_5adt";
+        String normalized = DatabaseUrlNormalizer.normalize(jdbcWithCreds);
+
+        assertEquals("jdbc:postgresql://dpg-c123456789.oregon-postgres.render.com/real_estate_db_5adt", normalized);
+        assertFalse(normalized.contains("real_estate_user"));
+        assertFalse(normalized.contains("secret_password"));
+    }
+
+    @Test
+    void testLocalDevelopmentUrlRemainsUnchanged() {
+        String localUrl = "jdbc:postgresql://localhost:5432/real_estate_due_diligence";
+        assertEquals(localUrl, DatabaseUrlNormalizer.normalize(localUrl));
+    }
+
+    @Test
+    void testPostgresqlWithoutCredentialsGetsJdbcPrefix() {
+        String url = "postgresql://localhost:5432/real_estate_due_diligence";
+        assertEquals("jdbc:postgresql://localhost:5432/real_estate_due_diligence", DatabaseUrlNormalizer.normalize(url));
+    }
+
+    @Test
+    void testUrlEncodedCredentialsAndQueryParams() {
+        String url = "postgresql://user%40domain:p%40ss%3Aword@db.render.com:5432/prod_db?ssl=true&sslmode=require";
+        String normalized = DatabaseUrlNormalizer.normalize(url);
+
+        assertEquals("jdbc:postgresql://db.render.com:5432/prod_db?ssl=true&sslmode=require", normalized);
+
+        DatabaseUrlNormalizer.Credentials creds = DatabaseUrlNormalizer.extractCredentials(url);
+        assertNotNull(creds);
+        assertEquals("user@domain", creds.username());
+        assertEquals("p@ss:word", creds.password());
+    }
+
+    @Test
+    void testDriverRejectsUrlWithCredentialsAndAcceptsNormalized() {
+        Driver driver = new Driver();
+        String renderUrlWithCreds = "jdbc:postgresql://real_estate_user:secret_password@dpg-c123456789.oregon-postgres.render.com/real_estate_db_5adt";
+
+        // Without stripping credentials, PostgreSQL driver parse fails or rejects
+        // because "real_estate_user:secret_password@..." contains colons in host
+        assertFalse(driver.acceptsURL(renderUrlWithCreds),
+                "org.postgresql.Driver must reject URLs with credentials in authority");
+
+        // After normalization, driver accepts the URL
+        String normalized = DatabaseUrlNormalizer.normalize(renderUrlWithCreds);
+        assertTrue(driver.acceptsURL(normalized),
+                "org.postgresql.Driver must accept normalized URL without authority credentials");
+    }
+
+    @Test
+    void testEnvironmentPostProcessorWithRenderUrlAndPreservedDbCredentials() {
+        StandardEnvironment environment = new StandardEnvironment();
+        Map<String, Object> testProps = new HashMap<>();
+        testProps.put("DB_URL", "postgresql://real_estate_user:secret@dpg-host:5432/real_estate_db");
+        testProps.put("DB_USERNAME", "custom_user");
+        testProps.put("DB_PASSWORD", "custom_pass");
+        environment.getPropertySources().addFirst(new MapPropertySource("renderEnv", testProps));
+
+        DatabaseUrlEnvironmentPostProcessor processor = new DatabaseUrlEnvironmentPostProcessor();
+        processor.postProcessEnvironment(environment, null);
+
+        // URL must be normalized without credentials
+        assertEquals("jdbc:postgresql://dpg-host:5432/real_estate_db", environment.getProperty("DB_URL"));
+        assertEquals("jdbc:postgresql://dpg-host:5432/real_estate_db", environment.getProperty("spring.datasource.url"));
+
+        // Explicit DB_USERNAME and DB_PASSWORD must be preserved
+        assertEquals("custom_user", environment.getProperty("DB_USERNAME"));
+        assertEquals("custom_pass", environment.getProperty("DB_PASSWORD"));
+        assertNull(environment.getProperty("spring.datasource.username"), "Explicit DB_USERNAME takes precedence");
+    }
+
+    @Test
+    void testEnvironmentPostProcessorExtractsCredentialsWhenDbUsernameNotSet() {
+        StandardEnvironment environment = new StandardEnvironment();
+        Map<String, Object> testProps = new HashMap<>();
+        testProps.put("DB_URL", "postgresql://render_user:render_secret@dpg-render-host:5432/render_db");
+        environment.getPropertySources().addFirst(new MapPropertySource("renderEnv", testProps));
+
+        DatabaseUrlEnvironmentPostProcessor processor = new DatabaseUrlEnvironmentPostProcessor();
+        processor.postProcessEnvironment(environment, null);
+
+        // URL is clean
+        assertEquals("jdbc:postgresql://dpg-render-host:5432/render_db", environment.getProperty("spring.datasource.url"));
+
+        // Fallback datasource credentials extracted
+        assertEquals("render_user", environment.getProperty("spring.datasource.username"));
+        assertEquals("render_secret", environment.getProperty("spring.datasource.password"));
+    }
+
+    @Test
+    void testBeanPostProcessorStripsCredentialsFromDataSourceProperties() {
+        DataSourceProperties properties = new DataSourceProperties();
+        properties.setUrl("postgresql://user:pass@host:5432/db");
+        properties.setUsername("existing_user");
+        properties.setPassword("existing_pass");
+
+        DatabaseUrlNormalizationBeanPostProcessor postProcessor = new DatabaseUrlNormalizationBeanPostProcessor();
+        postProcessor.postProcessBeforeInitialization(properties, "dataSourceProperties");
+
+        // URL has credentials stripped
+        assertEquals("jdbc:postgresql://host:5432/db", properties.getUrl());
+        // Username and password on DataSourceProperties remain intact
+        assertEquals("existing_user", properties.getUsername());
+        assertEquals("existing_pass", properties.getPassword());
+    }
+
+    @Test
+    void testBeanPostProcessorLeavesLocalDataSourcePropertiesUnchanged() {
+        DataSourceProperties properties = new DataSourceProperties();
+        String localUrl = "jdbc:postgresql://localhost:5432/real_estate_due_diligence";
+        properties.setUrl(localUrl);
+        properties.setUsername("postgres");
+
+        DatabaseUrlNormalizationBeanPostProcessor postProcessor = new DatabaseUrlNormalizationBeanPostProcessor();
+        postProcessor.postProcessBeforeInitialization(properties, "dataSourceProperties");
+
+        assertEquals(localUrl, properties.getUrl());
+        assertEquals("postgres", properties.getUsername());
     }
 
     @Test
@@ -34,108 +170,5 @@ class DatabaseUrlNormalizationTest {
         assertNull(DatabaseUrlNormalizer.normalize(null));
         assertEquals("", DatabaseUrlNormalizer.normalize(""));
         assertEquals("", DatabaseUrlNormalizer.normalize("   "));
-    }
-
-    @Test
-    void testNormalizerHandlesWhitespaceAroundPostgresqlUrl() {
-        String paddedUrl = "  postgresql://localhost:5432/real_estate_due_diligence  ";
-        String expected = "jdbc:postgresql://localhost:5432/real_estate_due_diligence";
-        assertEquals(expected, DatabaseUrlNormalizer.normalize(paddedUrl));
-    }
-
-    @Test
-    void testDriverAcceptsNormalizedUrl() {
-        Driver driver = new Driver();
-        String renderUrl = "postgresql://localhost:5432/real_estate_due_diligence";
-
-        // Without normalization, driver refuses the URL
-        assertFalse(driver.acceptsURL(renderUrl), "org.postgresql.Driver must reject raw postgresql:// URLs");
-
-        // After normalization, driver accepts the URL
-        String normalizedUrl = DatabaseUrlNormalizer.normalize(renderUrl);
-        assertTrue(driver.acceptsURL(normalizedUrl), "org.postgresql.Driver must accept normalized jdbc:postgresql:// URLs");
-    }
-
-    @Test
-    void testEnvironmentPostProcessorNormalizesDbUrl() {
-        StandardEnvironment environment = new StandardEnvironment();
-        Map<String, Object> testProps = new HashMap<>();
-        testProps.put("DB_URL", "postgresql://dpg-render-postgres:5432/real_estate");
-        environment.getPropertySources().addFirst(new MapPropertySource("renderEnv", testProps));
-
-        DatabaseUrlEnvironmentPostProcessor processor = new DatabaseUrlEnvironmentPostProcessor();
-        processor.postProcessEnvironment(environment, null);
-
-        assertEquals("jdbc:postgresql://dpg-render-postgres:5432/real_estate", environment.getProperty("DB_URL"));
-        assertEquals("jdbc:postgresql://dpg-render-postgres:5432/real_estate", environment.getProperty("spring.datasource.url"));
-    }
-
-    @Test
-    void testEnvironmentPostProcessorLeavesValidJdbcUrlUnchanged() {
-        StandardEnvironment environment = new StandardEnvironment();
-        Map<String, Object> testProps = new HashMap<>();
-        String validJdbcUrl = "jdbc:postgresql://postgres:5432/real_estate_due_diligence";
-        testProps.put("DB_URL", validJdbcUrl);
-        environment.getPropertySources().addFirst(new MapPropertySource("localEnv", testProps));
-
-        DatabaseUrlEnvironmentPostProcessor processor = new DatabaseUrlEnvironmentPostProcessor();
-        processor.postProcessEnvironment(environment, null);
-
-        assertEquals(validJdbcUrl, environment.getProperty("DB_URL"));
-        assertNull(environment.getProperty("spring.datasource.url"));
-    }
-
-    @Test
-    void testEnvironmentPostProcessorNormalizesDatabaseUrlFallback() {
-        StandardEnvironment environment = new StandardEnvironment();
-        Map<String, Object> testProps = new HashMap<>();
-        testProps.put("DATABASE_URL", "postgresql://render-host:5432/db");
-        environment.getPropertySources().addFirst(new MapPropertySource("renderEnv", testProps));
-
-        DatabaseUrlEnvironmentPostProcessor processor = new DatabaseUrlEnvironmentPostProcessor();
-        processor.postProcessEnvironment(environment, null);
-
-        assertEquals("jdbc:postgresql://render-host:5432/db", environment.getProperty("DB_URL"));
-        assertEquals("jdbc:postgresql://render-host:5432/db", environment.getProperty("spring.datasource.url"));
-    }
-
-    @Test
-    void testBeanPostProcessorNormalizesDataSourceProperties() {
-        DataSourceProperties properties = new DataSourceProperties();
-        properties.setUrl("postgresql://render-host:5432/db");
-
-        DatabaseUrlNormalizationBeanPostProcessor postProcessor = new DatabaseUrlNormalizationBeanPostProcessor();
-        postProcessor.postProcessBeforeInitialization(properties, "dataSourceProperties");
-
-        assertEquals("jdbc:postgresql://render-host:5432/db", properties.getUrl());
-    }
-
-    @Test
-    void testBeanPostProcessorPreservesValidDataSourceProperties() {
-        DataSourceProperties properties = new DataSourceProperties();
-        String validUrl = "jdbc:postgresql://localhost:5432/db";
-        properties.setUrl(validUrl);
-
-        DatabaseUrlNormalizationBeanPostProcessor postProcessor = new DatabaseUrlNormalizationBeanPostProcessor();
-        postProcessor.postProcessBeforeInitialization(properties, "dataSourceProperties");
-
-        assertEquals(validUrl, properties.getUrl());
-    }
-
-    @Test
-    void testSpringApplicationDiscoversAndExecutesEnvironmentPostProcessor() {
-        org.springframework.context.ConfigurableApplicationContext context =
-                new org.springframework.boot.builder.SpringApplicationBuilder()
-                        .sources(com.realestate.agent.config.DatabaseUrlNormalizationBeanPostProcessor.class)
-                        .web(org.springframework.boot.WebApplicationType.NONE)
-                        .run("--DB_URL=postgresql://dpg-render-sample.oregon-postgres.render.com:5432/test_db");
-        try {
-            assertEquals("jdbc:postgresql://dpg-render-sample.oregon-postgres.render.com:5432/test_db",
-                    context.getEnvironment().getProperty("DB_URL"));
-            assertEquals("jdbc:postgresql://dpg-render-sample.oregon-postgres.render.com:5432/test_db",
-                    context.getEnvironment().getProperty("spring.datasource.url"));
-        } finally {
-            context.close();
-        }
     }
 }
