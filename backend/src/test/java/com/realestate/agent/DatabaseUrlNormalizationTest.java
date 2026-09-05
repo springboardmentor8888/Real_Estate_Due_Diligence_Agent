@@ -3,6 +3,7 @@ package com.realestate.agent;
 import com.realestate.agent.config.DatabaseUrlEnvironmentPostProcessor;
 import com.realestate.agent.config.DatabaseUrlNormalizationBeanPostProcessor;
 import com.realestate.agent.config.DatabaseUrlNormalizer;
+import com.realestate.agent.config.SecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.postgresql.Driver;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
@@ -170,5 +171,24 @@ class DatabaseUrlNormalizationTest {
         assertNull(DatabaseUrlNormalizer.normalize(null));
         assertEquals("", DatabaseUrlNormalizer.normalize(""));
         assertEquals("", DatabaseUrlNormalizer.normalize("   "));
+    }
+
+    @Test
+    void testCorsConfigurationAllowsVercelFrontend() {
+        SecurityConfig config = new SecurityConfig(null, null, null, null, null, null);
+        org.springframework.test.util.ReflectionTestUtils.setField(config, "frontendBaseUrl", "https://realestate-due-diligence.vercel.app");
+        org.springframework.test.util.ReflectionTestUtils.setField(config, "allowedOrigins", "http://localhost:3000,https://realestate-due-diligence.vercel.app");
+
+        org.springframework.web.cors.CorsConfigurationSource source = config.corsConfigurationSource();
+        org.springframework.mock.web.MockHttpServletRequest request = new org.springframework.mock.web.MockHttpServletRequest();
+        request.setRequestURI("/api/auth/login");
+        request.addHeader("Origin", "https://realestate-due-diligence.vercel.app");
+
+        org.springframework.web.cors.CorsConfiguration corsConfig = source.getCorsConfiguration(request);
+        assertNotNull(corsConfig);
+        assertEquals("https://realestate-due-diligence.vercel.app", corsConfig.checkOrigin("https://realestate-due-diligence.vercel.app"));
+        assertEquals("https://preview-123.vercel.app", corsConfig.checkOrigin("https://preview-123.vercel.app"));
+        assertEquals("http://localhost:3000", corsConfig.checkOrigin("http://localhost:3000"));
+        assertTrue(corsConfig.getAllowCredentials());
     }
 }
