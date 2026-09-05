@@ -50,6 +50,9 @@ class AuthServiceTest {
     @Mock
     private CustomUserDetailsService customUserDetailsService;
 
+    @Mock
+    private com.realestate.agent.service.EmailService emailService;
+
     @InjectMocks
     private AuthServiceImpl authService;
 

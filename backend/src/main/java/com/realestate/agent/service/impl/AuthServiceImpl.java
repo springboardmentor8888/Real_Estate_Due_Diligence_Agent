@@ -16,16 +16,12 @@ import com.realestate.agent.security.CustomUserDetails;
 import com.realestate.agent.security.CustomUserDetailsService;
 import com.realestate.agent.security.JwtService;
 import com.realestate.agent.service.AuthService;
+import com.realestate.agent.service.EmailService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.MailException;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -51,7 +47,7 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final CustomUserDetailsService customUserDetailsService;
-    private final ObjectProvider<JavaMailSender> mailSenderProvider;
+    private final EmailService emailService;
 
     @Value("${app.verification.token-expiration-minutes:1440}")
     private long verificationTokenExpirationMinutes;
@@ -228,66 +224,16 @@ public class AuthServiceImpl implements AuthService {
         userRepository.save(user);
     }
 
-    private boolean isMailDeliveryConfigured(JavaMailSender mailSender) {
-        if (mailSender == null) {
-            return false;
-        }
-        if (mailSender instanceof JavaMailSenderImpl impl) {
-            if (!StringUtils.hasText(impl.getHost())) {
-                return false;
-            }
-            String auth = impl.getJavaMailProperties() != null
-                    ? impl.getJavaMailProperties().getProperty("mail.smtp.auth")
-                    : null;
-            if ("true".equalsIgnoreCase(auth) && !StringUtils.hasText(impl.getUsername())) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     private void sendVerificationEmail(User user, String token) {
-        JavaMailSender mailSender = mailSenderProvider != null ? mailSenderProvider.getIfAvailable() : null;
         String baseUrl = StringUtils.hasText(frontendBaseUrl) ? frontendBaseUrl : "http://localhost:3000";
-        if (!isMailDeliveryConfigured(mailSender)) {
-            log.info("SMTP delivery not configured. Verification link for {}: {}/verify-email?token={}",
-                    user.getEmail(), baseUrl, token);
-            return;
-        }
-
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(user.getEmail());
-        message.setSubject("Verify your Real Estate Due Diligence account");
-        message.setText("Verify your account using this link: " + baseUrl
-                + "/verify-email?token=" + token);
-        try {
-            mailSender.send(message);
-        } catch (MailException ex) {
-            throw new EmailDeliveryUnavailableException(
-                    "Unable to send the verification email. Please try again later.", ex);
-        }
+        String verificationUrl = baseUrl + "/verify-email?token=" + token;
+        emailService.sendVerificationEmail(user.getEmail(), verificationUrl);
     }
 
     private void sendPasswordResetEmail(User user, String token) {
-        JavaMailSender mailSender = mailSenderProvider != null ? mailSenderProvider.getIfAvailable() : null;
         String baseUrl = StringUtils.hasText(frontendBaseUrl) ? frontendBaseUrl : "http://localhost:3000";
-        if (!isMailDeliveryConfigured(mailSender)) {
-            log.info("SMTP delivery not configured. Password reset link for {}: {}/reset-password?token={}",
-                    user.getEmail(), baseUrl, token);
-            return;
-        }
-
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(user.getEmail());
-        message.setSubject("Reset your Real Estate Due Diligence password");
-        message.setText("Reset your password using this link: " + baseUrl
-                + "/reset-password?token=" + token);
-        try {
-            mailSender.send(message);
-        } catch (MailException ex) {
-            throw new EmailDeliveryUnavailableException(
-                    "Unable to send the password reset email. Please try again later.", ex);
-        }
+        String resetUrl = baseUrl + "/reset-password?token=" + token;
+        emailService.sendPasswordResetEmail(user.getEmail(), resetUrl);
     }
 
     private String hashToken(String token) {

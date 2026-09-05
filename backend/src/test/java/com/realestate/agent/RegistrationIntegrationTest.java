@@ -1,6 +1,8 @@
 package com.realestate.agent;
 
+import com.realestate.agent.exception.EmailDeliveryUnavailableException;
 import com.realestate.agent.repository.UserRepository;
+import com.realestate.agent.service.EmailService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,9 +10,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
-import org.springframework.mail.MailAuthenticationException;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -38,11 +37,11 @@ class RegistrationIntegrationTest {
     private UserRepository userRepository;
 
     @MockBean
-    private JavaMailSender mailSender;
+    private EmailService emailService;
 
     @BeforeEach
-    void resetMailSender() {
-        reset(mailSender);
+    void resetEmailService() {
+        reset(emailService);
     }
 
     @Test
@@ -65,8 +64,10 @@ class RegistrationIntegrationTest {
     @Test
     void register_returnsServiceUnavailable_andRollsBack_whenVerificationEmailCannotBeSent() throws Exception {
         String email = uniqueEmail("AGENT");
-        doThrow(new MailAuthenticationException("SMTP authentication failed"))
-                .when(mailSender).send(any(SimpleMailMessage.class));
+        doThrow(new EmailDeliveryUnavailableException(
+                "Unable to send the verification email. Please try again later.",
+                new RuntimeException("Brevo API error")))
+                .when(emailService).sendVerificationEmail(any(), any());
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)

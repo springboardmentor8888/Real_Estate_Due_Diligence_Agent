@@ -55,3 +55,10 @@ application:
     jwt:
       secret-key: ${JWT_SECRET_KEY}
       expiration: ${JWT_EXPIRATION:86400000}
+
+brevo:
+  api-key: ${BREVO_API_KEY:}
+  sender-email: ${BREVO_SENDER_EMAIL:noreply@realestate-agent.com}
+  sender-name: ${BREVO_SENDER_NAME:Real Estate Due Diligence}
+  api-url: ${BREVO_API_URL:https://api.brevo.com/v3}
+
