@@ -62,10 +62,40 @@ export async function apiFetch(path, options = {}) {
     ...options.headers,
   };
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers,
-  });
+  const isGet = !options.method || options.method.toUpperCase() === "GET";
+  const maxRetries = isGet ? 3 : 0;
+  let res = null;
+  let lastNetError = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      res = await fetch(`${API_BASE}${path}`, {
+        ...options,
+        headers,
+      });
+
+      if (res.ok || (res.status >= 400 && res.status < 500)) {
+        break;
+      }
+
+      if (attempt < maxRetries && [502, 503, 504].includes(res.status)) {
+        const delay = 1500 * Math.pow(2, attempt);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+    } catch (err) {
+      lastNetError = err;
+      if (attempt < maxRetries) {
+        const delay = 1500 * Math.pow(2, attempt);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+    }
+  }
+
+  if (!res) {
+    throw lastNetError || new Error("Network connection error");
+  }
 
   if (!res.ok) {
     if (res.status === 401 || res.status === 403) {

@@ -61,13 +61,41 @@ export default function PropertiesPage() {
         headers.Authorization = `Bearer ${token}`;
       }
 
-      const response = await fetch(
-        "/api/properties",
-        {
-          method: "GET",
-          headers,
+      let response = null;
+      let lastError = null;
+      const maxRetries = 3;
+
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+          response = await fetch("/api/properties", {
+            method: "GET",
+            headers,
+          });
+
+          // If OK or a standard client error (4xx), do not retry
+          if (response.ok || (response.status >= 400 && response.status < 500)) {
+            break;
+          }
+
+          // If 502/503/504 server cold-start / gateway error and retries remain
+          if (attempt < maxRetries && [502, 503, 504].includes(response.status)) {
+            const delay = 1500 * Math.pow(2, attempt);
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            continue;
+          }
+        } catch (netErr) {
+          lastError = netErr;
+          if (attempt < maxRetries) {
+            const delay = 1500 * Math.pow(2, attempt);
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            continue;
+          }
         }
-      );
+      }
+
+      if (!response) {
+        throw lastError || new Error("Unable to connect to the backend service.");
+      }
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -474,6 +502,21 @@ export default function PropertiesPage() {
             <div className="no-results">
               <h3>Unable to load properties</h3>
               <p>{errorMsg}</p>
+              <button
+                type="button"
+                onClick={fetchProperties}
+                className="details-btn"
+                style={{
+                  marginTop: "16px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "10px 24px",
+                  cursor: "pointer",
+                }}
+              >
+                Retry Loading
+              </button>
             </div>
           )}
 
