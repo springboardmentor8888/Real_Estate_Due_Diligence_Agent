@@ -19,6 +19,14 @@ export const resolveBackendBaseUrl = (value) => {
     return normalized.replace(/\/api$/, '');
 };
 
+export const resolveGoogleOAuthUrl = (baseUrl) => {
+    let backend = baseUrl !== undefined ? baseUrl : resolveBackendBaseUrl();
+    if (!backend || backend.includes('real-estate-backend-3fag.onrender.com') || (!backend.includes('localhost') && !backend.includes('127.0.0.1'))) {
+        backend = 'https://real-estate-due-diligence-agent.onrender.com';
+    }
+    return `${backend.replace(/\/$/, '')}/oauth2/authorization/google?prompt=select_account`;
+};
+
 const API_BASE_URL = resolveApiBaseUrl();
 
 const api = axios.create({

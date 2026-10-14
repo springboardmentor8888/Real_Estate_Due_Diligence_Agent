@@ -20,7 +20,8 @@ import {
   comparablesService,
   riskAssessmentService,
   resolveApiBaseUrl,
-  resolveBackendBaseUrl
+  resolveBackendBaseUrl,
+  resolveGoogleOAuthUrl
 } from './api';
 
 describe('API configuration helpers', () => {
@@ -60,6 +61,17 @@ describe('API configuration helpers', () => {
         process.env.REACT_APP_API_URL = originalApiUrl;
       }
     }
+  });
+
+  it('resolves Google OAuth URL to the active staging backend and never the legacy URL', () => {
+    expect(resolveGoogleOAuthUrl('https://real-estate-backend-3fag.onrender.com'))
+      .toBe('https://real-estate-due-diligence-agent.onrender.com/oauth2/authorization/google?prompt=select_account');
+    expect(resolveGoogleOAuthUrl('https://real-estate-due-diligence-agent.onrender.com'))
+      .toBe('https://real-estate-due-diligence-agent.onrender.com/oauth2/authorization/google?prompt=select_account');
+    expect(resolveGoogleOAuthUrl(''))
+      .toBe('https://real-estate-due-diligence-agent.onrender.com/oauth2/authorization/google?prompt=select_account');
+    expect(resolveGoogleOAuthUrl('http://localhost:8080'))
+      .toBe('http://localhost:8080/oauth2/authorization/google?prompt=select_account');
   });
 
   it('preserves a registration email-delivery failure for the UI to display', async () => {

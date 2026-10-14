@@ -3,7 +3,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Building2, ShieldCheck, TrendingUp } from 'lucide-react';
-import { resolveBackendBaseUrl } from '../services/api';
+import { resolveGoogleOAuthUrl } from '../services/api';
 
 export function AuthLayout({ title, subtitle, children, footer }) {
   return (
@@ -112,16 +112,15 @@ export function AuthLayout({ title, subtitle, children, footer }) {
   );
 }
 
+export { resolveGoogleOAuthUrl };
+
 export function GoogleButton({ children = 'Continue with Google' }) {
-  let backendUrl = resolveBackendBaseUrl();
-  if (!backendUrl || backendUrl.includes('real-estate-backend-3fag.onrender.com')) {
-    backendUrl = 'https://real-estate-due-diligence-agent.onrender.com';
-  }
+  const oauthUrl = resolveGoogleOAuthUrl();
 
   return (
     <button
       type="button"
-      onClick={() => { window.location.href = `${backendUrl}/oauth2/authorization/google?prompt=select_account`; }}
+      onClick={() => { window.location.href = oauthUrl; }}
       style={{
         display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center',
         gap: '8px', padding: '10px 16px', borderRadius: '10px',
