@@ -113,7 +113,10 @@ export function AuthLayout({ title, subtitle, children, footer }) {
 }
 
 export function GoogleButton({ children = 'Continue with Google' }) {
-  const backendUrl = resolveBackendBaseUrl();
+  let backendUrl = resolveBackendBaseUrl();
+  if (!backendUrl || backendUrl.includes('real-estate-backend-3fag.onrender.com')) {
+    backendUrl = 'https://real-estate-due-diligence-agent.onrender.com';
+  }
 
   return (
     <button
