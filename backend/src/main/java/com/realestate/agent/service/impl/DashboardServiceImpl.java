@@ -52,11 +52,22 @@ public class DashboardServiceImpl implements DashboardService {
                 (user.getLastName() != null ? user.getLastName() : "")).trim() : "User";
         if (fullName.isBlank() && user != null) fullName = user.getEmail();
 
-        List<Property> allProperties = propertyRepository.findAll();
-        List<DueDiligenceReport> allReports = reportRepository.findAll();
-        List<RiskAssessment> allRisks = riskAssessmentRepository.findAll();
-        List<PropertyDocument> allDocs = documentRepository.findAll();
-        List<PropertyListing> allListings = listingRepository.findAll();
+        long totalProperties = propertyRepository.count();
+        long reportsGenerated = reportRepository.count();
+        long totalRisks = riskAssessmentRepository.count();
+        long totalDocuments = documentRepository.count();
+        long verifiedDocuments = documentRepository.countByReportIsNotNull();
+        long pendingDocuments = documentRepository.countByReportIsNull();
+        long activeListings = listingRepository.countByListingStatus(ListingStatus.ACTIVE);
+        long underContract = listingRepository.countByListingStatus(ListingStatus.PENDING);
+        long soldProperties = listingRepository.countByListingStatus(ListingStatus.SOLD);
+        long highRiskAlerts = riskAssessmentRepository.countByRiskLevelIgnoreCase("HIGH")
+                + riskAssessmentRepository.countByRiskLevelIgnoreCase("CRITICAL");
+        long mediumRiskCount = riskAssessmentRepository.countByRiskLevelIgnoreCase("MEDIUM");
+        long lowRiskCount = riskAssessmentRepository.countByRiskLevelIgnoreCase("LOW");
+
+        List<Property> recentProperties = propertyRepository.findTopRecentProperties(org.springframework.data.domain.PageRequest.of(0, 20));
+        List<DueDiligenceReport> recentReports = reportRepository.findTopRecentReports(org.springframework.data.domain.PageRequest.of(0, 20));
         List<ComparableProperty> allComparables = comparablePropertyRepository.findAll();
 
         List<Notification> userNotifications = (user != null)
@@ -71,31 +82,20 @@ public class DashboardServiceImpl implements DashboardService {
                 ? watchlistRepository.findByUserEmail(user.getEmail())
                 : List.of();
 
-        long totalProperties = allProperties.size();
         long activeTransactions = 0;
         long pendingReviews = 0;
-        long reportsGenerated = allReports.size();
         long watchlistCount = userWatchlist.size();
         long unreadNotificationsCount = userNotifications.stream().filter(n -> !Boolean.TRUE.equals(n.getIsRead())).count();
-
-        long activeListings = allListings.stream().filter(l -> l.getListingStatus() == ListingStatus.ACTIVE).count();
-        long underContract = allListings.stream().filter(l -> l.getListingStatus() == ListingStatus.PENDING).count();
-        long soldProperties = allListings.stream().filter(l -> l.getListingStatus() == ListingStatus.SOLD).count();
         long totalInquiries = 0;
         long totalLoans = 0;
         long pendingLoans = 0;
         long approvedLoans = 0;
-        long totalDocuments = allDocs.size();
-        long verifiedDocuments = allDocs.stream().filter(d -> d.getReport() != null).count();
-        long highRiskAlerts = allRisks.stream()
-                .filter(r -> "HIGH".equalsIgnoreCase(r.getRiskLevel()) || "CRITICAL".equalsIgnoreCase(r.getRiskLevel()))
-                .count();
 
         List<ActivityItem> activities = new ArrayList<>();
 
-        // Structured Collections for the dashboard
+        // Structured preview collections for dashboard cards and tables
         List<Map<String, Object>> propertiesData = new ArrayList<>();
-        for (Property p : allProperties) {
+        for (Property p : recentProperties) {
             Map<String, Object> map = new HashMap<>();
             map.put("id", p.getPropertyId());
             map.put("propertyId", p.getPropertyId());
@@ -163,7 +163,7 @@ public class DashboardServiceImpl implements DashboardService {
         }
 
         List<Map<String, Object>> reportsData = new ArrayList<>();
-        for (DueDiligenceReport r : allReports) {
+        for (DueDiligenceReport r : recentReports) {
             Map<String, Object> map = new HashMap<>();
             map.put("id", r.getReportId());
             map.put("reportId", r.getReportId());
@@ -184,36 +184,38 @@ public class DashboardServiceImpl implements DashboardService {
         }
 
         List<Map<String, Object>> pendingReviewItems = new ArrayList<>();
-        for (Property p : allProperties) {
-            if (p.getStatus() == PropertyStatus.UNDER_REVIEW) {
-                Map<String, Object> map = new HashMap<>();
-                map.put("id", "prop-review-" + p.getPropertyId());
-                map.put("type", "PROPERTY_REVIEW");
-                map.put("title", p.getPropertyName());
-                String addrStr = p.getPrimaryAddress() != null ? p.getPrimaryAddress().getAddressLine1() : p.getPropertyName();
-                map.put("address", addrStr);
-                map.put("status", "UNDER_REVIEW");
-                map.put("createdAt", p.getCreatedAt());
-                map.put("timeAgo", formatTimeAgo(p.getCreatedAt()));
-                pendingReviewItems.add(map);
-            }
+        List<Property> underReviewProperties = propertyRepository.findRecentByStatus(
+                PropertyStatus.UNDER_REVIEW, org.springframework.data.domain.PageRequest.of(0, 10));
+        for (Property p : underReviewProperties) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", "prop-review-" + p.getPropertyId());
+            map.put("type", "PROPERTY_REVIEW");
+            map.put("title", p.getPropertyName());
+            String addrStr = p.getPrimaryAddress() != null ? p.getPrimaryAddress().getAddressLine1() : p.getPropertyName();
+            map.put("address", addrStr);
+            map.put("status", "UNDER_REVIEW");
+            map.put("createdAt", p.getCreatedAt());
+            map.put("timeAgo", formatTimeAgo(p.getCreatedAt()));
+            pendingReviewItems.add(map);
         }
-        for (DueDiligenceReport r : allReports) {
-            if ("PENDING".equalsIgnoreCase(r.getReportStatus()) || "IN_PROGRESS".equalsIgnoreCase(r.getReportStatus())) {
-                Map<String, Object> map = new HashMap<>();
-                map.put("id", "rep-review-" + r.getReportId());
-                map.put("type", "REPORT_REVIEW");
-                map.put("title", r.getReportName());
-                map.put("propertyId", r.getProperty() != null ? r.getProperty().getPropertyId() : null);
-                map.put("status", r.getReportStatus());
-                map.put("createdAt", r.getGeneratedAt());
-                map.put("timeAgo", formatTimeAgo(r.getGeneratedAt()));
-                pendingReviewItems.add(map);
-            }
+        List<DueDiligenceReport> pendingReports = reportRepository.findPendingReviewReports(
+                org.springframework.data.domain.PageRequest.of(0, 10));
+        for (DueDiligenceReport r : pendingReports) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", "rep-review-" + r.getReportId());
+            map.put("type", "REPORT_REVIEW");
+            map.put("title", r.getReportName());
+            map.put("propertyId", r.getProperty() != null ? r.getProperty().getPropertyId() : null);
+            map.put("status", r.getReportStatus());
+            map.put("createdAt", r.getGeneratedAt());
+            map.put("timeAgo", formatTimeAgo(r.getGeneratedAt()));
+            pendingReviewItems.add(map);
         }
 
         List<Map<String, Object>> comparableData = new ArrayList<>();
-        for (ComparableProperty c : allComparables) {
+        int compLimit = Math.min(allComparables.size(), 20);
+        for (int i = 0; i < compLimit; i++) {
+            ComparableProperty c = allComparables.get(i);
             Map<String, Object> map = new HashMap<>();
             map.put("id", c.getComparableId());
             map.put("distanceKm", c.getDistanceKm());
@@ -247,61 +249,55 @@ public class DashboardServiceImpl implements DashboardService {
 
         // Real Risk Overview calculations from PostgreSQL
         Map<String, Object> riskOverview = new HashMap<>();
-        double avgRisk = allRisks.stream()
-                .filter(r -> r.getRiskScore() != null)
-                .mapToDouble(r -> r.getRiskScore().doubleValue())
-                .average()
-                .orElse(0.0);
+        double avgRisk = riskAssessmentRepository.getAverageRiskScore();
         riskOverview.put("averageRiskScore", Math.round(avgRisk * 10.0) / 10.0);
-        riskOverview.put("totalAssessments", allRisks.size());
+        riskOverview.put("totalAssessments", totalRisks);
         riskOverview.put("highRiskCount", highRiskAlerts);
-        riskOverview.put("mediumRiskCount", allRisks.stream().filter(r -> "MEDIUM".equalsIgnoreCase(r.getRiskLevel())).count());
-        riskOverview.put("lowRiskCount", allRisks.stream().filter(r -> "LOW".equalsIgnoreCase(r.getRiskLevel())).count());
+        riskOverview.put("mediumRiskCount", mediumRiskCount);
+        riskOverview.put("lowRiskCount", lowRiskCount);
 
         Map<String, Object> categoryScores = new HashMap<>();
-        for (RiskAssessment r : allRisks) {
+        List<RiskAssessment> recentAssessments = riskAssessmentRepository.findTopRecentAssessments(
+                org.springframework.data.domain.PageRequest.of(0, 30));
+        for (RiskAssessment r : recentAssessments) {
             if (r.getRiskCategory() != null && r.getRiskScore() != null) {
                 String catName = r.getRiskCategory().getCategoryName();
-                categoryScores.put(catName, r.getRiskScore());
+                categoryScores.putIfAbsent(catName, r.getRiskScore());
             }
         }
         riskOverview.put("categoryScores", categoryScores);
 
         // Real Analytics metrics from PostgreSQL
         Map<String, Object> analytics = new HashMap<>();
-        Map<String, Long> statusCounts = allProperties.stream()
-                .collect(Collectors.groupingBy(p -> p.getStatus() != null ? p.getStatus().name() : "AVAILABLE", Collectors.counting()));
+        Map<String, Long> statusCounts = new HashMap<>();
+        for (Object[] row : propertyRepository.countPropertiesByStatus()) {
+            PropertyStatus s = (PropertyStatus) row[0];
+            Long cnt = (Long) row[1];
+            statusCounts.put(s != null ? s.name() : "AVAILABLE", cnt);
+        }
         analytics.put("statusBreakdown", statusCounts);
-        analytics.put("totalProperties", allProperties.size());
-        analytics.put("totalReports", allReports.size());
-        analytics.put("totalRiskAssessments", allRisks.size());
+        analytics.put("totalProperties", totalProperties);
+        analytics.put("totalReports", reportsGenerated);
+        analytics.put("totalRiskAssessments", totalRisks);
         analytics.put("totalOffers", userOffers.size());
 
-        BigDecimal totalMarketVal = allProperties.stream()
-                .map(p -> p.getMarketValue() != null ? p.getMarketValue() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalMarketVal = propertyRepository.sumMarketValue();
         analytics.put("totalMarketValue", totalMarketVal);
-        analytics.put("averageMarketValue", allProperties.isEmpty() ? BigDecimal.ZERO : totalMarketVal.divide(BigDecimal.valueOf(allProperties.size()), 2, RoundingMode.HALF_UP));
+        analytics.put("averageMarketValue", totalProperties > 0
+                ? totalMarketVal.divide(BigDecimal.valueOf(totalProperties), 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO);
 
         switch (role) {
             case "SELLER": {
                 Long userId = user != null ? user.getUserId() : null;
-                List<Property> sellerProperties = allProperties.stream()
-                        .filter(p -> userId != null && p.getCreatedBy() != null && userId.equals(p.getCreatedBy().getUserId()))
-                        .toList();
+                totalProperties = userId != null ? propertyRepository.countByCreatedByUserId(userId) : 0;
+                activeTransactions = userId != null ? propertyRepository.countByCreatedByUserIdAndStatus(userId, PropertyStatus.UNDER_REVIEW) : 0;
+                pendingReviews = activeTransactions;
+                reportsGenerated = userId != null ? reportRepository.countByPropertyCreatedByUserId(userId) : 0;
 
-                totalProperties = sellerProperties.size();
-                activeTransactions = sellerProperties.stream()
-                        .filter(p -> p.getStatus() == PropertyStatus.UNDER_REVIEW)
-                        .count();
-                pendingReviews = sellerProperties.stream()
-                        .filter(p -> p.getStatus() == PropertyStatus.UNDER_REVIEW)
-                        .count();
-
-                Set<Long> sellerPropIds = sellerProperties.stream().map(Property::getPropertyId).collect(Collectors.toSet());
-                reportsGenerated = allReports.stream()
-                        .filter(r -> r.getProperty() != null && sellerPropIds.contains(r.getProperty().getPropertyId()))
-                        .count();
+                List<Property> sellerProperties = userId != null
+                        ? propertyRepository.findRecentByCreatedByUserId(userId, org.springframework.data.domain.PageRequest.of(0, 15))
+                        : List.of();
 
                 for (Property p : sellerProperties) {
                     activities.add(ActivityItem.builder()
@@ -319,17 +315,11 @@ public class DashboardServiceImpl implements DashboardService {
             }
 
             case "AGENT": {
-                totalProperties = allProperties.size();
-                activeTransactions = allProperties.stream()
-                        .filter(p -> p.getStatus() == PropertyStatus.UNDER_REVIEW)
-                        .count();
-                pendingReviews = allProperties.stream()
-                        .filter(p -> p.getStatus() == PropertyStatus.UNDER_REVIEW)
-                        .count();
-                reportsGenerated = allReports.size();
+                activeTransactions = propertyRepository.countByStatus(PropertyStatus.UNDER_REVIEW);
+                pendingReviews = activeTransactions;
                 totalInquiries = userNotifications.size();
 
-                for (Property p : allProperties) {
+                for (Property p : recentProperties) {
                     activities.add(ActivityItem.builder()
                             .id("prop-" + p.getPropertyId())
                             .type("PROPERTY")
@@ -345,50 +335,32 @@ public class DashboardServiceImpl implements DashboardService {
             }
 
             case "BANK": {
-                totalProperties = allProperties.size();
-                totalLoans = allProperties.stream()
-                        .filter(p -> p.getMarketValue() != null && p.getMarketValue().doubleValue() > 0)
-                        .count();
-                pendingLoans = allProperties.stream()
-                        .filter(p -> p.getStatus() == PropertyStatus.UNDER_REVIEW)
-                        .count();
-                approvedLoans = allProperties.stream()
-                        .filter(p -> p.getStatus() == PropertyStatus.VERIFIED || p.getStatus() == PropertyStatus.AVAILABLE)
-                        .count();
+                totalLoans = totalProperties;
+                pendingLoans = propertyRepository.countByStatus(PropertyStatus.UNDER_REVIEW);
+                approvedLoans = propertyRepository.countByStatus(PropertyStatus.VERIFIED)
+                        + propertyRepository.countByStatus(PropertyStatus.AVAILABLE);
                 activeTransactions = pendingLoans;
-                pendingReviews = allRisks.size();
-                reportsGenerated = allReports.size();
+                pendingReviews = totalRisks;
                 break;
             }
 
             case "LEGAL_REVIEWER": {
-                totalProperties = allProperties.size();
-                totalDocuments = allDocs.size();
-                verifiedDocuments = allDocs.stream().filter(d -> d.getReport() != null).count();
-                activeTransactions = allProperties.stream().filter(p -> p.getStatus() == PropertyStatus.UNDER_REVIEW).count();
-                pendingReviews = allDocs.stream().filter(d -> d.getReport() == null).count();
-                if (pendingReviews == 0 && !allProperties.isEmpty()) {
-                    pendingReviews = allProperties.stream().filter(p -> p.getStatus() == PropertyStatus.UNDER_REVIEW).count();
+                activeTransactions = propertyRepository.countByStatus(PropertyStatus.UNDER_REVIEW);
+                pendingReviews = pendingDocuments;
+                if (pendingReviews == 0 && totalProperties > 0) {
+                    pendingReviews = activeTransactions;
                 }
-                reportsGenerated = allReports.size();
                 break;
             }
 
             case "BUYER":
             default: {
-                totalProperties = allProperties.size();
-                
-                // For buyer: Active transactions = active offers submitted by buyer + properties in active negotiation
                 long activeOffers = userOffers.stream()
                         .filter(o -> "PENDING".equalsIgnoreCase(o.getStatus()) || "ACCEPTED".equalsIgnoreCase(o.getStatus()))
                         .count();
-                activeTransactions = activeOffers > 0 ? activeOffers : allProperties.stream().filter(p -> p.getStatus() == PropertyStatus.UNDER_REVIEW).count();
+                activeTransactions = activeOffers > 0 ? activeOffers : propertyRepository.countByStatus(PropertyStatus.UNDER_REVIEW);
+                pendingReviews = propertyRepository.countByStatus(PropertyStatus.UNDER_REVIEW) + pendingReports.size();
 
-                // Pending reviews = properties/reports pending due diligence review
-                pendingReviews = pendingReviewItems.size() > 0 ? pendingReviewItems.size() : allRisks.size();
-                reportsGenerated = allReports.size();
-
-                // Build authentic buyer activity stream
                 for (Offer o : userOffers) {
                     activities.add(ActivityItem.builder()
                             .id("offer-" + o.getOfferId())
@@ -415,7 +387,7 @@ public class DashboardServiceImpl implements DashboardService {
                             .build());
                 }
 
-                for (Property p : allProperties) {
+                for (Property p : recentProperties) {
                     activities.add(ActivityItem.builder()
                             .id("prop-" + p.getPropertyId())
                             .type("PROPERTY")
@@ -428,7 +400,7 @@ public class DashboardServiceImpl implements DashboardService {
                             .build());
                 }
 
-                for (DueDiligenceReport r : allReports) {
+                for (DueDiligenceReport r : recentReports) {
                     activities.add(ActivityItem.builder()
                             .id("rep-" + r.getReportId())
                             .type("REPORT")
@@ -524,4 +496,3 @@ public class DashboardServiceImpl implements DashboardService {
         return months + " month" + (months == 1 ? "" : "s") + " ago";
     }
 }
-

@@ -143,6 +143,11 @@ export default function ReportsPage() {
                   <div className="flex flex-wrap items-center gap-3 mt-2">
                     <span className="text-xs text-slate-500">{formatDate(report.generatedAt || report.createdAt)}</span>
                     {getStatusBadge(report.reportStatus || report.status)}
+                    {(report.reportName?.includes('Synthetic') || report.executiveSummary?.includes('[Demonstration Audit]')) && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                        Synthetic Demo
+                      </span>
+                    )}
                     {report.overallRiskScore !== undefined && report.overallRiskScore !== null && (
                       <Badge variant="outline" className="text-xs bg-slate-100">
                         Risk Score: {report.overallRiskScore}

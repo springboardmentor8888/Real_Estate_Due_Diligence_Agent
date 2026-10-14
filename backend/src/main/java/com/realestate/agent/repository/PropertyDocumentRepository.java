@@ -11,4 +11,8 @@ public interface PropertyDocumentRepository extends JpaRepository<PropertyDocume
     List<PropertyDocument> findByPropertyPropertyId(Long propertyId);
     List<PropertyDocument> findByReportReportId(Long reportId);
     List<PropertyDocument> findByUploadedByUserId(Long userId);
+
+    long countByReportIsNotNull();
+
+    long countByReportIsNull();
 }

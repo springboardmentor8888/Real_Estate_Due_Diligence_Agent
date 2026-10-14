@@ -13,4 +13,6 @@ public interface PropertyListingRepository extends JpaRepository<PropertyListing
     List<PropertyListing> findByPropertyPropertyId(Long propertyId);
 
     List<PropertyListing> findByListingStatus(ListingStatus listingStatus);
+
+    long countByListingStatus(ListingStatus listingStatus);
 }

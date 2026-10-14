@@ -28,9 +28,23 @@ public class PropertySpecification {
 
             Join<Property, Address> addressJoin = null;
 
+            // Filter by general query keyword (name, code, street, city, state)
+            if (StringUtils.hasText(criteria.getQuery())) {
+                String term = "%" + criteria.getQuery().trim().toLowerCase() + "%";
+                addressJoin = root.join("addresses", JoinType.LEFT);
+                Predicate nameMatch = criteriaBuilder.like(criteriaBuilder.lower(root.get("propertyName")), term);
+                Predicate codeMatch = criteriaBuilder.like(criteriaBuilder.lower(root.get("propertyCode")), term);
+                Predicate cityMatch = criteriaBuilder.like(criteriaBuilder.lower(addressJoin.get("city")), term);
+                Predicate stateMatch = criteriaBuilder.like(criteriaBuilder.lower(addressJoin.get("state")), term);
+                Predicate addrMatch = criteriaBuilder.like(criteriaBuilder.lower(addressJoin.get("addressLine1")), term);
+                predicates.add(criteriaBuilder.or(nameMatch, codeMatch, cityMatch, stateMatch, addrMatch));
+            }
+
             // Filter by City
             if (StringUtils.hasText(criteria.getCity())) {
-                addressJoin = root.join("addresses", JoinType.LEFT);
+                if (addressJoin == null) {
+                    addressJoin = root.join("addresses", JoinType.LEFT);
+                }
                 predicates.add(criteriaBuilder.equal(
                         criteriaBuilder.lower(addressJoin.get("city")),
                         criteria.getCity().toLowerCase().trim()

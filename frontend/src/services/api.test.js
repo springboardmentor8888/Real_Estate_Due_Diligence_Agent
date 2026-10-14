@@ -134,3 +134,79 @@ describe('Milestone 3 Due Diligence Report, PDF & Excel Exports', () => {
     expect(res.data).toHaveLength(1);
   });
 });
+
+describe('Property Directory Pagination, Search, Details & Dashboard APIs', () => {
+  it('fetches paginated property catalog with page and size parameters', async () => {
+    const mockPageResponse = {
+      data: {
+        content: [
+          { propertyId: 1, propertyCode: 'SYN-RES-0001', propertyName: 'Highland Creek Estate #1' },
+          { propertyId: 2, propertyCode: 'SYN-RES-0002', propertyName: 'Sunset View Residence #2' }
+        ],
+        totalPages: 26,
+        totalElements: 504,
+        number: 0,
+        size: 20
+      }
+    };
+    mockApiClient.get.mockResolvedValueOnce(mockPageResponse);
+
+    const { propertyService } = await import('./api');
+    const result = await propertyService.getAll({ page: 0, size: 20 });
+
+    expect(mockApiClient.get).toHaveBeenCalledWith('/properties/all', { params: { page: 0, size: 20 } });
+    expect(result.data.content).toHaveLength(2);
+    expect(result.data.totalElements).toBe(504);
+  });
+
+  it('supports text query search across property catalog', async () => {
+    mockApiClient.get.mockResolvedValueOnce({
+      data: {
+        content: [
+          { propertyId: 1, propertyCode: 'SYN-RES-0001', propertyName: 'Highland Creek Estate #1' }
+        ],
+        totalPages: 1,
+        totalElements: 1
+      }
+    });
+
+    const { propertyService } = await import('./api');
+    const result = await propertyService.getAll({ page: 0, size: 20, query: 'Austin' });
+
+    expect(mockApiClient.get).toHaveBeenCalledWith('/properties/all', { params: { page: 0, size: 20, query: 'Austin' } });
+    expect(result.data.content[0].propertyCode).toBe('SYN-RES-0001');
+  });
+
+  it('fetches single property details by ID', async () => {
+    mockApiClient.get.mockResolvedValueOnce({
+      data: {
+        propertyId: 10,
+        propertyCode: 'SYN-RES-0010',
+        propertyName: 'Beacon Point Villa #10',
+        marketValue: 465000
+      }
+    });
+
+    const { propertyService } = await import('./api');
+    const result = await propertyService.getPropertyById(10);
+
+    expect(mockApiClient.get).toHaveBeenCalledWith('/properties/10');
+    expect(result.data.propertyCode).toBe('SYN-RES-0010');
+  });
+
+  it('fetches role-based dashboard stats', async () => {
+    mockApiClient.get.mockResolvedValueOnce({
+      data: {
+        role: 'BUYER',
+        totalProperties: 504,
+        pendingReviews: 126
+      }
+    });
+
+    const { dashboardService } = await import('./api');
+    const result = await dashboardService.getStats('BUYER');
+
+    expect(mockApiClient.get).toHaveBeenCalledWith('/dashboard/stats', { params: { role: 'BUYER' } });
+    expect(result.data.totalProperties).toBe(504);
+  });
+});

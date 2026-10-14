@@ -50,10 +50,12 @@ public class PropertyController {
 
     @GetMapping(value = {"", "/", "/all"})
     public ResponseEntity<Page<PropertyResponse>> getAllProperties(
+            @RequestParam(value = "query", required = false) String query,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size
     ) {
         PropertySearchCriteria criteria = PropertySearchCriteria.builder()
+                .query(query)
                 .page(page)
                 .size(size)
                 .build();
