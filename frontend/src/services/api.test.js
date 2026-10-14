@@ -37,6 +37,31 @@ describe('API configuration helpers', () => {
     expect(resolveBackendBaseUrl()).toBe('http://localhost:8080');
   });
 
+  it('automatically migrates deprecated 3fag URL to the new staging backend', () => {
+    expect(resolveApiBaseUrl('https://real-estate-backend-3fag.onrender.com/api'))
+      .toBe('https://real-estate-due-diligence-agent.onrender.com/api');
+    expect(resolveApiBaseUrl('https://real-estate-backend-3fag.onrender.com/api/'))
+      .toBe('https://real-estate-due-diligence-agent.onrender.com/api');
+    expect(resolveBackendBaseUrl('https://real-estate-backend-3fag.onrender.com/api'))
+      .toBe('https://real-estate-due-diligence-agent.onrender.com');
+  });
+
+  it('falls back to the active staging backend in production when env is unset', () => {
+    const originalEnv = process.env.NODE_ENV;
+    const originalApiUrl = process.env.REACT_APP_API_URL;
+    try {
+      process.env.NODE_ENV = 'production';
+      delete process.env.REACT_APP_API_URL;
+      expect(resolveApiBaseUrl()).toBe('https://real-estate-due-diligence-agent.onrender.com/api');
+      expect(resolveBackendBaseUrl()).toBe('https://real-estate-due-diligence-agent.onrender.com');
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+      if (originalApiUrl !== undefined) {
+        process.env.REACT_APP_API_URL = originalApiUrl;
+      }
+    }
+  });
+
   it('preserves a registration email-delivery failure for the UI to display', async () => {
     const unavailable = {
       response: {

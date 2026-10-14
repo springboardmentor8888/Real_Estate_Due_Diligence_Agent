@@ -1,10 +1,20 @@
 import axios from 'axios';
 
-export const resolveApiBaseUrl = (value = process.env.REACT_APP_API_URL || 'http://localhost:8080/api') => {
-    return String(value).replace(/\/$/, '');
+export const resolveApiBaseUrl = (value) => {
+    let raw = value !== undefined ? value : process.env.REACT_APP_API_URL;
+    if (!raw) {
+        raw = process.env.NODE_ENV === 'production'
+            ? 'https://real-estate-due-diligence-agent.onrender.com/api'
+            : 'http://localhost:8080/api';
+    }
+    let sanitized = String(raw).trim();
+    if (sanitized.includes('real-estate-backend-3fag.onrender.com')) {
+        sanitized = sanitized.replace('real-estate-backend-3fag.onrender.com', 'real-estate-due-diligence-agent.onrender.com');
+    }
+    return sanitized.replace(/\/$/, '');
 };
 
-export const resolveBackendBaseUrl = (value = process.env.REACT_APP_API_URL || 'http://localhost:8080/api') => {
+export const resolveBackendBaseUrl = (value) => {
     const normalized = resolveApiBaseUrl(value);
     return normalized.replace(/\/api$/, '');
 };
